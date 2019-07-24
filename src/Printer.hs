@@ -20,6 +20,9 @@ import qualified Data.Text.Lazy.Builder as B
 import qualified Data.Text.Lazy.Builder.Int as B
 import qualified Data.Text.Lazy.Builder.RealFloat as B
 
+quote :: B.Builder -> B.Builder
+quote s = "'" <> s <> "'"
+
 class FormatSql a where
     fmt :: a -> B.Builder
 
@@ -29,7 +32,7 @@ instance FormatSql Name where
 instance FormatSql Literal where
     fmt (I i) = B.decimal i
     fmt (F x) = B.realFloat x
-    fmt (T t) = B.fromText t
+    fmt (T t) = quote (B.fromText t)
     fmt (B True) = "true"
     fmt (B False) = "false"
 
@@ -42,13 +45,34 @@ instance FormatSql Insert where
         ") VALUES (" <> commas values <> ")"
 
 instance FormatSql Delete where
-    fmt Delete{table} = "DELETE FROM " <> fmt table
+    fmt Delete{table, conditions} = "DELETE FROM " <> fmt table <> wh where
+      wh = if null conditions then "" else "WHERE " <> commas conditions
 
 instance FormatSql Setting where
     fmt (Setting column rhs) = fmt column <> "=" <> fmt rhs
 
 instance FormatSql Update where
-    fmt Update{table, settings} = "UPDATE " <> fmt table <> " SET " <> commas settings
+    fmt Update{table, settings, conditions} =
+        "UPDATE " <> fmt table <> " SET " <> commas settings <> wh
+      where wh = if null conditions then "" else "WHERE " <> commas conditions
 
 instance FormatSql Select where
-    fmt Select{table, columns} = "SELECT " <> commas columns <> " FROM " <> fmt table
+    fmt Select{table, columns, conditions} =
+        "SELECT " <> commas columns <> " FROM " <> fmt table <> wh where
+      wh = if null conditions then "" else "WHERE " <> commas conditions
+
+instance FormatSql Condition where
+    fmt (Op op column value) = fmt column <> " " <> fmt op <> " " <> fmt value
+
+instance FormatSql Expr where
+    fmt (Lit lit) = fmt lit
+    fmt (Var name) = fmt name
+
+instance FormatSql Op where
+    fmt op = case op of
+        Eq -> "="
+        Syntax.LT -> "<"
+        LTE -> "<="
+        Syntax.GT -> ">"
+        GTE -> ">="
+        NEq -> "!="

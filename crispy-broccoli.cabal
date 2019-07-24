@@ -18,9 +18,14 @@ category:            Database
 build-type:          Simple
 
 library
-  -- exposed-modules:
+    exposed-modules:
+                    Syntax
+                    Printer
+                    Internal
   -- other-modules:
   -- other-extensions:
-  build-depends:       base ^>=4.12.0.0
+    build-depends:
+                  base
+                , text
   hs-source-dirs:      src
   default-language:    Haskell2010

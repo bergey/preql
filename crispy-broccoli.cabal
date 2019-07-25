@@ -29,3 +29,20 @@ library
                 , text
   hs-source-dirs:      src
   default-language:    Haskell2010
+
+test-suite tests
+    type: exitcode-stdio-1.0
+    main-is: Test.hs
+    -- other-modules: Test.Util
+    hs-source-dirs: test
+    build-depends:       base
+                       , crispy-broccoli
+                       , tasty
+                       , tasty-hunit
+                       , tasty-quickcheck
+                       , text
+
+
+
+
+    

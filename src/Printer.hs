@@ -36,6 +36,12 @@ instance FormatSql Literal where
     fmt (B True) = "true"
     fmt (B False) = "false"
 
+instance FormatSql Query where
+    fmt (QI insert) = fmt insert
+    fmt (QD delete) = fmt delete
+    fmt (QU update) = fmt update
+    fmt (QS select) = fmt select
+
 commas :: (FormatSql a, Foldable f) => f a -> B.Builder
 commas as = mconcat (intersperse ", " (map fmt (toList as)))
 
@@ -46,7 +52,9 @@ instance FormatSql Insert where
 
 instance FormatSql Delete where
     fmt Delete{table, conditions} = "DELETE FROM " <> fmt table <> wh where
-      wh = if null conditions then "" else "WHERE " <> commas conditions
+      wh = case conditions of
+          Nothing -> ""
+          Just conditions -> " WHERE " <> fmt conditions
 
 instance FormatSql Setting where
     fmt (Setting column rhs) = fmt column <> "=" <> fmt rhs

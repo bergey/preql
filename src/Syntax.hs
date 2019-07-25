@@ -30,7 +30,7 @@ data Insert = Insert
 -- | Queries of the form @DELETE FROM table WHERE conditions@.
 data Delete = Delete
     { table :: !Name
-    , conditions :: [Condition]
+    , conditions :: Maybe Condition
     } deriving (Show, Eq)
 
 -- TODO Expressions besides Literals

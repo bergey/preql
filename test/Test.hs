@@ -9,6 +9,7 @@ import           Query
 import           Syntax
 
 import           Control.Concurrent.MVar
+import           Data.Either
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -35,6 +36,9 @@ integration = testGroup "integration"
     , testCase "runQuery" $ do
         conn <- connect database
         assertEqual "" (Right 2) =<< runQuery conn int32 "SELECT 2"
+    , testCase "schema type mismatch causes runtime error" $ do
+        conn <- connect database
+        assertBool "" . isLeft =<< runQuery conn int32 "SELECT 2.5"
     , testCase "ignore later columns" $ do
         conn <- connect database
         assertEqual "" (Right 2) =<< runQuery conn int32 "SELECT 2, 3"

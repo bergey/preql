@@ -1,14 +1,14 @@
-{ mkDerivation, attoparsec, base, bytestring, postgresql-libpq
-, postgresql-simple, stdenv, tasty, tasty-hunit, tasty-quickcheck
-, text, vector
+{ mkDerivation, attoparsec, base, bytestring, free
+, postgresql-libpq, postgresql-simple, stdenv, tasty, tasty-hunit
+, tasty-quickcheck, text, transformers, vector
 }:
 mkDerivation {
   pname = "crispy-broccoli";
   version = "0.1.0.0";
   src = ./.;
   libraryHaskellDepends = [
-    attoparsec base bytestring postgresql-libpq postgresql-simple text
-    vector
+    attoparsec base bytestring free postgresql-libpq postgresql-simple
+    text transformers vector
   ];
   testHaskellDepends = [
     base postgresql-libpq tasty tasty-hunit tasty-quickcheck text

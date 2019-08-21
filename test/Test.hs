@@ -35,6 +35,12 @@ integration = testGroup "integration"
     , testCase "runQuery" $ do
         conn <- connect database
         assertEqual "" (Right 2) =<< runQuery conn int32 "SELECT 2"
+    , testCase "ignore later columns" $ do
+        conn <- connect database
+        assertEqual "" (Right 2) =<< runQuery conn int32 "SELECT 2, 3"
+    , testCase "parse a pair" $ do
+        conn <- connect database
+        assertEqual "" (Right (2, 3)) =<< runQuery conn ((,) <$> int32 <*> int32) "SELECT 2, 3"
     ]
 
 database :: ConnectInfo

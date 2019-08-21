@@ -9,7 +9,7 @@ mkDerivation {
     base postgresql-libpq postgresql-simple text
   ];
   testHaskellDepends = [
-    base tasty tasty-hunit tasty-quickcheck text
+    base postgresql-libpq tasty tasty-hunit tasty-quickcheck text
   ];
   homepage = "https://github.com/bergey/crispy-broccoli";
   description = "experiments with SQL";

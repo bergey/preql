@@ -2,8 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Connection
+import           FromSql
 import           Internal (Name, mkName)
 import           Printer
+import           Query
 import           Syntax
 
 import           Control.Concurrent.MVar
@@ -21,14 +23,18 @@ main = defaultMain $ testGroup "crispy-broccoli"
     ]
 
 integration :: TestTree
-integration = testGroup "integration" [
-    testCase "SELECT integer literal" $ do
+integration = testGroup "integration"
+    [ testCase "SELECT integer literal, raw PQ" $ do
         conn <- connect database
         connRaw <- takeMVar (connectionHandle conn)
         Just result <- PQ.exec connRaw "SELECT 2;"
         assertEqual "ntuples" (PQ.Row 1) =<< PQ.ntuples result
         assertEqual "nfields" (PQ.Col 1) =<< PQ.nfields result
+        assertEqual "oid" (PQ.Oid 23) =<< PQ.ftype result (PQ.Col 0) -- int4
         assertEqual "value" (Just "2") =<< PQ.getvalue result (PQ.Row 0) (PQ.Col 0)
+    , testCase "runQuery" $ do
+        conn <- connect database
+        assertEqual "" (Right 2) =<< runQuery conn int32 "SELECT 2"
     ]
 
 database :: ConnectInfo

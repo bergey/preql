@@ -1,11 +1,13 @@
-{ mkDerivation, base, stdenv, tasty, tasty-hunit, tasty-quickcheck
-, text
+{ mkDerivation, base, postgresql-libpq, postgresql-simple, stdenv
+, tasty, tasty-hunit, tasty-quickcheck, text
 }:
 mkDerivation {
   pname = "crispy-broccoli";
   version = "0.1.0.0";
   src = ./.;
-  libraryHaskellDepends = [ base text ];
+  libraryHaskellDepends = [
+    base postgresql-libpq postgresql-simple text
+  ];
   testHaskellDepends = [
     base tasty tasty-hunit tasty-quickcheck text
   ];

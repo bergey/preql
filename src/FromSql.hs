@@ -1,8 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveFunctor #-}
 -- | Decoding values from Postgres wire format to Haskell.
 
 module FromSql where
 
+import           Control.Applicative
 import           Control.Applicative.Free
 import           Control.Monad.Trans.Except
 import           Data.Attoparsec.ByteString (Parser)
@@ -10,6 +12,7 @@ import           Data.ByteString (ByteString)
 import           Data.IORef
 import           Data.Int
 
+import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID
 import qualified Data.Attoparsec.ByteString as P
 import qualified Data.Attoparsec.ByteString.Char8 as P8
 import qualified Data.ByteString as BS
@@ -49,6 +52,25 @@ checkTypes (SqlDecoder oids _) result = do
                 then go (succ col) rest
                 else return False
 
+field :: PQ.Oid -> Parser a -> SqlDecoder a
+field oid parser = SqlDecoder [oid] (liftAp parser)
 
 int32 :: SqlDecoder Int32
-int32 = SqlDecoder [PQ.Oid 23] (liftAp P8.decimal)
+int32 = field OID.int4Oid P8.decimal
+
+int64 :: SqlDecoder Int64
+int64 = field OID.int8Oid P8.decimal
+
+float32 :: SqlDecoder Float
+float32 = field OID.float4Oid (realToFrac <$> pg_double)
+
+float64 :: SqlDecoder Double
+float64 = field OID.float8Oid pg_double
+
+-- from Database.PostgreSQL.Simple.FromField
+pg_double :: Parser Double
+pg_double
+    =   (P.string "NaN"       *> pure ( 0 / 0))
+    <|> (P.string "Infinity"  *> pure ( 1 / 0))
+    <|> (P.string "-Infinity" *> pure (-1 / 0))
+    <|> P8.double

@@ -27,11 +27,10 @@ newtype Query params result = Query ByteString
 
 data QueryAndParams params result = Q (Query params result) params
 
--- TODO type class variant
 -- TODO handle params
 -- TODO handle multiple columns
-runQuery :: Connection -> SqlDecoder r -> Query () r -> IO (Either String r)
-runQuery conn dec (Query query) =
+runQueryWith :: SqlDecoder r -> Connection -> Query () r -> IO (Either String r)
+runQueryWith dec conn (Query query) =
     withMVar (connectionHandle conn) $ \connRaw -> do
         Just result <- PQ.exec connRaw query
         ok <- checkTypes dec result
@@ -39,3 +38,6 @@ runQuery conn dec (Query query) =
             -- then (parse dec <=< emptyValue) <$> PQ.getvalue result (PQ.Row 0) (PQ.Col 0)
             then runDecoder dec result (PQ.Row 0)
             else return (Left "Types do not match")
+
+runQuery :: FromSql r => Connection -> Query () r -> IO (Either String r)
+runQuery = runQueryWith fromSql

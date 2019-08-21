@@ -1,3 +1,5 @@
+{-# HLINT ignore "Use camelCase" #-}
+
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveFunctor #-}
 -- | Decoding values from Postgres wire format to Haskell.
@@ -9,6 +11,7 @@ import           Control.Applicative.Free
 import           Control.Monad.Trans.Except
 import           Data.Attoparsec.ByteString (Parser)
 import           Data.ByteString (ByteString)
+import           Data.Functor
 import           Data.IORef
 import           Data.Int
 
@@ -52,25 +55,37 @@ checkTypes (SqlDecoder oids _) result = do
                 then go (succ col) rest
                 else return False
 
+class FromSql a where
+    fromSql :: SqlDecoder a
+
 field :: PQ.Oid -> Parser a -> SqlDecoder a
 field oid parser = SqlDecoder [oid] (liftAp parser)
 
-int32 :: SqlDecoder Int32
-int32 = field OID.int4Oid P8.decimal
+instance FromSql Int32 where
+    fromSql = field OID.int4Oid P8.decimal
 
-int64 :: SqlDecoder Int64
-int64 = field OID.int8Oid P8.decimal
+instance FromSql Int64  where
+    fromSql = field OID.int8Oid P8.decimal
 
-float32 :: SqlDecoder Float
-float32 = field OID.float4Oid (realToFrac <$> pg_double)
+instance FromSql Float where
+    fromSql = field OID.float4Oid (realToFrac <$> pg_double)
 
-float64 :: SqlDecoder Double
-float64 = field OID.float8Oid pg_double
+instance FromSql Double where
+    fromSql = field OID.float8Oid pg_double
+
+instance (FromSql a, FromSql b) => FromSql (a, b) where
+    fromSql = (,) <$> fromSql <*> fromSql
+
+instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
+    fromSql = (,,) <$> fromSql <*> fromSql <*> fromSql
+
+-- TODO more tuple instances
+-- TODO TH to make this less tedious
 
 -- from Database.PostgreSQL.Simple.FromField
 pg_double :: Parser Double
 pg_double
-    =   (P.string "NaN"       *> pure ( 0 / 0))
-    <|> (P.string "Infinity"  *> pure ( 1 / 0))
-    <|> (P.string "-Infinity" *> pure (-1 / 0))
+    =   (P.string "NaN"       $> ( 0 / 0))
+    <|> (P.string "Infinity"  $> ( 1 / 0))
+    <|> (P.string "-Infinity" $> (-1 / 0))
     <|> P8.double

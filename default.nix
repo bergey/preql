@@ -1,4 +1,4 @@
-{ mkDerivation, attoparsec, base, bytestring, free
+{ mkDerivation, attoparsec, base, bytestring, contravariant, free
 , postgresql-libpq, postgresql-simple, stdenv, tasty, tasty-hunit
 , tasty-quickcheck, text, transformers, vector
 }:
@@ -7,8 +7,8 @@ mkDerivation {
   version = "0.1.0.0";
   src = ./.;
   libraryHaskellDepends = [
-    attoparsec base bytestring free postgresql-libpq postgresql-simple
-    text transformers vector
+    attoparsec base bytestring contravariant free postgresql-libpq
+    postgresql-simple text transformers vector
   ];
   testHaskellDepends = [
     base postgresql-libpq tasty tasty-hunit tasty-quickcheck text

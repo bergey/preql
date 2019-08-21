@@ -8,6 +8,7 @@ import           Connection
 
 import           Control.Concurrent.MVar
 import           Control.Monad
+import           Control.Monad.Trans.Except
 import           Data.ByteString (ByteString)
 import           Data.String (IsString)
 
@@ -28,16 +29,15 @@ newtype Query params result = Query ByteString
 data QueryAndParams params result = Q (Query params result) params
 
 -- TODO handle params
--- TODO handle multiple columns
-runQueryWith :: SqlDecoder r -> Connection -> Query () r -> IO (Either String r)
+runQueryWith :: SqlDecoder r -> Connection -> Query () r -> IO (Either String [r])
 runQueryWith dec conn (Query query) =
     withMVar (connectionHandle conn) $ \connRaw -> do
         Just result <- PQ.exec connRaw query
+        ntuples <- PQ.ntuples result
         ok <- checkTypes dec result
         if ok
-            -- then (parse dec <=< emptyValue) <$> PQ.getvalue result (PQ.Row 0) (PQ.Col 0)
-            then runDecoder dec result (PQ.Row 0)
+            then runExceptT $ traverse (runDecoder dec result) [0 .. ntuples - 1]
             else return (Left "Types do not match")
 
-runQuery :: FromSql r => Connection -> Query () r -> IO (Either String r)
+runQuery :: FromSql r => Connection -> Query () r -> IO (Either String [r])
 runQuery = runQueryWith fromSql

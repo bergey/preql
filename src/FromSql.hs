@@ -8,6 +8,7 @@ module FromSql where
 
 import           Control.Applicative
 import           Control.Applicative.Free
+import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Data.Attoparsec.ByteString (Parser)
 import           Data.ByteString (ByteString)
@@ -28,10 +29,10 @@ instance Applicative SqlDecoder where
     pure a = SqlDecoder [] (pure a)
     SqlDecoder t1 p1 <*> SqlDecoder t2 p2 = SqlDecoder (t1 <> t2) (p1 <*> p2)
 
-runDecoder :: SqlDecoder a -> PQ.Result -> PQ.Row -> IO (Either String a)
+runDecoder :: SqlDecoder a -> PQ.Result -> PQ.Row -> ExceptT String IO a
 runDecoder (SqlDecoder _ parsers) result row = do
-    columnRef <- newIORef (PQ.Col 0)
-    runExceptT $ runAp (parseFields result row columnRef) parsers
+    columnRef <- lift $ newIORef (PQ.Col 0)
+    runAp (parseFields result row columnRef) parsers
 
 parseFields :: PQ.Result -> PQ.Row -> IORef PQ.Column -> Parser a -> ExceptT String IO a
 parseFields result currentRow columnRef parser = ExceptT $ do

@@ -37,16 +37,16 @@ integration = testGroup "integration"
         assertEqual "value" (Just "2") =<< PQ.getvalue result (PQ.Row 0) (PQ.Col 0)
     , testCase "runQuery" $ do
         conn <- connect database
-        assertEqual "" (Right [2]) =<< runQuery @Int32 conn  "SELECT 2"
+        assertEqual "" (Right [2]) =<< runQuery @() @Int32 conn  "SELECT 2" ()
     , testCase "schema type mismatch causes runtime error" $ do
         conn <- connect database
-        assertBool "" . isLeft =<< runQuery @Int32 conn "SELECT 2.5"
+        assertBool "" . isLeft =<< runQuery @() @Int32 conn "SELECT 2.5" ()
     , testCase "ignore later columns" $ do
         conn <- connect database
-        assertEqual "" (Right [2]) =<< runQuery @Int32 conn "SELECT 2, 3"
+        assertEqual "" (Right [2]) =<< runQuery @() @Int32 conn "SELECT 2, 3" ()
     , testCase "parse a pair" $ do
         conn <- connect database
-        assertEqual "" (Right [(2, 3)]) =<< runQuery @(Int32, Int32) conn  "SELECT 2, 3"
+        assertEqual "" (Right [(2, 3)]) =<< runQuery @() @(Int32, Int32) conn "SELECT 2, 3" ()
     ]
 
 database :: ConnectInfo

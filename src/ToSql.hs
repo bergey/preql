@@ -32,6 +32,13 @@ instance Divisible SqlEncoder where
       SqlEncoder cs = contramap (snd . pair) fc
     conquer = SqlEncoder [] -- identity, does not actually encode any fields
 
+runFieldEncoder :: p -> FieldEncoder p -> (PQ.Oid, ByteString, PQ.Format)
+runFieldEncoder p (FieldEncoder oid enc) = (oid, enc p, PQ.Text)
+
+-- TODO think harder about Maybe
+runEncoder :: SqlEncoder p -> p -> [Maybe (PQ.Oid, ByteString, PQ.Format)]
+runEncoder (SqlEncoder fields) p = map (Just . runFieldEncoder p) fields
+
 class ToSql a where
     toSql :: SqlEncoder a
 

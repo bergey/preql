@@ -4,6 +4,7 @@
 module Query where
 
 import           FromSql
+import           ToSql
 import           Connection
 
 import           Control.Concurrent.MVar
@@ -28,16 +29,16 @@ newtype Query params result = Query ByteString
 
 data QueryAndParams params result = Q (Query params result) params
 
--- TODO handle params
-runQueryWith :: SqlDecoder r -> Connection -> Query () r -> IO (Either String [r])
-runQueryWith dec conn (Query query) =
+runQueryWith :: SqlEncoder p -> SqlDecoder r -> Connection -> Query p r -> p -> IO (Either String [r])
+runQueryWith enc dec conn (Query query) params =
     withMVar (connectionHandle conn) $ \connRaw -> do
-        Just result <- PQ.exec connRaw query
+        -- TODO promote Nothing to a suitable error
+        Just result <- PQ.execParams connRaw query (runEncoder enc params) PQ.Text
         ntuples <- PQ.ntuples result
         ok <- checkTypes dec result
         if ok
             then runExceptT $ traverse (runDecoder dec result) [0 .. ntuples - 1]
             else return (Left "Types do not match")
 
-runQuery :: FromSql r => Connection -> Query () r -> IO (Either String [r])
-runQuery = runQueryWith fromSql
+runQuery :: (ToSql p, FromSql r) => Connection -> Query p r -> p -> IO (Either String [r])
+runQuery = runQueryWith toSql fromSql

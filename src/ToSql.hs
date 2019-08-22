@@ -2,12 +2,18 @@
 
 module ToSql where
 
+import           Data.ByteString (ByteString)
+import           Data.ByteString.Builder (Builder)
 import           Data.Functor.Contravariant
 import           Data.Functor.Contravariant.Divisible
-import           Data.ByteString (ByteString)
+import           Data.Int
+import           Database.PostgreSQL.Simple.ToField (inQuotes)
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Builder as B
 import qualified Database.PostgreSQL.LibPQ as PQ
+import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID
 
 data FieldEncoder a = FieldEncoder PQ.Oid (a -> ByteString)
 
@@ -29,6 +35,9 @@ instance Divisible SqlEncoder where
 class ToSql a where
     toSql :: SqlEncoder a
 
+instance ToSql () where
+    toSql = conquer
+
 instance (ToSql a, ToSql b) => ToSql (a, b) where
     toSql = divided toSql toSql
 instance (ToSql a, ToSql b, ToSql c) => ToSql (a, b, c) where
@@ -49,3 +58,29 @@ instance (ToSql a, ToSql b, ToSql c, ToSql d, ToSql e, ToSql f, ToSql g, ToSql h
     toSql = divide (\(a, b, c, d, e, f, g, h, i, j) -> (a, (b, c, d, e, f, g, h, i, j))) toSql toSql
 instance (ToSql a, ToSql b, ToSql c, ToSql d, ToSql e, ToSql f, ToSql g, ToSql h, ToSql i, ToSql j, ToSql k) => ToSql (a, b, c, d, e, f, g, h, i, j, k) where
     toSql = divide (\(a, b, c, d, e, f, g, h, i, j, k) -> (a, (b, c, d, e, f, g, h, i, j, k))) toSql toSql
+
+field :: PQ.Oid -> (a -> ByteString) -> SqlEncoder a
+field oid enc = SqlEncoder [FieldEncoder oid enc]
+
+builder :: PQ.Oid -> (a -> Builder) -> SqlEncoder a
+builder oid enc = field oid (BSL.toStrict . B.toLazyByteString . enc)
+
+instance ToSql Int32 where
+    toSql = builder OID.int4Oid B.int32Dec -- Text format
+
+instance ToSql Int64 where
+    toSql = builder OID.int8Oid B.int64Dec
+
+instance ToSql Float where
+    toSql = builder OID.float4Oid (\v ->
+        if isNaN v || isInfinite v
+        then inQuotes (B.floatDec v)
+        else B.floatDec v
+        )
+
+instance ToSql Double where
+    toSql = builder OID.float8Oid (\v ->
+        if isNaN v || isInfinite v
+        then inQuotes (B.doubleDec v)
+        else B.doubleDec v
+        )

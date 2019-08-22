@@ -47,6 +47,21 @@ integration = testGroup "integration"
     , testCase "parse a pair" $ do
         conn <- connect database
         assertEqual "" (Right [(2, 3)]) =<< runQuery @() @(Int32, Int32) conn "SELECT 2, 3" ()
+    , testCase "add Int32 parameters" $ do
+        conn <- connect database
+        assertEqual "" (Right [3]) =<< runQuery @(Int32, Int32) @Int32 conn "SELECT $1 + $2" (1, 2)
+    , testCase "add Int64 parameters" $ do
+        conn <- connect database
+        assertEqual "" (Right [3]) =<< runQuery @(Int64, Int64) @Int64 conn "SELECT $1 + $2" (1, 2)
+    , testCase "add Float32 parameters" $ do
+        conn <- connect database
+        assertEqual "" (Right [3]) =<< runQuery @(Float, Float) @Float conn "SELECT $1 + $2" (1, 2)
+    , testCase "add Float64 parameters" $ do
+        conn <- connect database
+        assertEqual "" (Right [3]) =<< runQuery @(Double, Double) @Double conn "SELECT $1 + $2" (1, 2)
+    , testCase "add 3 Int32 parameters" $ do
+        conn <- connect database
+        assertEqual "" (Right [6]) =<< runQuery @(Int32, Int32, Int32) @Int32 conn "SELECT $1 + $2 + $3" (1, 2, 3)
     ]
 
 database :: ConnectInfo

@@ -18,7 +18,7 @@ let
 
     variant = if doBenchmark then pkgs.haskell.lib.doBenchmark else pkgs.lib.id;
 
-    drv = variant (haskellPackages.callPackage f {});
+    drv = variant (pkgs.haskell.lib.dontCheck (haskellPackages.callPackage f {}));
 
 in
 

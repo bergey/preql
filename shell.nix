@@ -18,8 +18,14 @@ let
 
     variant = if doBenchmark then pkgs.haskell.lib.doBenchmark else pkgs.lib.id;
 
-    drv = variant (pkgs.haskell.lib.dontCheck (haskellPackages.callPackage f {}));
+    drv = variant (haskellPackages.callPackage f {});
 
 in
 
-    if pkgs.lib.inNixShell then drv.env else drv
+    if !pkgs.lib.inNixShell then pkgs.haskell.lib.dontCheck drv else
+    pkgs.stdenv.mkDerivation {
+        name = "haskell-env";
+        buildInputs = drv.env.nativeBuildInputs ++ [
+        haskellPackages.cabal-install
+        ];
+    }

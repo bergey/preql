@@ -1,0 +1,32 @@
+spec-version: 0.30.0
+name: crispy-broccoli
+version: 0.1
+synopsis: experiments with SQL
+github: bergey/crispy-broccoli
+author: Daniel Bergey
+maintainer: bergey@teallabs.org
+
+library:
+  source-dirs: [src]
+
+tests:
+  tests:
+    source-dirs: test
+    main: Test.hs
+    dependencies:
+      - tasty
+      - tasty-hunit
+      - tasty-quickcheck
+      - crispy-broccoli
+
+dependencies:
+    - attoparsec
+    - base
+    - bytestring
+    - contravariant
+    - free
+    - postgresql-libpq
+    - postgresql-simple
+    - text
+    - transformers
+    - vector

@@ -2,10 +2,39 @@
 
 Set Warnings "-notation-overridden,-parsing".
 
+(* Model Monoid & Applicative in general *)
+
+Inductive MonoidDict (M : Type) :=
+| monoid_dict : M -> (M -> M -> M) -> MonoidDict M.
+Arguments monoid_dict {M} _ _.
+
+Definition MonoidLaws {M : Type} (dict : MonoidDict M) :=
+  match dict with
+  | monoid_dict mempty append =>
+    forall (m : M), append mempty m = m (* left identity *)
+    /\ forall (m : M), append m mempty = m (* right identity *)
+    /\  forall (a  b c : M), append a (append b c) = append (append a b) c (* associativity *)
+end.
+
+Definition Pure F := forall A, A -> F A.
+Definition App F := forall A B, F (A -> B) -> F A -> F B.
+Definition ApplicativeDict F := (Pure F, App F).
+
+Definition ApplicativeIdentity {F : Type->Type} (dict : ApplicativeDict F) :=
+  match dict with
+  | (pure, app) => forall A, app (pure identity) a = a
+end.
+
+
+
+(* The Monoidal type generalizes SqlDecoder, substituting any Monoid M
+for the [Text], and any Applicative F for the SqlParser. *)
+
 Inductive Monoidal (M : Type) (F : Type -> Type) (A : Type) : Type := 
 | monoidal : M -> (F A) -> Monoidal M F A.
 
 Arguments monoidal {M} {F} {A} _ _.
+
 
 Definition pure_monoidal {M : Type} {F : Type -> Type} { A : Type }
     (mempty : M) (pure_f : forall A, A -> F A) (a : A) : Monoidal M F A :=

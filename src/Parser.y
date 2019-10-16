@@ -9,6 +9,7 @@ import Internal (mkName)
 %name parse
 %tokentype { L.Token }
 %error { parseError }
+%monad { Either String }
 
 %token
     delete { L.Delete }
@@ -37,6 +38,6 @@ Expr
 
 
 {
-parseError :: [L.Token] -> a
-parseError _ = error "Parse error"
+parseError :: [L.Token] -> Either String a
+parseError _ = Left "Parse error"
 }

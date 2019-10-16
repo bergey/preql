@@ -121,7 +121,13 @@ parser = testGroup "parser"
           { table = mkName "taffy"
           , conditions = Just (Op Eq (mkName "flavor") (Lit (T"blueberry")))
           })
+    , testParse "INSERT INTO users (email) VALUES ('bergey@teallabs.org')"
+        (QI Insert
+            { table = mkName "users"
+            , columns = mkName "email" :| []
+            , values = T "bergey@teallabs.org" :| []
+            })
     ]
 
 testParse query expected = testCase query $
-    assertEqual "" expected (parse (alexScanTokens query))
+    assertEqual "" (Right expected) (parse (alexScanTokens query))

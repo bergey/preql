@@ -116,7 +116,7 @@ parser :: TestTree
 parser = testGroup "parser"
     [ testParse "DELETE FROM taffy"
         (QD (Delete (mkName "taffy") Nothing))
-    , testParse "DELETE FROM taffy WHERE flavor = 'blueberry'"
+    , testParse "dEleTe FROM taffy WHERE flavor = 'blueberry'"
       (QD Delete
           { table = mkName "taffy"
           , conditions = Just (Op Eq (mkName "flavor") (Lit (T"blueberry")))

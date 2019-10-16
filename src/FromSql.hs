@@ -1,7 +1,7 @@
 {-# HLINT ignore "Use camelCase" #-}
 
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveFunctor #-}
 -- | Decoding values from Postgres wire format to Haskell.
 
 module FromSql where
@@ -10,17 +10,17 @@ import           Control.Applicative
 import           Control.Applicative.Free
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
-import           Data.Attoparsec.ByteString (Parser)
-import           Data.ByteString (ByteString)
+import           Data.Attoparsec.ByteString                 (Parser)
+import           Data.ByteString                            (ByteString)
 import           Data.Functor
-import           Data.IORef
 import           Data.Int
+import           Data.IORef
 
+import qualified Data.Attoparsec.ByteString                 as P
+import qualified Data.Attoparsec.ByteString.Char8           as P8
+import qualified Data.ByteString                            as BS
+import qualified Database.PostgreSQL.LibPQ                  as PQ
 import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID
-import qualified Data.Attoparsec.ByteString as P
-import qualified Data.Attoparsec.ByteString.Char8 as P8
-import qualified Data.ByteString as BS
-import qualified Database.PostgreSQL.LibPQ as PQ
 
 data SqlDecoder a = SqlDecoder [PQ.Oid] (Ap Parser a)
     deriving Functor

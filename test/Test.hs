@@ -1,12 +1,12 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE TypeApplications         #-}
 
 import           Connection
 import           FromSql
+import           Internal                  (Name, mkName)
+import           Lex                       (alexScanTokens)
 import           Parser
-import           Internal (Name, mkName)
-import           Lex (alexScanTokens)
 import           Printer
 import           Query
 import           Syntax
@@ -14,12 +14,12 @@ import           Syntax
 import           Control.Concurrent.MVar
 import           Data.Either
 import           Data.Int
-import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.List.NonEmpty        (NonEmpty (..))
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
+import qualified Data.List.NonEmpty        as NE
+import qualified Data.Text                 as T
 import qualified Database.PostgreSQL.LibPQ as PQ
 
 main :: IO ()

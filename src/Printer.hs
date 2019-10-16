@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 -- | Print the types in Syntax as valid SQL.  The emphasis is on
 -- queries to send to the database, not on legibilty; no extra whitespace is introduced.
@@ -10,14 +10,14 @@ module Printer where
 import           Internal
 import           Syntax
 
-import           Data.Foldable (toList)
+import           Data.Foldable                    (toList)
 import           Data.List
 
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Builder as B
-import qualified Data.Text.Lazy.Builder.Int as B
+import qualified Data.List.NonEmpty               as NE
+import qualified Data.Text                        as T
+import qualified Data.Text.Lazy                   as TL
+import qualified Data.Text.Lazy.Builder           as B
+import qualified Data.Text.Lazy.Builder.Int       as B
 import qualified Data.Text.Lazy.Builder.RealFloat as B
 
 quote :: B.Builder -> B.Builder
@@ -30,10 +30,10 @@ instance FormatSql Name where
     fmt = B.fromText . getName
 
 instance FormatSql Literal where
-    fmt (I i) = B.decimal i
-    fmt (F x) = B.realFloat x
-    fmt (T t) = quote (B.fromText t)
-    fmt (B True) = "true"
+    fmt (I i)     = B.decimal i
+    fmt (F x)     = B.realFloat x
+    fmt (T t)     = quote (B.fromText t)
+    fmt (B True)  = "true"
     fmt (B False) = "false"
 
 instance FormatSql Query where
@@ -53,7 +53,7 @@ instance FormatSql Insert where
 instance FormatSql Delete where
     fmt Delete{table, conditions} = "DELETE FROM " <> fmt table <> wh where
       wh = case conditions of
-          Nothing -> ""
+          Nothing         -> ""
           Just conditions -> " WHERE " <> fmt conditions
 
 instance FormatSql Setting where
@@ -73,14 +73,14 @@ instance FormatSql Condition where
     fmt (Op op column value) = fmt column <> " " <> fmt op <> " " <> fmt value
 
 instance FormatSql Expr where
-    fmt (Lit lit) = fmt lit
+    fmt (Lit lit)  = fmt lit
     fmt (Var name) = fmt name
 
 instance FormatSql Op where
     fmt op = case op of
-        Eq -> "="
+        Eq        -> "="
         Syntax.LT -> "<"
-        LTE -> "<="
+        LTE       -> "<="
         Syntax.GT -> ">"
-        GTE -> ">="
-        NEq -> "!="
+        GTE       -> ">="
+        NEq       -> "!="

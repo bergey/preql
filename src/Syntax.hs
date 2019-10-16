@@ -7,9 +7,9 @@ module Syntax where
 import           Internal
 
 import           Data.List.NonEmpty (NonEmpty)
-import           Data.Text (Text)
+import           Data.Text          (Text)
 
-import qualified Data.Text as T
+import qualified Data.Text          as T
 
 data Literal = I !Int | F !Double | T !Text | B !Bool
     deriving (Show, Eq)
@@ -22,14 +22,14 @@ data Query = QI !Insert | QD !Delete | QU !Update | QS !Select
 -- * single row
 -- * no @ON CONFLICT@
 data Insert = Insert
-    { table :: !Name
+    { table   :: !Name
     , columns :: NonEmpty Name
-    , values :: NonEmpty Literal -- TODO enforce matched lengths?
+    , values  :: NonEmpty Literal -- TODO enforce matched lengths?
     } deriving (Show, Eq)
 
 -- | Queries of the form @DELETE FROM table WHERE conditions@.
 data Delete = Delete
-    { table :: !Name
+    { table      :: !Name
     , conditions :: Maybe Condition
     } deriving (Show, Eq)
 
@@ -40,15 +40,15 @@ data Setting = Setting !Name !Literal
 -- | Queries of the form @UPDATE table SET settings WHERE conditions@.  Where each
 -- @Setting name literal@ is like SQL @name = literal@.
 data Update = Update
-    { table :: !Name
-    , settings :: NonEmpty Setting
+    { table      :: !Name
+    , settings   :: NonEmpty Setting
     , conditions :: [Condition]
     } deriving (Show, Eq)
 
 -- | Queries of the form @SELECT columns FROM table WHERE conditions@.
 data Select = Select
-    { table :: !Name
-    , columns :: NonEmpty Name
+    { table      :: !Name
+    , columns    :: NonEmpty Name
     , conditions :: [Condition]
     } deriving (Show, Eq)
 

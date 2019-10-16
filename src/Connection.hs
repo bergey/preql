@@ -5,4 +5,4 @@ module Connection
     , connect, connectPostgreSQL
     ) where
 
-import Database.PostgreSQL.Simple.Internal
+import           Database.PostgreSQL.Simple.Internal

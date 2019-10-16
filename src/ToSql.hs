@@ -2,17 +2,17 @@
 
 module ToSql where
 
-import           Data.ByteString (ByteString)
-import           Data.ByteString.Builder (Builder)
+import           Data.ByteString                            (ByteString)
+import           Data.ByteString.Builder                    (Builder)
 import           Data.Functor.Contravariant
 import           Data.Functor.Contravariant.Divisible
 import           Data.Int
-import           Database.PostgreSQL.Simple.ToField (inQuotes)
+import           Database.PostgreSQL.Simple.ToField         (inQuotes)
 
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Builder as B
-import qualified Database.PostgreSQL.LibPQ as PQ
+import qualified Data.ByteString                            as BS
+import qualified Data.ByteString.Builder                    as B
+import qualified Data.ByteString.Lazy                       as BSL
+import qualified Database.PostgreSQL.LibPQ                  as PQ
 import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID
 
 data FieldEncoder a = FieldEncoder PQ.Oid (a -> ByteString)

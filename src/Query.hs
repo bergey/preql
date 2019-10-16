@@ -3,17 +3,17 @@
 
 module Query where
 
+import           Connection
 import           FromSql
 import           ToSql
-import           Connection
 
 import           Control.Concurrent.MVar
 import           Control.Monad
 import           Control.Monad.Trans.Except
-import           Data.ByteString (ByteString)
-import           Data.String (IsString)
+import           Data.ByteString            (ByteString)
+import           Data.String                (IsString)
 
-import qualified Database.PostgreSQL.LibPQ as PQ
+import qualified Database.PostgreSQL.LibPQ  as PQ
 
 -- | A @Query@ is a string ready to be passed to Postgres, with
 -- phantom type parameters describing its parameters and result.

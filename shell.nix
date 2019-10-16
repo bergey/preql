@@ -28,5 +28,6 @@ in
         buildInputs = drv.env.nativeBuildInputs ++ [
         haskellPackages.cabal-install
         pkgs.ghcid
+        pkgs.stylish-haskell
         ];
     }

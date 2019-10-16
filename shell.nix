@@ -27,5 +27,6 @@ in
         name = "haskell-env";
         buildInputs = drv.env.nativeBuildInputs ++ [
         haskellPackages.cabal-install
+        pkgs.ghcid
         ];
     }

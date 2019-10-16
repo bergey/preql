@@ -42,10 +42,16 @@ $z = [zZ]
 tokens :-
 
     $white+            ;
-    $s $e $l $e $c $t { \_ _ -> Select }
     $d $e $l $e $t $e { \_ _ -> Delete }
+    $s $e $l $e $c $t { \_ _ -> Select }
+    $i $n $s $e $r $t { \_ _ -> Insert }
     $f $r $o $m { \_ _ -> From }
     $w $h $e $r $e { \_ _ -> Where }
+    $i $n $t $o { \_ _ -> Into }
+    $v $a $l $u $e $s { \_ _ -> Values }
+    "(" { \_ _ -> LParen }
+    "," { \_ _ -> Comma }
+    ")" { \_ _ -> RParen }
     "=" { \_ _ -> Equals }
     "<>" { \_ _ -> NotEquals }
     "!=" { \_ _ -> NotEquals }
@@ -56,8 +62,9 @@ tokens :-
 {
 
 data Token = Delete | Select | Insert
-     | From | Where
+     | From | Where | Into | Values
      | Name Text | String Text
+     | LParen | RParen | Comma
      | Equals | NotEquals
      deriving Show
 

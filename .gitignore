@@ -3,3 +3,4 @@
 /result
 /crispy-broccoli.cabal
 /dist-newstyle
+*_flymake.hs

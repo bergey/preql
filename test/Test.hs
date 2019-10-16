@@ -5,6 +5,7 @@
 import           Connection
 import           FromSql
 import           Internal (Name, mkName)
+import           Parser
 import           Printer
 import           Query
 import           Syntax
@@ -21,7 +22,8 @@ import qualified Data.List.NonEmpty as NE
 
 main :: IO ()
 main = defaultMain $ testGroup "crispy-broccoli"
-    [ syntax
+    [ parser
+    , printer
     , integration
     ]
 
@@ -73,9 +75,9 @@ database = ConnectInfo
     , connectPassword = ""
     }
 
--- | Tests of the SQL syntax parser
-syntax :: TestTree
-syntax = testGroup "parser" [
+-- | Tests of the SQL syntax printer
+printer :: TestTree
+printer = testGroup "printer" [
     testCase "DELETE, no condition" $
         assertEqual ""
             "DELETE FROM taffy"
@@ -106,4 +108,12 @@ syntax = testGroup "parser" [
                  , columns = mkName "email" :| [ mkName "first_name" ]
                  , values = T "bergey@teallabs.org" :| [ T "Daniel" ]
                  }))
+    ]
+
+parser :: TestTree
+parser = testGroup "parser" [
+    testCase "DELETE, no condition" $
+        assertEqual ""
+        (Right (QD (Delete (mkName "taffy") Nothing)))
+        (parse "DELETE FROM taffy")
     ]

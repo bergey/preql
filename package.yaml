@@ -19,8 +19,12 @@ tests:
       - tasty-quickcheck
       - crispy-broccoli
 
+build-tools:
+  - alex
+      
 dependencies:
     - attoparsec
+    - array
     - base
     - bytestring
     - contravariant
@@ -30,3 +34,4 @@ dependencies:
     - text
     - transformers
     - vector
+

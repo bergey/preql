@@ -17,6 +17,7 @@ default.nix: package.yaml
 	nix-shell -p cabal2nix --run 'cabal2nix . > default.nix'
 
 ${PROJECT}.cabal: package.yaml
+	find . -name '*_flymake.hs' -delete
 ifeq ("${IN_NIX_SHELL}",)
 	hpack
 else

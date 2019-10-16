@@ -8,22 +8,26 @@ import qualified Data.Text as T
 
 }
 
-%wrapper "basic"
+%wrapper "posn"
 
 $unicodeIds = $printable # [$white \.\;\'\"\(\)]
+$quoted = $printable # [\']
 
 tokens :-
 
     $white+            ;
-    "SELECT" { \_ -> Select }
-    "DELETE" { \_ -> Delete }
-    "FROM" { \_ -> From }
-    $unicodeIds+ { Name . T.pack }
+    "SELECT" { \_ _ -> Select }
+    "DELETE" { \_ _ -> Delete }
+    "FROM" { \_ _ -> From }
+    "WHERE" { \_ _ -> Where }
+    "=" { \_ _ -> Equals }
+    [\'] $quoted* [\'] { \_ -> String . T.pack . init . tail }
+    $unicodeIds+ { \_ -> Name . T.pack }
     
 
 {
 
-data Token = Delete | From | Name Text | Select
+data Token = Delete | From | Name Text | Select | Where | Equals | String Text
      deriving Show
 
 }

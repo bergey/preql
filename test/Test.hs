@@ -17,8 +17,9 @@ import           Data.List.NonEmpty (NonEmpty(..))
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
+import qualified Database.PostgreSQL.LibPQ as PQ
 
 main :: IO ()
 main = defaultMain $ testGroup "crispy-broccoli"
@@ -111,9 +112,17 @@ printer = testGroup "printer" [
     ]
 
 parser :: TestTree
-parser = testGroup "parser" [
-    testCase "DELETE, no condition" $
+parser = testGroup "parser"
+    [ testCase "DELETE, no condition" $
         assertEqual ""
         (Right (QD (Delete (mkName "taffy") Nothing)))
         (parse "DELETE FROM taffy")
+    , testParse "DELETE FROM taffy WHERE flavor = 'blueberry'"
+      (QD Delete
+          { table = mkName "taffy"
+          , conditions = Just (Op Eq (mkName "flavor") (Lit (T"blueberry")))
+          })
     ]
+
+testParse query expected = testCase query $
+    assertEqual "" (Right expected) (parse (T.pack query))

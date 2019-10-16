@@ -21,6 +21,7 @@ tests:
 
 build-tools:
   - alex
+  - happy
       
 dependencies:
     - attoparsec

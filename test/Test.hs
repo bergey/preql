@@ -4,8 +4,9 @@
 
 import           Connection
 import           FromSql
-import           Internal (Name, mkName)
 import           Parser
+import           Internal (Name, mkName)
+import           Lex (alexScanTokens)
 import           Printer
 import           Query
 import           Syntax
@@ -113,10 +114,8 @@ printer = testGroup "printer" [
 
 parser :: TestTree
 parser = testGroup "parser"
-    [ testCase "DELETE, no condition" $
-        assertEqual ""
-        (Right (QD (Delete (mkName "taffy") Nothing)))
-        (parse "DELETE FROM taffy")
+    [ testParse "DELETE FROM taffy"
+        (QD (Delete (mkName "taffy") Nothing))
     , testParse "DELETE FROM taffy WHERE flavor = 'blueberry'"
       (QD Delete
           { table = mkName "taffy"
@@ -125,4 +124,4 @@ parser = testGroup "parser"
     ]
 
 testParse query expected = testCase query $
-    assertEqual "" (Right expected) (parse (T.pack query))
+    assertEqual "" expected (parse (alexScanTokens query))

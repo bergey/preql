@@ -1,7 +1,7 @@
 { mkDerivation, alex, array, attoparsec, base, bytestring
-, contravariant, free, hpack, postgresql-libpq, postgresql-simple
-, stdenv, tasty, tasty-hunit, tasty-quickcheck, text, transformers
-, vector
+, contravariant, free, happy, hpack, postgresql-libpq
+, postgresql-simple, stdenv, tasty, tasty-hunit, tasty-quickcheck
+, text, transformers, vector
 }:
 mkDerivation {
   pname = "crispy-broccoli";
@@ -11,13 +11,13 @@ mkDerivation {
     array attoparsec base bytestring contravariant free
     postgresql-libpq postgresql-simple text transformers vector
   ];
-  libraryToolDepends = [ alex hpack ];
+  libraryToolDepends = [ alex happy hpack ];
   testHaskellDepends = [
     array attoparsec base bytestring contravariant free
     postgresql-libpq postgresql-simple tasty tasty-hunit
     tasty-quickcheck text transformers vector
   ];
-  testToolDepends = [ alex ];
+  testToolDepends = [ alex happy ];
   prePatch = "hpack";
   homepage = "https://github.com/bergey/crispy-broccoli#readme";
   description = "experiments with SQL";

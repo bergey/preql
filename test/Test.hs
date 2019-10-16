@@ -121,6 +121,11 @@ parser = testGroup "parser"
           { table = mkName "taffy"
           , conditions = Just (Op Eq (mkName "flavor") (Lit (T"blueberry")))
           })
+    , testParse "DELETE FROM users WHERE email != 'bergey@teallabs.org'"
+      (QD Delete
+       { table = mkName "users"
+       , conditions = Just (Op NEq (mkName "email") (Lit (T "bergey@teallabs.org")))
+       })
     , testParse "INSERT INTO users (email) VALUES ('bergey@teallabs.org')"
         (QI Insert
             { table = mkName "users"

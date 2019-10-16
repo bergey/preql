@@ -47,13 +47,18 @@ tokens :-
     $f $r $o $m { \_ _ -> From }
     $w $h $e $r $e { \_ _ -> Where }
     "=" { \_ _ -> Equals }
+    "<>" { \_ _ -> NotEquals }
+    "!=" { \_ _ -> NotEquals }
     [\'] $quoted* [\'] { \_ -> String . T.pack . init . tail }
     $unicodeIds+ { \_ -> Name . T.pack }
     
 
 {
 
-data Token = Delete | From | Name Text | Select | Where | Equals | String Text
+data Token = Delete | Select | Insert
+     | From | Where
+     | Name Text | String Text
+     | Equals | NotEquals
      deriving Show
 
 }

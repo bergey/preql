@@ -18,6 +18,7 @@ import Internal (mkName)
     select { L.Select }
     where { L.Where }
     '=' { L.Equals }
+    '!=' { L.NotEquals }
     string { L.String $$ }
 
 %%
@@ -28,7 +29,11 @@ Delete
     : delete from Name where Condition { Delete $3 (Just $5) }
     | delete from Name { Delete $3 Nothing }
 
-Condition : Name '=' Expr { Op Eq $1 $3 }
+Operator
+    : '=' { Eq }
+    | '!=' { NEq }
+
+Condition : Name Operator Expr { Op $2 $1 $3 }
 
 Name : name { mkName $1 }
 

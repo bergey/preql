@@ -10,7 +10,7 @@ import qualified Data.Text as T
 
 %wrapper "posn"
 
-$unicodeIds = $printable # [$white \.\;\'\"\(\)]
+$unicodeIds = $printable # [$white \,\.\;\'\"\(\)]
 $quoted = $printable # [\']
 $a = [aA]
 $b = [bB]

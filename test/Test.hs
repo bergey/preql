@@ -132,6 +132,12 @@ parser = testGroup "parser"
             , columns = mkName "email" :| []
             , values = T "bergey@teallabs.org" :| []
             })
+    , testParse "INSERT INTO addresses (street, country) VALUES ('4 Ames St', 'USA')"
+      (QI Insert
+       { table = "addresses"
+       , columns = "street" :| ["country" ]
+       , values = T "4 Ames St" :| [ T "USA" ]
+       })
     ]
 
 testParse query expected = testCase query $

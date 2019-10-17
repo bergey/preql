@@ -138,6 +138,18 @@ parser = testGroup "parser"
        , columns = "street" :| ["country" ]
        , values = T "4 Ames St" :| [ T "USA" ]
        })
+    , testParse "SELECT name FROM users"
+      (QS Select
+       { table = "users"
+       , columns = "name" :| []
+       , conditions = []
+       })
+    , testParse "SELECT name, email FROM users"
+      (QS Select
+       { table = "users"
+       , columns = "name" :| ["email"]
+       , conditions = []
+       })
     ]
 
 testParse query expected = testCase query $

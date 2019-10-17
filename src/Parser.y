@@ -39,11 +39,15 @@ import qualified Data.List.NonEmpty as NE
 
 Query
     : Delete { QD $1 }
+    | Select { QS $1 }
     | Insert { QI $1 }
 
 Delete
     : delete from Name where Condition { Delete $3 (Just $5) }
     | delete from Name { Delete $3 Nothing }
+
+Select
+    : select NameList from Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = [] } }
 
 Insert : insert into Name '(' NameList ')' values '(' LitList ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }

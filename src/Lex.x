@@ -55,6 +55,12 @@ tokens :-
     "=" { lex Equals }
     "<>" { lex NotEquals }
     "!=" { lex NotEquals }
+    "<" { lex LT }
+    "<=" { lex LTE }
+    ">" { lex GT }
+    "<=" { lex GTE }
+    $l $i $k $e { lex Like }
+    $i $l $i $k $e { lex ILike }
     $a $n $d { lex And }
     $o $r { lex Or }
     [\'] $quoted* [\'] { lex' (String . T.pack . init . tail) }
@@ -70,8 +76,9 @@ data Token = Delete | Select | Insert
      | From | Where | Into | Values
      | Name Text | String Text
      | LParen | RParen | Comma
-     | Equals | NotEquals
-     | And | Or
+     | Equals | NotEquals | LT | LTE | GT | GTE
+     | Like | ILike
+     | And | Or | Not
      | EOF
      deriving Show
 

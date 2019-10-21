@@ -61,5 +61,5 @@ data Condition = Op !Op !Name !Expr
 data Expr = Lit !Literal | Var !Name
     deriving (Show, Eq)
 
-data Op = Eq | LT | LTE | GT | GTE | NEq
+data Op = Eq | LT | LTE | GT | GTE | NEq | Not | Like | ILike
     deriving (Show, Eq)

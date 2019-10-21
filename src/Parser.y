@@ -6,6 +6,7 @@ import Syntax
 import Internal (mkName)
 import Lex (Alex, LocToken(..), Token)
 
+import           Prelude hiding (LT, GT, lex)
 import           Data.List.NonEmpty        (NonEmpty (..))
 
 import qualified Lex as L
@@ -18,6 +19,11 @@ import qualified Data.List.NonEmpty as NE
 %lexer { lexwrap } {  L.LocToken _ L.EOF }
 %error { happyError }
 
+%left '!=' '<=' '>='
+%nonassoc like ilike
+%left '<' '>'
+%right '='
+%right not
 %left and
 %left or
 
@@ -39,6 +45,13 @@ import qualified Data.List.NonEmpty as NE
 
     '=' { LocToken _ L.Equals }
     '!=' { LocToken _ L.NotEquals }
+    '<' { L.LocToken _ L.LT }
+    '>' { L.LocToken _ L.GT }
+    '<=' { L.LocToken _ L.LTE }
+    '>=' { L.LocToken _ L.GTE }
+    not { L.LocToken _ L.Not }
+    like { L.LocToken _ L.Like }
+    ilike { L.LocToken _ L.ILike }
 
     and  { LocToken _ L.And }
     or { LocToken _ L.Or }
@@ -78,6 +91,12 @@ LitList
 Operator
     : '=' { Eq }
     | '!=' { NEq }
+    | '<' { LT }
+    | '>' { GT }
+    | '<=' { LTE }
+    | '>=' { GTE }
+    | like { Like }
+    | ilike { ILike }
 
 Condition
     : Name Operator Expr { Op $2 $1 $3 }
@@ -94,6 +113,8 @@ Expr
 Literal : string { T $1 }
 
 {
+
+-- from https://github.com/dagit/happy-plus-alex/blob/master/src/Parser.y
 
 lexwrap :: (L.LocToken -> Alex a) -> Alex a
 lexwrap = (L.alexMonadScan' >>=)

@@ -160,7 +160,23 @@ parser = testGroup "parser"
        { table = "users"
        , columns = "name" :| ["email"]
        , conditions = Just (Or (Op Eq "name" (Lit (T "Daniel"))) (Op Eq "name" (Lit (T "Bergey"))))
-       })]
+       })
+    , testParse "SELECT name FROM users WHERE age = 35"
+        -- We currently parse integers & decimals all to Double
+        -- Just test that both parser rules work
+      (QS Select
+       { table = "users"
+       , columns = "name" :| []
+       , conditions = Just (Op Eq "age" (Lit (F 35)))
+       })
+    , testParse "SELECT name FROM users WHERE age = 35.5"
+      (QS Select
+       { table = "users"
+       , columns = "name" :| []
+       , conditions = Just (Op Eq "age" (Lit (F 35.5)))
+       })
+    ]
+
 
 
 testParse query expected = testCase query $

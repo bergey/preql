@@ -11,7 +11,9 @@ import qualified Data.Text as T
 %wrapper "monadUserState"
 
 $unicodeIds = $printable # [$white \,\.\;\'\"\(\)]
+$firstLetter = $unicodeIds # [0-9]
 $quoted = $printable # [\']
+$digit = [0-9]
 $a = [aA]
 $b = [bB]
 $c = [cC]
@@ -64,7 +66,9 @@ tokens :-
     $a $n $d { lex And }
     $o $r { lex Or }
     [\'] $quoted* [\'] { lex' (String . T.pack . init . tail) }
-    $unicodeIds+ { lex' (Name . T.pack) }
+    $firstLetter $unicodeIds* { lex' (Name . T.pack) }
+    $digit+ { lex' (Number . read) }
+    $digit+ "." $digit+ { lex' (Number . read) }
     
 
 {
@@ -74,7 +78,7 @@ data LocToken = LocToken AlexPosn Token
 
 data Token = Delete | Select | Insert
      | From | Where | Into | Values
-     | Name Text | String Text
+     | Name Text | String Text | Number Double
      | LParen | RParen | Comma
      | Equals | NotEquals | LT | LTE | GT | GTE
      | Like | ILike

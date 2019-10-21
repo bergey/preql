@@ -42,6 +42,7 @@ import qualified Data.List.NonEmpty as NE
 
     name { LocToken _ (L.Name $$) }
     string { LocToken _ (L.String $$) }
+    number { LocToken _ (L.Number $$) }
 
     '=' { LocToken _ L.Equals }
     '!=' { LocToken _ L.NotEquals }
@@ -110,7 +111,9 @@ Expr
     | Name { Var $1 }
     | '(' Expr ')' { $2 }
 
-Literal : string { T $1 }
+Literal
+        : string { T $1 }
+        | number { F $1 }
 
 {
 

@@ -2,44 +2,46 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Parser where
 
-import qualified Lex as L
 import Syntax
 import Internal (mkName)
+import Lex (Alex, LocToken(..), Token)
 
 import           Data.List.NonEmpty        (NonEmpty (..))
 
+import qualified Lex as L
 import qualified Data.List.NonEmpty as NE
 }
 
 %name parse
-%tokentype { L.Token }
-%error { parseError }
-%monad { Either String }
+%tokentype { L.LocToken }
+%monad { Alex }
+%lexer { lexwrap } {  L.LocToken _ L.EOF }
+%error { happyError }
 
 %left and
 %left or
 
 %token
-    delete { L.Delete }
-    select { L.Select }
-    insert { L.Insert }
+    delete { LocToken _ L.Delete }
+    select { LocToken _ L.Select }
+    insert { LocToken _ L.Insert }
 
-    from { L.From }
-    where { L.Where }
-    into { L.Into }
-    values { L.Values }
-    '(' { L.LParen }
-    ')' { L.RParen }
-    comma { L.Comma }
+    from { LocToken _ L.From }
+    where { LocToken _ L.Where }
+    into { LocToken _ L.Into }
+    values { LocToken _ L.Values }
+    '(' { LocToken _ L.LParen }
+    ')' { LocToken _ L.RParen }
+    comma { LocToken _ L.Comma }
 
-    name { L.Name $$ }
-    string { L.String $$ }
+    name { LocToken _ (L.Name $$) }
+    string { LocToken _ (L.String $$) }
 
-    '=' { L.Equals }
-    '!=' { L.NotEquals }
+    '=' { LocToken _ L.Equals }
+    '!=' { LocToken _ L.NotEquals }
 
-    and  { L.And }
-    or { L.Or }
+    and  { LocToken _ L.And }
+    or { LocToken _ L.Or }
 
 %%
 
@@ -92,6 +94,15 @@ Expr
 Literal : string { T $1 }
 
 {
-parseError :: [L.Token] -> Either String a
-parseError _ = Left "Parse error"
+
+lexwrap :: (L.LocToken -> Alex a) -> Alex a
+lexwrap = (L.alexMonadScan' >>=)
+
+happyError :: L.LocToken -> Alex a
+happyError (L.LocToken p t) =
+  L.alexError' p ("parse error at token '" ++ L.unLex t ++ "'")
+
+parseExp :: FilePath -> String -> Either String Query
+parseExp = L.runAlex' parse
+
 }

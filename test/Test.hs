@@ -5,7 +5,6 @@
 import           Connection
 import           FromSql
 import           Internal                  (Name, mkName)
-import           Lex                       (alexScanTokens)
 import           Parser
 import           Printer
 import           Query
@@ -165,4 +164,4 @@ parser = testGroup "parser"
 
 
 testParse query expected = testCase query $
-    assertEqual "" (Right expected) (parse (alexScanTokens query))
+    assertEqual "" (Right expected) (parseExp "<testcase>" query)

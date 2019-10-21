@@ -77,6 +77,7 @@ Name : name { mkName $1 }
 Expr
     : Literal { Lit $1 }
     | Name { Var $1 }
+    | '(' Expr ')' { $2 }
 
 Literal : string { T $1 }
 

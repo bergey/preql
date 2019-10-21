@@ -10,14 +10,15 @@ module Printer where
 import           Internal
 import           Syntax
 
-import           Data.Foldable                    (toList)
+import           Data.Foldable (toList)
 import           Data.List
+import           Prelude hiding (LT, GT, lex)
 
-import qualified Data.List.NonEmpty               as NE
-import qualified Data.Text                        as T
-import qualified Data.Text.Lazy                   as TL
-import qualified Data.Text.Lazy.Builder           as B
-import qualified Data.Text.Lazy.Builder.Int       as B
+-- import qualified Data.List.NonEmpty as NE
+-- import qualified Data.Text as T
+-- import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as B
+import qualified Data.Text.Lazy.Builder.Int as B
 import qualified Data.Text.Lazy.Builder.RealFloat as B
 
 quote :: B.Builder -> B.Builder
@@ -62,25 +63,51 @@ instance FormatSql Setting where
 instance FormatSql Update where
     fmt Update{table, settings, conditions} =
         "UPDATE " <> fmt table <> " SET " <> commas settings <> wh
-      where wh = if null conditions then "" else "WHERE " <> commas conditions
+      where wh = case conditions of
+                Nothing         -> ""
+                Just conditions -> " WHERE " <> fmt conditions
 
 instance FormatSql Select where
     fmt Select{table, columns, conditions} =
-        "SELECT " <> commas columns <> " FROM " <> fmt table <> wh where
-      wh = if null conditions then "" else "WHERE " <> commas conditions
+        "SELECT " <> commas columns <> " FROM " <> fmt table <> wh
+      where wh = case conditions of
+                Nothing         -> ""
+                Just conditions -> " WHERE " <> fmt conditions
 
 instance FormatSql Condition where
-    fmt (Op op column value) = fmt column <> " " <> fmt op <> " " <> fmt value
+    fmt (Compare op column value) = fmt column <> " " <> fmt op <> " " <> fmt value
+    fmt (Or l r) = "(" <> fmt l <> ") OR (" <> fmt r <> ")"
+    fmt (And l r) = "(" <> fmt l <> ") AND (" <> fmt r <> ")"
 
 instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit
     fmt (Var name) = fmt name
+    fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
+    fmt (Unary op expr) = fmt op <> "(" <> fmt expr <> ")"
 
-instance FormatSql Op where
+instance FormatSql BinOp where
+    fmt op = case op of
+        Mul -> "*"
+        Div -> "/"
+        Add -> "+"
+        Sub -> "-"
+        Exponent -> "^"
+        Comp c -> fmt c
+
+instance FormatSql UnaryOp where
+    fmt op = case op of
+        Negate -> "-"
+        Is -> "IS"
+        IsNull -> "ISNULL"
+        NotNull -> "NOTNULL"
+
+instance FormatSql Compare where
     fmt op = case op of
         Eq        -> "="
-        Syntax.LT -> "<"
+        LT -> "<"
         LTE       -> "<="
-        Syntax.GT -> ">"
+        GT -> ">"
         GTE       -> ">="
         NEq       -> "!="
+        Like -> "LIKE"
+        ILike -> "ILIKE"

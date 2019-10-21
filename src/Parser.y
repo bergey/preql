@@ -100,7 +100,7 @@ Operator
     | ilike { ILike }
 
 Condition
-    : Name Operator Expr { Op $2 $1 $3 }
+    : Name Operator Expr { Compare $2 $1 $3 }
     | Condition and Condition { And $1 $3 }
     | Condition or Condition { Or $1 $3 }
 

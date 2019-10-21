@@ -52,14 +52,22 @@ data Select = Select
     , conditions :: Maybe Condition
     } deriving (Show, Eq)
 
-data Condition = Op !Op !Name !Expr
+-- TODO NOT
+data Condition = Compare !Compare !Name !Expr
     | Or Condition Condition
     | And Condition Condition
     deriving (Show, Eq)
 
--- TODO many more types of expressions
 data Expr = Lit !Literal | Var !Name
+    | BinOp !BinOp !Expr !Expr
+    | Unary !UnaryOp !Expr
     deriving (Show, Eq)
 
-data Op = Eq | LT | LTE | GT | GTE | NEq | Not | Like | ILike
+data BinOp = Mul | Div | Add | Sub | Exponent | Comp !Compare
+    deriving (Show, Eq)
+
+data UnaryOp = Negate | Is | IsNull | NotNull
+    deriving (Show, Eq)
+
+data Compare = Eq | LT | LTE | GT | GTE | NEq |  Like | ILike
     deriving (Show, Eq)

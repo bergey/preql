@@ -91,7 +91,7 @@ printer = testGroup "printer" [
             "DELETE FROM taffy WHERE flavor = 'blueberry'"
             (fmt (QD Delete
                   { table = mkName "taffy"
-                  , conditions = Just (Op Eq (mkName "flavor") (Lit (T"blueberry")))
+                  , conditions = Just (Compare Eq (mkName "flavor") (Lit (T"blueberry")))
                   }))
     , testCase "INSERT, one column" $
         assertEqual ""
@@ -118,12 +118,12 @@ parser = testGroup "parser"
     , testParse "dEleTe FROM taffy WHERE flavor = 'blueberry'"
       (QD Delete
           { table = mkName "taffy"
-          , conditions = Just (Op Eq (mkName "flavor") (Lit (T"blueberry")))
+          , conditions = Just (Compare Eq (mkName "flavor") (Lit (T"blueberry")))
           })
     , testParse "DELETE FROM users WHERE email != 'bergey@teallabs.org'"
       (QD Delete
        { table = mkName "users"
-       , conditions = Just (Op NEq (mkName "email") (Lit (T "bergey@teallabs.org")))
+       , conditions = Just (Compare NEq (mkName "email") (Lit (T "bergey@teallabs.org")))
        })
     , testParse "INSERT INTO users (email) VALUES ('bergey@teallabs.org')"
         (QI Insert
@@ -153,13 +153,13 @@ parser = testGroup "parser"
       (QS Select
        { table = "users"
        , columns = "name" :| ["email"]
-       , conditions = Just (Op Eq "name" (Lit (T "Daniel")))
+       , conditions = Just (Compare Eq "name" (Lit (T "Daniel")))
        })
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
       (QS Select
        { table = "users"
        , columns = "name" :| ["email"]
-       , conditions = Just (Or (Op Eq "name" (Lit (T "Daniel"))) (Op Eq "name" (Lit (T "Bergey"))))
+       , conditions = Just (Or (Compare Eq "name" (Lit (T "Daniel"))) (Compare Eq "name" (Lit (T "Bergey"))))
        })
     , testParse "SELECT name FROM users WHERE age = 35"
         -- We currently parse integers & decimals all to Double
@@ -167,13 +167,13 @@ parser = testGroup "parser"
       (QS Select
        { table = "users"
        , columns = "name" :| []
-       , conditions = Just (Op Eq "age" (Lit (F 35)))
+       , conditions = Just (Compare Eq "age" (Lit (F 35)))
        })
     , testParse "SELECT name FROM users WHERE age = 35.5"
       (QS Select
        { table = "users"
        , columns = "name" :| []
-       , conditions = Just (Op Eq "age" (Lit (F 35.5)))
+       , conditions = Just (Compare Eq "age" (Lit (F 35.5)))
        })
     ]
 

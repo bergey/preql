@@ -54,6 +54,14 @@ tokens :-
     "(" { lex LParen }
     "," { lex Comma }
     ")" { lex RParen }
+    "*" { lex Mul }
+    "/" { lex Div }
+    "+" { lex Add }
+    "-" { lex Sub }
+    "^" { lex Exponent }
+    $i $s { lex Is }
+    $i $s $n $u $l $l { lex IsNull }
+    $n $o $t $n $u $l $l { lex NotNull }
     "=" { lex Equals }
     "<>" { lex NotEquals }
     "!=" { lex NotEquals }
@@ -80,6 +88,8 @@ data Token = Delete | Select | Insert
      | From | Where | Into | Values
      | Name Text | String Text | Number Double
      | LParen | RParen | Comma
+     | Mul | Div | Add | Sub | Exponent
+     | Is | IsNull | NotNull
      | Equals | NotEquals | LT | LTE | GT | GTE
      | Like | ILike
      | And | Or | Not
@@ -113,6 +123,7 @@ unLex t = case t of
     Values -> "VALUES"
     Name n -> T.unpack n 
     String s -> T.unpack s
+    Number n -> show n
     LParen  -> "("
     RParen  -> ")"
     Comma -> ","

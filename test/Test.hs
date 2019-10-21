@@ -142,15 +142,27 @@ parser = testGroup "parser"
       (QS Select
        { table = "users"
        , columns = "name" :| []
-       , conditions = []
+       , conditions = Nothing
        })
     , testParse "SELECT name, email FROM users"
       (QS Select
        { table = "users"
        , columns = "name" :| ["email"]
-       , conditions = []
+       , conditions = Nothing
        })
-    ]
+    , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
+      (QS Select
+       { table = "users"
+       , columns = "name" :| ["email"]
+       , conditions = Just (Op Eq "name" (Lit (T "Daniel")))
+       })
+    , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
+      (QS Select
+       { table = "users"
+       , columns = "name" :| ["email"]
+       , conditions = Just (Or (Op Eq "name" (Lit (T "Daniel"))) (Op Eq "name" (Lit (T "Bergey"))))
+       })]
+
 
 testParse query expected = testCase query $
     assertEqual "" (Right expected) (parse (alexScanTokens query))

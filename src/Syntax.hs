@@ -42,17 +42,19 @@ data Setting = Setting !Name !Literal
 data Update = Update
     { table      :: !Name
     , settings   :: NonEmpty Setting
-    , conditions :: [Condition]
+    , conditions :: Maybe Condition
     } deriving (Show, Eq)
 
 -- | Queries of the form @SELECT columns FROM table WHERE conditions@.
 data Select = Select
     { table      :: !Name
     , columns    :: NonEmpty Name
-    , conditions :: [Condition]
+    , conditions :: Maybe Condition
     } deriving (Show, Eq)
 
 data Condition = Op !Op !Name !Expr
+    | Or Condition Condition
+    | And Condition Condition
     deriving (Show, Eq)
 
 -- TODO many more types of expressions

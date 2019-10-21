@@ -55,6 +55,8 @@ tokens :-
     "=" { \_ _ -> Equals }
     "<>" { \_ _ -> NotEquals }
     "!=" { \_ _ -> NotEquals }
+    $a $n $d { \_ _ -> And }
+    $o $r { \_ _ -> Or }
     [\'] $quoted* [\'] { \_ -> String . T.pack . init . tail }
     $unicodeIds+ { \_ -> Name . T.pack }
     
@@ -66,6 +68,7 @@ data Token = Delete | Select | Insert
      | Name Text | String Text
      | LParen | RParen | Comma
      | Equals | NotEquals
+     | And | Or
      deriving Show
 
 }

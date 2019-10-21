@@ -16,6 +16,9 @@ import qualified Data.List.NonEmpty as NE
 %error { parseError }
 %monad { Either String }
 
+%left and
+%left or
+
 %token
     delete { L.Delete }
     select { L.Select }
@@ -35,6 +38,9 @@ import qualified Data.List.NonEmpty as NE
     '=' { L.Equals }
     '!=' { L.NotEquals }
 
+    and  { L.And }
+    or { L.Or }
+
 %%
 
 Query
@@ -47,7 +53,8 @@ Delete
     | delete from Name { Delete $3 Nothing }
 
 Select
-    : select NameList from Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = [] } }
+    : select NameList from Name where Condition { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
+    | select NameList from Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
 
 Insert : insert into Name '(' NameList ')' values '(' LitList ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
@@ -70,7 +77,10 @@ Operator
     : '=' { Eq }
     | '!=' { NEq }
 
-Condition : Name Operator Expr { Op $2 $1 $3 }
+Condition
+    : Name Operator Expr { Op $2 $1 $3 }
+    | Condition and Condition { And $1 $3 }
+    | Condition or Condition { Or $1 $3 }
 
 Name : name { mkName $1 }
 

@@ -24,6 +24,9 @@ import qualified Data.Text.Lazy.Builder.RealFloat as B
 quote :: B.Builder -> B.Builder
 quote s = "'" <> s <> "'"
 
+doubleQuote :: B.Builder -> B.Builder
+doubleQuote s = "\"" <> s <> "\""
+
 class FormatSql a where
     fmt :: a -> B.Builder
 

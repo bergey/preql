@@ -4,7 +4,8 @@
 
 import           Connection
 import           FromSql
-import           Internal                  (Name, mkName)
+import           Instances
+import           Internal (Name, mkName)
 import           Parser
 import           Printer
 import           Query
@@ -13,12 +14,15 @@ import           Syntax
 import           Control.Concurrent.MVar
 import           Data.Either
 import           Data.Int
-import           Data.List.NonEmpty        (NonEmpty (..))
+import           Data.List.NonEmpty (NonEmpty (..))
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck
 
-import qualified Data.List.NonEmpty        as NE
-import qualified Data.Text                 as T
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TLB
 import qualified Database.PostgreSQL.LibPQ as PQ
 
 main :: IO ()
@@ -26,6 +30,7 @@ main = defaultMain $ testGroup "crispy-broccoli"
     [ parser
     , printer
     , integration
+    , quickCheck
     ]
 
 integration :: TestTree
@@ -177,7 +182,15 @@ parser = testGroup "parser"
        })
     ]
 
-
-
 testParse query expected = testCase query $
     assertEqual "" (Right expected) (parseExp "<testcase>" query)
+
+quickCheck :: TestTree
+quickCheck = testGroup "QuickCheck"
+    [ testProperty "Arbitrary SELECT" (\select -> assertRoundTrip (QS select))
+    ]
+
+assertRoundTrip :: Syntax.Query -> Bool
+assertRoundTrip query =
+    Right query == parseExp "<assertRoundTrip>" printed
+  where printed = TL.unpack . TLB.toLazyText . fmt $ query

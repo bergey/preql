@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 -- | Definitions which need to be private in order to maintain their invariants.
 
 module Internal (
@@ -5,12 +6,13 @@ module Internal (
     ) where
 
 import           Data.String (IsString (..))
-import           Data.Text   (Text)
+import           Data.Text (Text)
+import           GHC.Generics
 
-import qualified Data.Text   as T
+import qualified Data.Text as T
 
 newtype Name = Name Text
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Generic)
 
 instance IsString Name where
     fromString = Name . T.pack

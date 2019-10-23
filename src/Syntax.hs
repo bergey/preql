@@ -54,10 +54,10 @@ data Select = Select
     , conditions :: Maybe Condition
     } deriving (Show, Eq, Generic)
 
--- TODO NOT
 data Condition = Compare !Compare !Name !Expr
     | Or Condition Condition
     | And Condition Condition
+    | Not Condition
     deriving (Show, Eq, Generic)
 
 data Expr = Lit !Literal | Var !Name

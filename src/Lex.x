@@ -119,9 +119,9 @@ unLex t = case t of
     Delete -> "DELETE"
     Select  -> "SELECT "
     Insert -> "INSERT"
-    From  -> "FROM "
-    Where  -> "WHERE "
-    Into  -> "INTO "
+    From  -> "FROM"
+    Where  -> "WHERE"
+    Into  -> "INTO"
     Values -> "VALUES"
     Name n -> T.unpack n 
     String s -> T.unpack s
@@ -129,10 +129,23 @@ unLex t = case t of
     LParen  -> "("
     RParen  -> ")"
     Comma -> ","
+    Mul -> "*"
+    Div -> "/"
+    Add -> "+"
+    Sub -> "-"
+    Exponent -> "^"
+    Is -> "IS"
+    Null -> "NULL"
+    IsNull -> "IsNull"
+    NotNull -> "NotNull"
     Equals -> "="
     NotEquals -> "!="
+    Like -> "LIKE"
+    ILike -> "ILIKE"
     And  -> "AND "
     Or -> "OR"
+    Not -> "NOT"
+    EOF -> "<EOF>"
 
 alexEOF :: Alex LocToken
 alexEOF = do

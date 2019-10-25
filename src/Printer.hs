@@ -27,6 +27,9 @@ quote s = "'" <> s <> "'"
 doubleQuote :: B.Builder -> B.Builder
 doubleQuote s = "\"" <> s <> "\""
 
+parens :: B.Builder -> B.Builder
+parens s = "(" <> s <> ")"
+
 class FormatSql a where
     fmt :: a -> B.Builder
 
@@ -79,8 +82,9 @@ instance FormatSql Select where
 
 instance FormatSql Condition where
     fmt (Compare op column value) = fmt column <> " " <> fmt op <> " " <> fmt value
-    fmt (Or l r) = "(" <> fmt l <> ") OR (" <> fmt r <> ")"
-    fmt (And l r) = "(" <> fmt l <> ") AND (" <> fmt r <> ")"
+    fmt (Or l r) = parens (fmt l) <> " OR " <> parens (fmt r)
+    fmt (And l r) = parens (fmt l) <> " AND " <> parens (fmt r)
+    fmt (Not cond) = "NOT" <> parens (fmt cond)
 
 instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit

@@ -90,7 +90,11 @@ instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit
     fmt (Var name) = fmt name
     fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
-    fmt (Unary op expr) = fmt op <> "(" <> fmt expr <> ")"
+    fmt (Unary op expr) = case op of
+        NegateNum -> "-" <> parens (fmt expr)
+        NegateBool -> "NOT " <> parens (fmt expr)
+        IsNull -> parens (fmt expr) <> " IS NULL"
+        NotNull -> parens (fmt expr) <> " IS NOT NULL"
 
 instance FormatSql BinOp where
     fmt op = case op of
@@ -100,12 +104,6 @@ instance FormatSql BinOp where
         Sub -> "-"
         Exponent -> "^"
         Comp c -> fmt c
-
-instance FormatSql UnaryOp where
-    fmt op = case op of
-        Negate -> "-"
-        IsNull -> "IS NULL"
-        NotNull -> "IS NOT NULL"
 
 instance FormatSql Compare where
     fmt op = case op of

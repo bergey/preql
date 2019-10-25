@@ -124,7 +124,8 @@ Expr
     | Name { Var $1 }
     | '(' Expr ')' { $2 }
     | Expr BinOp Expr { BinOp $2 $1 $3 }
-    | not Expr { Unary Negate $2 }
+    | not Expr { Unary NegateBool $2 }
+    | '-' Expr { Unary NegateNum $2 }
     | Expr Null { Unary $2 $1 }
 
 Literal

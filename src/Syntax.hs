@@ -68,7 +68,7 @@ data Expr = Lit !Literal | Var !Name
 data BinOp = Mul | Div | Add | Sub | Exponent | Comp !Compare
     deriving (Show, Eq, Generic)
 
-data UnaryOp = Negate | IsNull | NotNull
+data UnaryOp = NegateNum | NegateBool | IsNull | NotNull
     deriving (Show, Eq, Generic)
 
 data Compare = Eq | LT | LTE | GT | GTE | NEq |  Like | ILike

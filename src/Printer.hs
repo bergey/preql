@@ -15,8 +15,9 @@ import           Data.List
 import           Prelude hiding (LT, GT, lex)
 
 -- import qualified Data.List.NonEmpty as NE
--- import qualified Data.Text as T
--- import qualified Data.Text.Lazy as TL
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TLB
 import qualified Data.Text.Lazy.Builder as B
 import qualified Data.Text.Lazy.Builder.Int as B
 import qualified Data.Text.Lazy.Builder.RealFloat as B
@@ -32,6 +33,9 @@ parens s = "(" <> s <> ")"
 
 class FormatSql a where
     fmt :: a -> B.Builder
+
+formatAsText :: FormatSql a => a -> String
+formatAsText = TL.unpack . TLB.toLazyText . fmt
 
 instance FormatSql Name where
     fmt = B.fromText . getName

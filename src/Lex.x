@@ -83,8 +83,10 @@ tokens :-
 
 {
 
-data LocToken = LocToken AlexPosn Token
-     deriving Show
+data LocToken = LocToken
+     { loc :: AlexPosn
+     , unLoc :: Token
+     } deriving Show
 
 data Token = Delete | Select | Insert
      | From | Where | Into | Values

@@ -1,24 +1,24 @@
 module Instances where
 
-import Internal
-import Syntax
+import           Internal
+import           Syntax
 
-import Test.QuickCheck
-import Generic.Random
+import           Control.Applicative
+import           Data.List.NonEmpty (NonEmpty(..))
+import           Generic.Random
+import           Test.QuickCheck
 
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 
-instance Arbitrary a => Arbitrary (NE.NonEmpty a) where
-    arbitrary = NE.fromList . getNonEmpty <$> arbitrary
+instance Arbitrary a => Arbitrary (NonEmpty a) where
+    arbitrary = liftA2 (:|) arbitrary arbitrary
 
 instance Arbitrary Name where
-    arbitrary = mkName . T.pack <$>
-        (fmap getPrintableString arbitrary `suchThat`
-            (\name -> not (any (`elem` " \t\n,.;'\"()<>=+-^!@") name)
-                && (name /= "")
-                && not (head name `elem` "0123456789_$")
-            ))
+    -- listOf uses size; it's good to limit name length, incidental that it gets smaller deeper in the AST
+    -- another sensible option would be to resize to 32, the Postgres effective name limit
+    arbitrary = mkName . T.pack <$> liftA2 (:) firstChar (listOf tailChar) where
+      firstChar = tailChar `suchThat` (`notElem` "0123456789_$")
+      tailChar = arbitraryPrintableChar `suchThat` (`notElem` " \t\n,.;'\"()<>=+-^!@")
 
 -- instance Arbitrary Literal where arbitrary = genericArbitraryU
 instance Arbitrary Literal where
@@ -34,8 +34,23 @@ instance Arbitrary Delete where arbitrary = genericArbitraryU
 instance Arbitrary Setting where arbitrary = genericArbitraryU
 instance Arbitrary Update where arbitrary = genericArbitraryU
 instance Arbitrary Select where arbitrary = genericArbitraryU
-instance Arbitrary Condition where arbitrary = genericArbitraryU
-instance Arbitrary Expr where arbitrary = genericArbitraryU
+
+-- Recursive types need more careful treatment to avoid infinite trees
+instance Arbitrary Condition where
+    arbitrary = do
+        size <- getSize
+        if size <= 1
+            then Compare <$> arbitrary <*> arbitrary <*> arbitrary
+            else scale (\s -> s - 1) genericArbitraryU
+
+instance Arbitrary Expr where
+    arbitrary = do
+        size <- getSize
+        if size <= 1
+            then oneof [ Lit <$> arbitrary, Var <$> arbitrary ]
+            else scale (\s -> s - 1) genericArbitraryU
+        genericArbitraryU
+
 instance Arbitrary BinOp where arbitrary = genericArbitraryU
 instance Arbitrary UnaryOp where arbitrary = genericArbitraryU
 instance Arbitrary Compare where arbitrary = genericArbitraryU

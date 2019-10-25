@@ -51,6 +51,7 @@ import qualified Data.List.NonEmpty as NE
     '^' { LocToken _ L.Exponent }
 
     is { LocToken _ L.Is }
+    null { LocToken _ L.Null }
     isnull { LocToken _ L.IsNull }
     notnull { LocToken _ L.NotNull }
 
@@ -123,10 +124,18 @@ Expr
     | Name { Var $1 }
     | '(' Expr ')' { $2 }
     | Expr BinOp Expr { BinOp $2 $1 $3 }
+    | not Expr { Unary Negate $2 }
+    | Expr Null { Unary $2 $1 }
 
 Literal
         : string { T $1 }
         | number { F $1 }
+
+Null
+        : is null { IsNull }
+        | isnull { IsNull }
+        | is not null { NotNull }
+        | notnull { NotNull }
 
 BinOp
     : '*' { Mul }

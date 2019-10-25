@@ -104,9 +104,8 @@ instance FormatSql BinOp where
 instance FormatSql UnaryOp where
     fmt op = case op of
         Negate -> "-"
-        Is -> "IS"
-        IsNull -> "ISNULL"
-        NotNull -> "NOTNULL"
+        IsNull -> "IS NULL"
+        NotNull -> "IS NOT NULL"
 
 instance FormatSql Compare where
     fmt op = case op of

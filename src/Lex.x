@@ -60,6 +60,8 @@ tokens :-
     "-" { lex Sub }
     "^" { lex Exponent }
     $i $s { lex Is }
+    $n $o $t { lex Not }
+    $n $u $l $l { lex Null }
     $i $s $n $u $l $l { lex IsNull }
     $n $o $t $n $u $l $l { lex NotNull }
     "=" { lex Equals }
@@ -89,7 +91,7 @@ data Token = Delete | Select | Insert
      | Name Text | String Text | Number Double
      | LParen | RParen | Comma
      | Mul | Div | Add | Sub | Exponent
-     | Is | IsNull | NotNull
+     | Is | Null | IsNull | NotNull
      | Equals | NotEquals | LT | LTE | GT | GTE
      | Like | ILike
      | And | Or | Not

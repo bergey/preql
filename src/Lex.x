@@ -64,13 +64,13 @@ tokens :-
     $n $u $l $l { lex Null }
     $i $s $n $u $l $l { lex IsNull }
     $n $o $t $n $u $l $l { lex NotNull }
-    "=" { lex Equals }
     "<>" { lex NotEquals }
     "!=" { lex NotEquals }
     "<" { lex LT }
     "<=" { lex LTE }
     ">" { lex GT }
-    "<=" { lex GTE }
+    ">=" { lex GTE }
+    "=" { lex Equals }
     $l $i $k $e { lex Like }
     $i $l $i $k $e { lex ILike }
     $a $n $d { lex And }

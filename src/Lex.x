@@ -10,7 +10,7 @@ import qualified Data.Text as T
 
 %wrapper "monadUserState"
 
-$unicodeIds = $printable # [$white \,\.\;\'\"\(\)\<\>=\+\-\^\!]
+$unicodeIds = $printable # [$white \,\.\;\'\"\(\)\<\>=\+\-\^\!@]
 $firstLetter = $unicodeIds # [0-9_\$]
 $quoted = $printable # [\']
 $digit = [0-9]

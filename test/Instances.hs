@@ -13,12 +13,13 @@ import qualified Data.Text as T
 instance Arbitrary a => Arbitrary (NonEmpty a) where
     arbitrary = liftA2 (:|) arbitrary arbitrary
 
+-- | These ASCII letters are only a small subset of allowed identifiers.
 instance Arbitrary Name where
     -- listOf uses size; it's good to limit name length, incidental that it gets smaller deeper in the AST
     -- another sensible option would be to resize to 32, the Postgres effective name limit
     arbitrary = mkName . T.pack <$> liftA2 (:) firstChar (listOf tailChar) where
-      firstChar = tailChar `suchThat` (`notElem` "0123456789_$")
-      tailChar = arbitraryPrintableChar `suchThat` (`notElem` " \t\n,.;'\"()<>=+-^!@")
+      firstChar = elements $ ['a'..'z'] ++ ['A'..'Z']
+      tailChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ "0123456789_$"
 
 -- instance Arbitrary Literal where arbitrary = genericArbitraryU
 instance Arbitrary Literal where

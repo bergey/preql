@@ -15,6 +15,7 @@ import           Control.Concurrent.MVar
 import           Data.Either
 import           Data.Int
 import           Data.List.NonEmpty (NonEmpty (..))
+import           Prelude hiding (Ordering(..), lex)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck
@@ -180,6 +181,12 @@ parser = testGroup "parser"
        , columns = "name" :| []
        , conditions = Just (Compare Eq "age" (Lit (F 35.5)))
        })
+    , testParse "SELECT foo FROM bar WHERE baz > -2"
+      (QS Select
+          { table = "bar"
+          , columns = "foo" :| []
+          , conditions = Just (Compare GT "baz" (Lit (F (-2) )))
+          })
     ]
 
 testParse query expected = testCase query $

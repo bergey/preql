@@ -77,9 +77,8 @@ tokens :-
     $o $r { lex Or }
     [\'] $quoted* [\'] { lex' (String . T.pack . init . tail) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
-    $digit+ { lex' (Number . read) }
-    $digit+ "." $digit+ { lex' (Number . read) }
-    
+    "-"? $digit+ { lex' (Number . read) }
+    "-"? $digit+ "." $digit+ { lex' (Number . read) }
 
 {
 

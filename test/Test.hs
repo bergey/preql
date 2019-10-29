@@ -187,6 +187,18 @@ parser = testGroup "parser"
           , columns = "foo" :| []
           , conditions = Just (Compare GT "baz" (Lit (F (-2) )))
           })
+    , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
+        (QS Select
+          { table = "bar"
+          , columns = "foo" :| []
+          , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
+          })
+    , testParse "SELECT foo FROM bar WHERE baz = 2E-2"
+        (QS Select
+          { table = "bar"
+          , columns = "foo" :| []
+          , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
+          })
     ]
 
 testParse query expected = testCase query $

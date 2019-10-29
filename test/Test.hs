@@ -31,7 +31,7 @@ main = defaultMain $ testGroup "crispy-broccoli"
     [ parser
     , printer
     , integration
-    , quickCheck
+    -- , quickCheck
     ]
 
 integration :: TestTree

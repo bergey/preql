@@ -2,14 +2,14 @@
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE TypeApplications         #-}
 
-import           Connection
-import           FromSql
 import           Instances
-import           Internal (Name, mkName)
-import           Parser
-import           Printer
-import           Query
-import           Syntax
+import           Syntax.Internal (Name, mkName)
+import           Syntax.Parser
+import           Syntax.Printer
+import           Syntax.Untyped
+import           Wire.Connection
+import           Wire.FromSql
+import           Wire.Query
 
 import           Control.Concurrent.MVar
 import           Data.Either
@@ -209,7 +209,7 @@ quickCheck = testGroup "QuickCheck"
     [ testProperty "Arbitrary SELECT" (\select -> assertRoundTrip (QS select))
     ]
 
-assertRoundTrip :: Syntax.Query -> Bool
+assertRoundTrip :: Syntax.Untyped.Query -> Bool
 assertRoundTrip query =
     Right query == parseExp "<assertRoundTrip>" printed
   where printed = TL.unpack . TLB.toLazyText . fmt $ query

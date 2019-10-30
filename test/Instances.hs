@@ -1,7 +1,7 @@
 module Instances where
 
-import           Internal
-import           Syntax
+import           Syntax.Internal
+import           Syntax.Untyped
 
 import           Control.Applicative
 import           Data.List.NonEmpty (NonEmpty(..))

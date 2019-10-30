@@ -1,51 +1,52 @@
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 module TH where
 
+import Syntax.Untyped as Syntax
+import Syntax.Parser (parseExp)
+import TypedQuery
+
+import Data.String (IsString(..))
+import Database.PostgreSQL.Simple (Only(..))
 import Language.Haskell.TH
+import Language.Haskell.TH.Quote
 
 a1Names :: Int -> [String]
 a1Names n = take n names where
   names = [c : "" | c <- ['a'..'z']] ++ [ c : show i | i <- [1..], c <- ['a'..'z'] ]
 
-tup2 :: Q Exp
-tup2 = do
-    a <- newName "a"
-    b <- newName "b"
-    return $ TupE [ VarE a, VarE b ]
+cNames :: Char -> Int -> Q [Name]
+cNames c n = traverse newName [c : show i | i <- [1..n] ]
 
-tup2Ty :: Q Type
-tup2Ty = do
-    a <- newName "a"
-    b <- newName "b"
-    return $ -- ForallT [PlainTV a, PlainTV b] [] $
-        AppT (AppT (TupleT 2) (VarT a)) (VarT b)
+tupleType :: [Name] -> Type
+tupleType [v] = AppT (ConT ''Only) (VarT v)
+tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
+    where n = length names
 
-showTup2 :: Q Exp
-showTup2 = do
-    ta <- newName "ta"
-    tb <- newName "tb"
-    va <- newName "va"
-    vb <- newName "vb"
-    -- impl <- [e| \(a, b) -> show a ++ show b |]
-    -- let impl = LamE [TupP [VarP va,VarP vb]] (InfixE (Just (AppE (VarE 'show) (VarE va))) (VarE '(++)) (Just (AppE (VarE 'show) (VarE vb))))
-    impl <- [e| \(a, b) -> concat [show a, show b] |]
-    return $ SigE impl
-        (ForallT [PlainTV ta, PlainTV tb]
-         [AppT (ConT ''Show) (VarT ta), AppT (ConT ''Show) (VarT tb)]
-         (AppT (AppT ArrowT
-                (AppT (AppT (TupleT 2) (VarT ta)) (VarT tb)))
-             (ConT ''String)))
+-- | Synthesize a TypedQuery tagged with tuples of the given size
+makeArityQuery :: String -> Int -> Int -> Q Exp
+makeArityQuery q p r = do
+    paramNames <- cNames 'p' p
+    resultNames <- cNames 'r' r
+    return $ SigE
+        (AppE (ConE 'TypedQuery) (AppE (VarE 'fromString) (LitE (StringL q))))
+        (AppT (AppT (ConT ''TypedQuery) (tupleType paramNames)) (tupleType resultNames))
 
-showTup :: Int -> Q Exp
-showTup n = do
-    typeNames <- traverse newName (map ('t':) (a1Names n))
-    varNames <- traverse newName (map ('v':) (a1Names n))
-    let
-        impl = LamE
-            [TupP (map VarP varNames)]
-            (AppE (VarE 'concat) (ListE [AppE (VarE 'show) (VarE v) | v <- varNames]))
-        tyVars = map PlainTV typeNames
-        constraints = [AppT (ConT ''Show) (VarT v) | v<- typeNames]
-        functionType = AppT (AppT ArrowT tupleType) (ConT ''String)
-        tupleType = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) typeNames
-    return $ SigE impl (ForallT tyVars constraints functionType)
+countColumnsReturned :: Syntax.Query -> Int
+countColumnsReturned (QS (Select {columns})) = length columns
+countColumnsReturned _ = 0
+
+aritySql :: QuasiQuoter
+aritySql = QuasiQuoter
+    { quoteExp = \q -> do
+            loc <- location
+            let e_ast = parseExp (show loc) q
+            case e_ast of
+                Right ast -> makeArityQuery q 0 (countColumnsReturned ast)
+                Left err -> error err
+    , quotePat = \_ -> error "qq aritySql cannot be used in pattern context"
+    , quoteType = \_ -> error "qq aritySql cannot be used in type context"
+    , quoteDec = \_ -> error "qq aritySql cannot be used in declaration context"
+    }

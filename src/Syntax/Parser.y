@@ -13,7 +13,9 @@ import qualified Syntax.Lex as L
 import qualified Data.List.NonEmpty as NE
 }
 
-%name parse
+%name parseQuery_ Query
+%name parseCondition_ Condition
+%name parseExpr_ Expr
 %tokentype { L.LocToken }
 %monad { Alex }
 %lexer { lexwrap } {  L.LocToken _ L.EOF }
@@ -159,7 +161,13 @@ happyError :: L.LocToken -> Alex a
 happyError (L.LocToken p t) =
   L.alexError' p ("parse error at token '" ++ L.unLex t ++ "'")
 
-parseExp :: FilePath -> String -> Either String Query
-parseExp = L.runAlex' parse
+parseQuery :: FilePath -> String -> Either String Query
+parseQuery = L.runAlex' parseQuery_
+
+parseCondition :: FilePath -> String -> Either String Condition
+parseCondition = L.runAlex' parseCondition_
+
+parseExpr :: FilePath -> String -> Either String Expr
+parseExpr = L.runAlex' parseExpr_
 
 }

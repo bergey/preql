@@ -180,5 +180,5 @@ quickCheck = testGroup "QuickCheck"
 
 assertRoundTrip :: Query -> Bool
 assertRoundTrip query =
-    Right query == parseExp "<assertRoundTrip>" printed
+    Right query == parseQuery "<assertRoundTrip>" printed
   where printed = TL.unpack . TLB.toLazyText . fmt $ query

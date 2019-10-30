@@ -5,7 +5,7 @@
 module TH where
 
 import Syntax.Untyped as Syntax
-import Syntax.Parser (parseExp)
+import Syntax.Parser (parseQuery)
 import TypedQuery
 
 import Data.String (IsString(..))
@@ -38,7 +38,7 @@ aritySql :: QuasiQuoter
 aritySql = QuasiQuoter
     { quoteExp = \q -> do
             loc <- location
-            let e_ast = parseExp (show loc) q
+            let e_ast = parseQuery (show loc) q
             case e_ast of
                 Right ast -> makeArityQuery q
                     (maxParamQuery ast)

@@ -1,18 +1,14 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
-{-# LANGUAGE TypeApplications         #-}
 
 import           Instances
+import Test.Wire (wire)
+
 import           Syntax.Internal (Name, mkName)
 import           Syntax.Parser
 import           Syntax.Printer
 import           Syntax.Untyped
-import           Wire.Connection
-import           Wire.FromSql
-import           Wire.Query
 
-import           Control.Concurrent.MVar
-import           Data.Either
 import           Data.Int
 import           Data.List.NonEmpty (NonEmpty (..))
 import           Prelude hiding (Ordering(..), lex)
@@ -24,7 +20,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
-import qualified Database.PostgreSQL.LibPQ as PQ
 
 main :: IO ()
 main = defaultMain $ testGroup "crispy-broccoli"
@@ -33,54 +28,6 @@ main = defaultMain $ testGroup "crispy-broccoli"
     , wire
     -- , quickCheck
     ]
-
-wire :: TestTree
-wire = testGroup "wire"
-    [ testCase "SELECT integer literal, raw PQ" $ do
-        conn <- connect database
-        connRaw <- takeMVar (connectionHandle conn)
-        Just result <- PQ.exec connRaw "SELECT 2;"
-        assertEqual "ntuples" (PQ.Row 1) =<< PQ.ntuples result
-        assertEqual "nfields" (PQ.Col 1) =<< PQ.nfields result
-        assertEqual "oid" (PQ.Oid 23) =<< PQ.ftype result (PQ.Col 0) -- int4
-        assertEqual "value" (Just "2") =<< PQ.getvalue result (PQ.Row 0) (PQ.Col 0)
-    , testCase "runQuery" $ do
-        conn <- connect database
-        assertEqual "" (Right [2]) =<< runQuery @() @Int32 conn  "SELECT 2" ()
-    , testCase "schema type mismatch causes runtime error" $ do
-        conn <- connect database
-        assertBool "" . isLeft =<< runQuery @() @Int32 conn "SELECT 2.5" ()
-    , testCase "ignore later columns" $ do
-        conn <- connect database
-        assertEqual "" (Right [2]) =<< runQuery @() @Int32 conn "SELECT 2, 3" ()
-    , testCase "parse a pair" $ do
-        conn <- connect database
-        assertEqual "" (Right [(2, 3)]) =<< runQuery @() @(Int32, Int32) conn "SELECT 2, 3" ()
-    , testCase "add Int32 parameters" $ do
-        conn <- connect database
-        assertEqual "" (Right [3]) =<< runQuery @(Int32, Int32) @Int32 conn "SELECT $1 + $2" (1, 2)
-    , testCase "add Int64 parameters" $ do
-        conn <- connect database
-        assertEqual "" (Right [3]) =<< runQuery @(Int64, Int64) @Int64 conn "SELECT $1 + $2" (1, 2)
-    , testCase "add Float32 parameters" $ do
-        conn <- connect database
-        assertEqual "" (Right [3]) =<< runQuery @(Float, Float) @Float conn "SELECT $1 + $2" (1, 2)
-    , testCase "add Float64 parameters" $ do
-        conn <- connect database
-        assertEqual "" (Right [3]) =<< runQuery @(Double, Double) @Double conn "SELECT $1 + $2" (1, 2)
-    , testCase "add 3 Int32 parameters" $ do
-        conn <- connect database
-        assertEqual "" (Right [6]) =<< runQuery @(Int32, Int32, Int32) @Int32 conn "SELECT $1 + $2 + $3" (1, 2, 3)
-    ]
-
-database :: ConnectInfo
-database = ConnectInfo
-    { connectHost = "localhost"
-    , connectUser = "bergey"
-    , connectDatabase = "crispy_broccoli"
-    , connectPort = 5432
-    , connectPassword = ""
-    }
 
 -- | Tests of the SQL syntax printer
 printer :: TestTree
@@ -209,7 +156,7 @@ quickCheck = testGroup "QuickCheck"
     [ testProperty "Arbitrary SELECT" (\select -> assertRoundTrip (QS select))
     ]
 
-assertRoundTrip :: Syntax.Untyped.Query -> Bool
+assertRoundTrip :: Query -> Bool
 assertRoundTrip query =
     Right query == parseExp "<assertRoundTrip>" printed
   where printed = TL.unpack . TLB.toLazyText . fmt $ query

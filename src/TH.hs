@@ -34,19 +34,43 @@ makeArityQuery q p r = do
         (AppE (ConE 'TypedQuery) (AppE (VarE 'fromString) (LitE (StringL q))))
         (AppT (AppT (ConT ''TypedQuery) (tupleType paramNames)) (tupleType resultNames))
 
-countColumnsReturned :: Syntax.Query -> Int
-countColumnsReturned (QS (Select {columns})) = length columns
-countColumnsReturned _ = 0
-
 aritySql :: QuasiQuoter
 aritySql = QuasiQuoter
     { quoteExp = \q -> do
             loc <- location
             let e_ast = parseExp (show loc) q
             case e_ast of
-                Right ast -> makeArityQuery q 0 (countColumnsReturned ast)
+                Right ast -> makeArityQuery q
+                    (maxParamQuery ast)
+                    (countColumnsReturned ast)
                 Left err -> error err
     , quotePat = \_ -> error "qq aritySql cannot be used in pattern context"
     , quoteType = \_ -> error "qq aritySql cannot be used in type context"
     , quoteDec = \_ -> error "qq aritySql cannot be used in declaration context"
     }
+
+countColumnsReturned :: Syntax.Query -> Int
+countColumnsReturned (QS (Select {columns})) = length columns
+countColumnsReturned _ = 0
+
+-- TODO update when Expr allowed more places
+maxParamQuery :: Query -> Int
+maxParamQuery (QS (Select {conditions})) = case conditions of
+                          Nothing -> 0
+                          Just c -> maxParamCondition c
+maxParamQuery _ = 0
+
+maxParamCondition :: Condition -> Int
+maxParamCondition condition = case condition of
+    Compare _ _ e -> maxParamExpr e
+    Or l r -> max (maxParamCondition l) (maxParamCondition r)
+    And l r -> max (maxParamCondition l) (maxParamCondition r)
+    Not c -> maxParamCondition c
+
+maxParamExpr :: Expr -> Int
+maxParamExpr expr = case expr of
+    Param i -> i
+    BinOp _ l r -> max (maxParamExpr l) (maxParamExpr r)
+    Unary _ e -> maxParamExpr e
+    Lit _ -> 0
+    Var _ -> 0

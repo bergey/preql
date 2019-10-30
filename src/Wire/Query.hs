@@ -1,11 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- |
 
-module Query where
+module Wire.Query where
 
-import           Connection
-import           FromSql
-import           ToSql
+import           Wire.Connection
+import           Wire.FromSql
+import           Wire.ToSql
 
 import           Control.Concurrent.MVar
 import           Control.Monad

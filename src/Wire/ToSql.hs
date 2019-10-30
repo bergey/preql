@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module ToSql where
+module Wire.ToSql where
 
 import           Data.ByteString                            (ByteString)
 import           Data.ByteString.Builder                    (Builder)

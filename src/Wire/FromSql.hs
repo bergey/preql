@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | Decoding values from Postgres wire format to Haskell.
 
-module FromSql where
+module Wire.FromSql where
 
 import           Control.Applicative
 import           Control.Applicative.Free

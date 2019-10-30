@@ -1,15 +1,15 @@
 {
 {-# LANGUAGE DuplicateRecordFields #-}
-module Parser where
+module Syntax.Parser where
 
-import Syntax
-import Internal (mkName)
-import Lex (Alex, LocToken(..), Token)
+import Syntax.Untyped
+import Syntax.Internal (mkName)
+import Syntax.Lex (Alex, LocToken(..), Token)
 
 import           Prelude hiding (LT, GT, lex)
 import           Data.List.NonEmpty        (NonEmpty (..))
 
-import qualified Lex as L
+import qualified Syntax.Lex as L
 import qualified Data.List.NonEmpty as NE
 }
 

@@ -1,18 +1,18 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Debug where
+module Syntax.Debug where
 
-import Internal
-import Parser
-import Printer
-import Syntax
-import Lex (runAlex, alexMonadScan, LocToken(..))
+import Syntax.Internal
+import Syntax.Parser
+import Syntax.Printer
+import Syntax.Untyped
+import Syntax.Lex (runAlex, alexMonadScan, LocToken(..))
 
 import Control.Monad (liftM)
 import Data.List.NonEmpty (NonEmpty(..))
 import Prelude hiding (Ordering(..), lex)
 
-import qualified Lex as L
+import qualified Syntax.Lex as L
 
 lexAll :: L.Alex [LocToken]
 lexAll = do

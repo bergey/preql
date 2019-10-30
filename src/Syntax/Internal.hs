@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 -- | Definitions which need to be private in order to maintain their invariants.
 
-module Internal (
+module Syntax.Internal (
     Name, mkName, getName
     ) where
 

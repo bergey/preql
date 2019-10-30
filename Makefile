@@ -6,7 +6,7 @@ build: default.nix
 shell: default.nix ${PROJECT}.cabal
 	nix-shell --command "export PS1='[${PROJECT}] $(value PS1)'; return"
 
-repl: default.nix
+repl: default.nix ${PROJECT}.cabal
 	nix-shell --run 'cabal v1-repl ${PROJECT}'
 
 .PHONY: test

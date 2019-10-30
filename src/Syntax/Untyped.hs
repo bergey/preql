@@ -60,7 +60,7 @@ data Condition = Compare !Compare !Name !Expr
     | Not Condition
     deriving (Show, Eq, Generic)
 
-data Expr = Lit !Literal | Var !Name
+data Expr = Lit !Literal | Var !Name | Param !Int
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
     deriving (Show, Eq, Generic)

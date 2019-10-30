@@ -78,6 +78,7 @@ tokens :-
     [\'] $quoted* [\'] { lex' (String . T.pack . init . tail) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
     "-"? $digit+ ("." $digit+)? ($e "-"? $digit+)? { lex' (Number . read) }
+    "$" $digit+ { lex' (Param . read . tail) }
 
 {
 
@@ -88,7 +89,7 @@ data LocToken = LocToken
 
 data Token = Delete | Select | Insert
      | From | Where | Into | Values
-     | Name Text | String Text | Number Double
+     | Name Text | String Text | Number Double | Param Int
      | LParen | RParen | Comma
      | Mul | Div | Add | Sub | Exponent
      | Is | Null | IsNull | NotNull
@@ -126,6 +127,7 @@ unLex t = case t of
     Name n -> T.unpack n 
     String s -> T.unpack s
     Number n -> show n
+    Param i -> '$' : show i
     LParen  -> "("
     RParen  -> ")"
     Comma -> ","

@@ -76,6 +76,14 @@ printer = testGroup "printer" [
                  , columns = mkName "email" :| [ mkName "first_name" ]
                  , values = T "bergey@teallabs.org" :| [ T "Daniel" ]
                  }))
+    , testCase "params" $
+      assertEqual ""
+        "SELECT name, email FROM users WHERE name = $1"
+        (fmt (QS Select
+              { table = "users"
+              , columns = "name" :| ["email"]
+              , conditions = Just (Compare Eq "name" (Param 1))
+              }))
     ]
 
 parser :: TestTree

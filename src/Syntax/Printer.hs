@@ -93,6 +93,7 @@ instance FormatSql Condition where
 instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit
     fmt (Var name) = fmt name
+    fmt (Param i) = B.fromString ('$' : show i)
     fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
     fmt (Unary op expr) = case op of
         NegateNum -> "-" <> parens (fmt expr)

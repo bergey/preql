@@ -43,6 +43,7 @@ import qualified Data.List.NonEmpty as NE
     name { LocToken _ (L.Name $$) }
     string { LocToken _ (L.String $$) }
     number { LocToken _ (L.Number $$) }
+    param { LocToken _ (L.Param $$) }
 
     '*' { LocToken _ L.Mul }
     '/' { LocToken _ L.Div }
@@ -122,6 +123,7 @@ Name : name { mkName $1 }
 Expr
     : Literal { Lit $1 }
     | Name { Var $1 }
+    | param { Param $1 }
     | '(' Expr ')' { $2 }
     | Expr BinOp Expr { BinOp $2 $1 $3 }
     | not Expr { Unary NegateBool $2 }

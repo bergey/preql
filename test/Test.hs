@@ -1,16 +1,21 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
 
 import           Instances
-import Test.Wire (wire)
+import           Test.Wire (wire, database)
 
 import           Syntax.Internal (Name, mkName)
 import           Syntax.Parser
 import           Syntax.Printer
 import           Syntax.Untyped
+import           TH
+import           TypedQuery
 
+import           Data.Either
 import           Data.Int
 import           Data.List.NonEmpty (NonEmpty (..))
+import           Database.PostgreSQL.Simple (connect, close)
 import           Prelude hiding (Ordering(..), lex)
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -27,6 +32,15 @@ main = defaultMain $ testGroup "crispy-broccoli"
     , printer
     , wire
     -- , quickCheck
+    , integration
+    ]
+
+integration :: TestTree
+integration = withResource (connect database) close $ \db -> testGroup "integration"
+    [ testCase "SELECT foo, bar FROM baz" $ do
+        conn <- db
+        result <- runQuery conn [aritySql| SELECT foo, bar FROM baz |] ()
+        assertEqual "" [(1, "one"), (2, "two")] (result :: [(Int, T.Text)])
     ]
 
 -- | Tests of the SQL syntax printer

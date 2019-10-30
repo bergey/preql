@@ -1,11 +1,31 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module TypedQuery where
 
-import Data.Int (Int64)
-import Database.PostgreSQL.Simple
+import           PQResultUtils
+import           Syntax.Printer
+import           Syntax.Untyped                      (Query)
+
+import           Data.Int                            (Int64)
+import           Data.String
+
+import           Data.Text.Encoding                  (decodeUtf8, encodeUtf8)
+
+-- import qualified Data.ByteString                     as BS
+-- import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Builder             as BS
+import qualified Data.ByteString.Lazy                as BSL
+import qualified Data.Text.Lazy.Builder              as B
+import qualified Data.Vector                         as V
+-- import qualified Database.PostgreSQL.LibPQ           as PQ
+import qualified Database.PostgreSQL.Simple          as PS
+import qualified Database.PostgreSQL.Simple.FromRow  as PS
+import qualified Database.PostgreSQL.Simple.Internal as PS
+import qualified Database.PostgreSQL.Simple.ToField  as PS
+import qualified Database.PostgreSQL.Simple.ToRow    as PS
 
 -- | An SQL query, annotated with the types of its parameters and results.
-newtype TypedQuery p r = TypedQuery Query
+data TypedQuery p r = TypedQuery String Query
     deriving Show
 
 buildActions :: PS.Connection -> PS.Query -> [PS.Action] -> IO Params
@@ -21,6 +41,14 @@ query conn (TypedQuery raw parsed) p = do
     let q = fromString raw :: PS.Query
     substitutions <- buildActions conn q (PS.toRow p)
     let formatted = formatAsByteString substitutions parsed
+    result <- PS.exec conn formatted
+    finishQueryWith PS.fromRow conn q result
+
+-- | compare @query conn q p@
+query_ :: PS.FromRow r => PS.Connection -> TypedQuery p r -> IO [r]
+query_ conn (TypedQuery raw parsed) = do
+    let q = fromString raw :: PS.Query
+    let formatted = formatAsByteString emptyParams parsed
     result <- PS.exec conn formatted
     finishQueryWith PS.fromRow conn q result
 

@@ -15,7 +15,7 @@ import           TypedQuery
 import           Data.Either
 import           Data.Int
 import           Data.List.NonEmpty (NonEmpty (..))
-import           Database.PostgreSQL.Simple (connect, close)
+import           Database.PostgreSQL.Simple (connect, close, Only(..))
 import           Prelude hiding (Ordering(..), lex)
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -41,8 +41,12 @@ integration :: TestTree
 integration = withResource (connect database) close $ \db -> testGroup "integration"
     [ testCase "SELECT foo, bar FROM baz" $ do
         conn <- db
-        result <- runQuery conn [aritySql|SELECT foo, bar FROM baz |] ()
+        result <- query conn [aritySql|SELECT foo, bar FROM baz |] ()
         assertEqual "" [(1, "one"), (2, "two")] (result :: [(Int, T.Text)])
+    , testCase "with params" $ do
+        conn <- db
+        result <- query conn [aritySql| SELECT foo, bar FROM baz WHERE foo = $1|] (Only 1 :: Only Int)
+        assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
     ]
 
 -- | Tests of the SQL syntax printer
@@ -51,21 +55,21 @@ printer = testGroup "printer" [
     testCase "DELETE, no condition" $
         assertEqual ""
             "DELETE FROM taffy"
-            (fmt (QD Delete
+            (fmt emptyParams (QD Delete
                   { table = mkName "taffy"
                   , conditions = Nothing
                   }))
     , testCase "DELETE, = condition" $
         assertEqual ""
             "DELETE FROM taffy WHERE flavor = 'blueberry'"
-            (fmt (QD Delete
+            (fmt emptyParams (QD Delete
                   { table = mkName "taffy"
                   , conditions = Just (Compare Eq (mkName "flavor") (Lit (T"blueberry")))
                   }))
     , testCase "INSERT, one column" $
         assertEqual ""
             "INSERT INTO users (email) VALUES ('bergey@teallabs.org')"
-            (fmt (QI Insert
+            (fmt emptyParams (QI Insert
                  { table = mkName "users"
                  , columns = mkName "email" :| []
                  , values = Lit (T "bergey@teallabs.org") :| []
@@ -73,7 +77,7 @@ printer = testGroup "printer" [
     , testCase "INSERT, two columns" $
         assertEqual ""
             "INSERT INTO users (email, first_name) VALUES ('bergey@teallabs.org', 'Daniel')"
-            (fmt (QI Insert
+            (fmt emptyParams (QI Insert
                  { table = mkName "users"
                  , columns = mkName "email" :| [ mkName "first_name" ]
                  , values = Lit (T "bergey@teallabs.org") :| [ Lit (T "Daniel") ]
@@ -81,7 +85,7 @@ printer = testGroup "printer" [
     , testCase "params" $
       assertEqual ""
         "SELECT name, email FROM users WHERE name = $1"
-        (fmt (QS Select
+        (fmt Placeholders (QS Select
               { table = "users"
               , columns = Var "name" :| [ Var "email"]
               , conditions = Just (Compare Eq "name" (Param 1))
@@ -194,4 +198,4 @@ quickCheck = testGroup "QuickCheck"
 assertRoundTrip :: Query -> Bool
 assertRoundTrip query =
     Right query == parseQuery "<assertRoundTrip>" printed
-  where printed = TL.unpack . TLB.toLazyText . fmt $ query
+  where printed = TL.unpack . TLB.toLazyText . fmt Placeholders $ query

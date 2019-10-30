@@ -36,6 +36,7 @@ dependencies:
     - postgresql-simple
     - template-haskell
     - text
+    - th-lift-instances
     - transformers
     - vector
 

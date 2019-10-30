@@ -12,6 +12,7 @@ import Data.String (IsString(..))
 import Database.PostgreSQL.Simple (Only(..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
+import Language.Haskell.TH.Syntax (Lift(..))
 
 a1Names :: Int -> [String]
 a1Names n = take n names where
@@ -26,12 +27,13 @@ tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
     where n = length names
 
 -- | Synthesize a TypedQuery tagged with tuples of the given size
-makeArityQuery :: String -> Word -> Int -> Q Exp
-makeArityQuery q p r = do
+makeArityQuery :: String -> Query -> Word -> Int -> Q Exp
+makeArityQuery raw parsed p r = do
     paramNames <- cNames 'p' (fromIntegral p)
     resultNames <- cNames 'r' r
+    parsedQ <- lift parsed
     return $ SigE
-        (AppE (ConE 'TypedQuery) (AppE (VarE 'fromString) (LitE (StringL q))))
+        (AppE (AppE (ConE 'TypedQuery) (LitE (StringL raw))) parsedQ)
         (AppT (AppT (ConT ''TypedQuery) (tupleType paramNames)) (tupleType resultNames))
 
 aritySql :: QuasiQuoter
@@ -40,7 +42,7 @@ aritySql = QuasiQuoter
             loc <- location
             let e_ast = parseQuery (show loc) q
             case e_ast of
-                Right ast -> makeArityQuery q
+                Right ast -> makeArityQuery q ast
                     (maxParamQuery ast)
                     (countColumnsReturned ast)
                 Left err -> error err

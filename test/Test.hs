@@ -30,12 +30,12 @@ main :: IO ()
 main = defaultMain $ testGroup "crispy-broccoli"
     [ parser
     , printer
-    , integration
+    , wire
     -- , quickCheck
     ]
 
-integration :: TestTree
-integration = testGroup "integration"
+wire :: TestTree
+wire = testGroup "wire"
     [ testCase "SELECT integer literal, raw PQ" $ do
         conn <- connect database
         connRaw <- takeMVar (connectionHandle conn)

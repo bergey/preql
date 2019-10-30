@@ -21,13 +21,19 @@ import qualified Data.List.NonEmpty as NE
 %lexer { lexwrap } {  L.LocToken _ L.EOF }
 %error { happyError }
 
-%left '!=' '<=' '>='
-%nonassoc like ilike
-%left '<' '>'
-%right '='
-%right not
-%left and
 %left or
+%left and
+%right not
+%right '='
+%left '<' '>'
+%nonassoc like ilike
+%left '!=' '<=' '>='
+%nonassoc notnull
+%nonassoc isnull
+%nonassoc is
+%left '+' '-'
+%left '*' '/'
+%left '^'
 
 %token
     delete { LocToken _ L.Delete }
@@ -103,7 +109,7 @@ LitList
     : Literal { [$1] }
     | LitList comma Literal { $3 : $1 }
 
-Compare
+Compare :: { Compare }
     : '=' { Eq }
     | '!=' { NEq }
     | '<' { LT }
@@ -122,12 +128,24 @@ Condition
 
 Name : name { mkName $1 }
 
-Expr
+Expr :: { Expr }
     : Literal { Lit $1 }
     | Name { Var $1 }
     | param { Param $1 }
     | '(' Expr ')' { $2 }
-    | Expr BinOp Expr { BinOp $2 $1 $3 }
+    | Expr '^' Expr { BinOp Exponent $1 $3 }
+    | Expr '*' Expr { BinOp Mul $1 $3 }
+    | Expr '/' Expr { BinOp Div $1 $3 }
+    | Expr '+' Expr { BinOp Add $1 $3 }
+    | Expr '-' Expr { BinOp Sub $1 $3 }
+    | Expr '=' Expr { BinOp (Comp  Eq) $1 $3 }
+    | Expr '!=' Expr { BinOp (Comp  NEq) $1 $3 }
+    | Expr '<' Expr { BinOp (Comp  LT) $1 $3 }
+    | Expr '>' Expr { BinOp (Comp  GT) $1 $3 }
+    | Expr '<=' Expr { BinOp (Comp  LTE) $1 $3 }
+    | Expr '>=' Expr { BinOp (Comp  GTE) $1 $3 }
+    | Expr like Expr { BinOp (Comp  Like) $1 $3 }
+    | Expr ilike Expr { BinOp (Comp  ILike) $1 $3 }
     | not Expr { Unary NegateBool $2 }
     | '-' Expr { Unary NegateNum $2 }
     | Expr Null { Unary $2 $1 }
@@ -142,13 +160,6 @@ Null
         | is not null { NotNull }
         | notnull { NotNull }
 
-BinOp
-    : '*' { Mul }
-    | '/' { Div }
-    | '+' { Add }
-    | '-' { Sub }
-    | '^' { Exponent }
-    | Compare { Comp $1 }
 
 {
 

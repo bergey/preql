@@ -39,7 +39,7 @@ integration :: TestTree
 integration = withResource (connect database) close $ \db -> testGroup "integration"
     [ testCase "SELECT foo, bar FROM baz" $ do
         conn <- db
-        result <- runQuery conn [aritySql| SELECT foo, bar FROM baz |] ()
+        result <- runQuery conn [aritySql|SELECT foo, bar FROM baz |] ()
         assertEqual "" [(1, "one"), (2, "two")] (result :: [(Int, T.Text)])
     ]
 
@@ -168,10 +168,17 @@ parser = testGroup "parser"
           , columns = "foo" :| []
           , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
           })
+    , testParseExpr "2 * 3 + 1"
+      (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
+    , testParseExpr "1 + 2 * 3"
+      (BinOp Add (Lit (F 1)) (BinOp Mul (Lit (F 2)) (Lit (F 3))) )
     ]
 
 testParse query expected = testCase query $
-    assertEqual "" (Right expected) (parseExp "<testcase>" query)
+    assertEqual "" (Right expected) (parseQuery "<testcase>" query)
+
+testParseExpr query expected = testCase query $
+    assertEqual "" (Right expected) (parseExpr "<testcase>" query)
 
 quickCheck :: TestTree
 quickCheck = testGroup "QuickCheck"

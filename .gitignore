@@ -4,3 +4,5 @@
 /crispy-broccoli.cabal
 /dist-newstyle
 *_flymake.hs
+/src/Syntax/Parser.hs
+/src/Syntax/Parser.info

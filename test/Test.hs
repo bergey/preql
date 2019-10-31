@@ -66,7 +66,7 @@ printer = testGroup "printer" [
             (fmt (QI Insert
                  { table = mkName "users"
                  , columns = mkName "email" :| []
-                 , values = T "bergey@teallabs.org" :| []
+                 , values = Lit (T "bergey@teallabs.org") :| []
                  }))
     , testCase "INSERT, two columns" $
         assertEqual ""
@@ -74,14 +74,14 @@ printer = testGroup "printer" [
             (fmt (QI Insert
                  { table = mkName "users"
                  , columns = mkName "email" :| [ mkName "first_name" ]
-                 , values = T "bergey@teallabs.org" :| [ T "Daniel" ]
+                 , values = Lit (T "bergey@teallabs.org") :| [ Lit (T "Daniel") ]
                  }))
     , testCase "params" $
       assertEqual ""
         "SELECT name, email FROM users WHERE name = $1"
         (fmt (QS Select
               { table = "users"
-              , columns = "name" :| ["email"]
+              , columns = Var "name" :| [ Var "email"]
               , conditions = Just (Compare Eq "name" (Param 1))
               }))
     ]
@@ -104,36 +104,36 @@ parser = testGroup "parser"
         (QI Insert
             { table = mkName "users"
             , columns = mkName "email" :| []
-            , values = T "bergey@teallabs.org" :| []
+            , values = Lit (T "bergey@teallabs.org") :| []
             })
     , testParse "INSERT INTO addresses (street, country) VALUES ('4 Ames St', 'USA')"
       (QI Insert
        { table = "addresses"
        , columns = "street" :| ["country" ]
-       , values = T "4 Ames St" :| [ T "USA" ]
+       , values = Lit (T "4 Ames St") :| [ Lit (T "USA") ]
        })
     , testParse "SELECT name FROM users"
       (QS Select
        { table = "users"
-       , columns = "name" :| []
+       , columns = Var "name" :| []
        , conditions = Nothing
        })
     , testParse "SELECT name, email FROM users"
       (QS Select
        { table = "users"
-       , columns = "name" :| ["email"]
+       , columns = Var "name" :| [Var "email"]
        , conditions = Nothing
        })
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
       (QS Select
        { table = "users"
-       , columns = "name" :| ["email"]
+       , columns = Var "name" :| [Var "email"]
        , conditions = Just (Compare Eq "name" (Lit (T "Daniel")))
        })
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
       (QS Select
        { table = "users"
-       , columns = "name" :| ["email"]
+       , columns = Var "name" :| [Var "email"]
        , conditions = Just (Or (Compare Eq "name" (Lit (T "Daniel"))) (Compare Eq "name" (Lit (T "Bergey"))))
        })
     , testParse "SELECT name FROM users WHERE age = 35"
@@ -141,31 +141,31 @@ parser = testGroup "parser"
         -- Just test that both parser rules work
       (QS Select
        { table = "users"
-       , columns = "name" :| []
+       , columns = Var "name" :| []
        , conditions = Just (Compare Eq "age" (Lit (F 35)))
        })
     , testParse "SELECT name FROM users WHERE age = 35.5"
       (QS Select
        { table = "users"
-       , columns = "name" :| []
+       , columns = Var "name" :| []
        , conditions = Just (Compare Eq "age" (Lit (F 35.5)))
        })
     , testParse "SELECT foo FROM bar WHERE baz > -2"
       (QS Select
           { table = "bar"
-          , columns = "foo" :| []
+          , columns = Var "foo" :| []
           , conditions = Just (Compare GT "baz" (Lit (F (-2) )))
           })
     , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
         (QS Select
           { table = "bar"
-          , columns = "foo" :| []
+          , columns = Var "foo" :| []
           , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
           })
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2"
         (QS Select
           { table = "bar"
-          , columns = "foo" :| []
+          , columns = Var "foo" :| []
           , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
           })
     , testParseExpr "2 * 3 + 1"

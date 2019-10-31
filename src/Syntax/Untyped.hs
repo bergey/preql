@@ -26,7 +26,7 @@ data Query = QI !Insert | QD !Delete | QU !Update | QS !Select
 data Insert = Insert
     { table   :: !Name
     , columns :: NonEmpty Name
-    , values  :: NonEmpty Literal -- TODO enforce matched lengths?
+    , values  :: NonEmpty Expr -- TODO enforce matched lengths?
     } deriving (Show, Eq, Generic)
 
 -- | Queries of the form @DELETE FROM table WHERE conditions@.
@@ -35,8 +35,7 @@ data Delete = Delete
     , conditions :: Maybe Condition
     } deriving (Show, Eq, Generic)
 
--- TODO Expressions besides Literals
-data Setting = Setting !Name !Literal
+data Setting = Setting !Name !Expr
     deriving (Show, Eq, Generic)
 
 -- | Queries of the form @UPDATE table SET settings WHERE conditions@.  Where each
@@ -50,7 +49,7 @@ data Update = Update
 -- | Queries of the form @SELECT columns FROM table WHERE conditions@.
 data Select = Select
     { table      :: !Name
-    , columns    :: NonEmpty Name
+    , columns    :: NonEmpty Expr
     , conditions :: Maybe Condition
     } deriving (Show, Eq, Generic)
 

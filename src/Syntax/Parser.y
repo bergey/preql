@@ -89,10 +89,10 @@ Delete
     | delete from Name { Delete $3 Nothing }
 
 Select
-    : select NameList from Name where Condition { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
-    | select NameList from Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
+    : select ExprList from Name where Condition { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
+    | select ExprList from Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
 
-Insert : insert into Name '(' NameList ')' values '(' LitList ')'
+Insert : insert into Name '(' NameList ')' values '(' ExprList ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
 
 {- These lists are non-empty by construction, but not by type. List head is the right-most element. -}
@@ -104,10 +104,6 @@ NameList
 ExprList
     : Expr { [$1] }
     | ExprList comma Expr { $3 : $1 }
-
-LitList
-    : Literal { [$1] }
-    | LitList comma Literal { $3 : $1 }
 
 Compare :: { Compare }
     : '=' { Eq }

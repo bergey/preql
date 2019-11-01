@@ -47,7 +47,7 @@ instance Arbitrary Condition where
         size <- getSize
         if size <= 1
             then Compare <$> arbitrary <*> arbitrary <*> arbitrary
-            else scale (\s -> s - 1) genericArbitraryU
+            else scale (`div` 2) genericArbitraryU
     shrink = genericShrink
 
 instance Arbitrary Expr where
@@ -55,7 +55,7 @@ instance Arbitrary Expr where
         size <- getSize
         if size <= 1
             then oneof [ Lit <$> arbitrary, Var <$> arbitrary ]
-            else scale (\s -> s - 1) genericArbitraryU
+            else scale (`div` 2) genericArbitraryU
         genericArbitraryU
     shrink = genericShrink
 

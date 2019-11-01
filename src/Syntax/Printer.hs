@@ -38,6 +38,7 @@ formatAsText :: FormatSql a => a -> String
 formatAsText = TL.unpack . TLB.toLazyText . fmt
 
 instance FormatSql Name where
+    -- TODO enclose keywoards &c in double quotes
     fmt = B.fromText . getName
 
 instance FormatSql Literal where

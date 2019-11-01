@@ -4,6 +4,7 @@ import           Syntax.Internal
 import           Syntax.Untyped
 
 import           Control.Applicative
+import           Data.Char (toUpper)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Generic.Random
 import           Test.QuickCheck
@@ -13,20 +14,24 @@ import qualified Data.Text as T
 instance Arbitrary a => Arbitrary (NonEmpty a) where
     arbitrary = liftA2 (:|) arbitrary arbitrary
 
+keywords = ["DELETE", "SELECT", "INSERT", "FROM", "WHERE", "INTO", "VALUES", "IS", "NOT", "NULL", "ISNULL", "NOTNULL", "LIKE", "ILIKE", "AND", "OR" ]
+
 -- | These ASCII letters are only a small subset of allowed identifiers.
 instance Arbitrary Name where
     -- listOf uses size; it's good to limit name length, incidental that it gets smaller deeper in the AST
     -- another sensible option would be to resize to 32, the Postgres effective name limit
-    arbitrary = mkName . T.pack <$> liftA2 (:) firstChar (listOf tailChar) where
-      firstChar = elements $ ['a'..'z'] ++ ['A'..'Z']
-      tailChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ "0123456789_$"
+    arbitrary = mkName . T.pack <$> (liftA2 (:) firstChar (listOf tailChar)
+        `suchThat` (\name -> not (map toUpper name `elem` keywords)))
+      where
+        firstChar = elements $ ['a'..'z'] ++ ['A'..'Z']
+        tailChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ "0123456789_$"
 
 -- instance Arbitrary Literal where arbitrary = genericArbitraryU
 instance Arbitrary Literal where
     -- TODO remaining Literal constructors
     arbitrary = oneof
         [ F <$> arbitrary
-        , T . T.pack . getPrintableString <$> arbitrary
+        , T . T.pack <$> fmap getPrintableString arbitrary `suchThat` (all (/= '\''))
         ]
 
 instance Arbitrary Query where arbitrary = genericArbitraryU

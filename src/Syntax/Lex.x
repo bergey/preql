@@ -189,4 +189,17 @@ alexError' (AlexPn _ l c) msg = do
 runAlex' :: Alex a -> FilePath -> String -> Either String a
 runAlex' a fp input = runAlex input (setFilePath fp >> a)
 
+lexAll :: Alex [LocToken]
+lexAll = do
+    token <- alexMonadScan
+    case unLoc token of
+        EOF -> return [token]
+        _ -> fmap (token :) lexAll
+
+testLex' :: String -> Either String [LocToken]
+testLex' s = runAlex s lexAll
+
+testLex :: String -> Either String [Token]
+testLex s = map unLoc <$> testLex' s
+
 }

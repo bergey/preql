@@ -75,7 +75,7 @@ tokens :-
     $i $l $i $k $e { lex ILike }
     $a $n $d { lex And }
     $o $r { lex Or }
-    [\'] $quoted* [\'] { lex' (String . T.pack . init . tail) }
+    [\'] ("''" | $quoted)* [\'] { lex' (String . T.pack . unquoteString) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
     "-"? $digit+ ("." $digit+)? ($e "-"? $digit+)? { lex' (Number . read) }
     "$" $digit+ { lex' (Param . read . tail) }
@@ -97,7 +97,7 @@ data Token = Delete | Select | Insert
      | Like | ILike
      | And | Or | Not
      | EOF
-     deriving Show
+     deriving (Show, Eq, Ord)
 
 /* from https://github.com/dagit/happy-plus-alex/blob/master/src/Lexer.x */
 
@@ -148,6 +148,17 @@ unLex t = case t of
     Or -> "OR"
     Not -> "NOT"
     EOF -> "<EOF>"
+
+-- | remove single quotes, and '' escape sequences
+unquoteString :: String -> String
+unquoteString ('\'' : rest) = go rest
+  where
+    go  ('\'' : '\'' : rest) = '\'' : go rest
+    go ['\''] = ""
+    go [_] = error "string did not end with a '"
+    go ('\'' : _rest) = error "unescaped ' in middle"
+    go (c : rest)  = c : go rest
+unquoteString _ = error "string did not begin with a '"
 
 alexEOF :: Alex LocToken
 alexEOF = do

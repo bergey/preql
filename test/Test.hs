@@ -21,6 +21,8 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck
 
+import qualified Syntax.Lex as L
+
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -172,6 +174,8 @@ parser = testGroup "parser"
       (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
     , testParseExpr "1 + 2 * 3"
       (BinOp Add (Lit (F 1)) (BinOp Mul (Lit (F 2)) (Lit (F 3))) )
+    , testCase "lex '' escape" $
+      assertEqual "" (Right [L.String "foo'bar", L.EOF]) (L.testLex "'foo''bar'")
     ]
 
 testParse query expected = testCase query $

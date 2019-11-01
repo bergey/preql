@@ -26,9 +26,9 @@ tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
     where n = length names
 
 -- | Synthesize a TypedQuery tagged with tuples of the given size
-makeArityQuery :: String -> Int -> Int -> Q Exp
+makeArityQuery :: String -> Word -> Int -> Q Exp
 makeArityQuery q p r = do
-    paramNames <- cNames 'p' p
+    paramNames <- cNames 'p' (fromIntegral p)
     resultNames <- cNames 'r' r
     return $ SigE
         (AppE (ConE 'TypedQuery) (AppE (VarE 'fromString) (LitE (StringL q))))
@@ -53,21 +53,21 @@ countColumnsReturned :: Syntax.Query -> Int
 countColumnsReturned (QS (Select {columns})) = length columns
 countColumnsReturned _ = 0
 
--- TODO update when Expr allowed more places
-maxParamQuery :: Query -> Int
+-- TODO update because Expr is allowed more places
+maxParamQuery :: Query -> Word
 maxParamQuery (QS (Select {conditions})) = case conditions of
                           Nothing -> 0
                           Just c -> maxParamCondition c
 maxParamQuery _ = 0
 
-maxParamCondition :: Condition -> Int
+maxParamCondition :: Condition -> Word
 maxParamCondition condition = case condition of
     Compare _ _ e -> maxParamExpr e
     Or l r -> max (maxParamCondition l) (maxParamCondition r)
     And l r -> max (maxParamCondition l) (maxParamCondition r)
     Not c -> maxParamCondition c
 
-maxParamExpr :: Expr -> Int
+maxParamExpr :: Expr -> Word
 maxParamExpr expr = case expr of
     Param i -> i
     BinOp _ l r -> max (maxParamExpr l) (maxParamExpr r)

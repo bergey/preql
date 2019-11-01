@@ -89,7 +89,7 @@ data LocToken = LocToken
 
 data Token = Delete | Select | Insert
      | From | Where | Into | Values
-     | Name Text | String Text | Number Double | Param Int
+     | Name Text | String Text | Number Double | Param Word
      | LParen | RParen | Comma
      | Mul | Div | Add | Sub | Exponent
      | Is | Null | IsNull | NotNull

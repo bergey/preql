@@ -31,7 +31,7 @@ main = defaultMain $ testGroup "crispy-broccoli"
     [ parser
     , printer
     , wire
-    -- , quickCheck
+    , quickCheck
     , integration
     ]
 

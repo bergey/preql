@@ -43,6 +43,7 @@ instance Arbitrary Condition where
         if size <= 1
             then Compare <$> arbitrary <*> arbitrary <*> arbitrary
             else scale (\s -> s - 1) genericArbitraryU
+    shrink = genericShrink
 
 instance Arbitrary Expr where
     arbitrary = do
@@ -51,6 +52,7 @@ instance Arbitrary Expr where
             then oneof [ Lit <$> arbitrary, Var <$> arbitrary ]
             else scale (\s -> s - 1) genericArbitraryU
         genericArbitraryU
+    shrink = genericShrink
 
 instance Arbitrary BinOp where arbitrary = genericArbitraryU
 instance Arbitrary UnaryOp where arbitrary = genericArbitraryU

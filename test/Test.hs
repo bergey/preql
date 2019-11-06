@@ -187,6 +187,8 @@ testParseExpr query expected = testCase query $
 quickCheck :: TestTree
 quickCheck = testGroup "QuickCheck"
     [ testProperty "Arbitrary SELECT" (\select -> assertRoundTrip (QS select))
+    , testProperty "Arbitrary INSERT" (\select -> assertRoundTrip (QI select))
+    , testProperty "Arbitrary DELETE" (\select -> assertRoundTrip (QD select))
     ]
 
 assertRoundTrip :: Query -> Bool

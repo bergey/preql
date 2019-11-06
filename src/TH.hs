@@ -28,13 +28,11 @@ tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
 
 -- | Synthesize a TypedQuery tagged with tuples of the given size
 makeArityQuery :: String -> Query -> Word -> Int -> Q Exp
-makeArityQuery raw parsed p r = do
-    paramNames <- cNames 'p' (fromIntegral p)
-    resultNames <- cNames 'r' r
-    parsedQ <- lift parsed
-    return $ SigE
-        (AppE (AppE (ConE 'TypedQuery) (LitE (StringL raw))) parsedQ)
-        (AppT (AppT (ConT ''TypedQuery) (tupleType paramNames)) (tupleType resultNames))
+makeArityQuery raw parsed p r =
+    [e|TypedQuery raw parsed :: TypedQuery params result |]
+    where
+        params = tupleType <$> cNames 'p' (fromIntegral p)
+        result = tupleType <$> cNames 'r' r
 
 aritySql :: QuasiQuoter
 aritySql = QuasiQuoter

@@ -47,10 +47,12 @@ tokens :-
     $d $e $l $e $t $e { lex Delete }
     $s $e $l $e $c $t { lex Select }
     $i $n $s $e $r $t { lex Insert }
+    $u $p $d $a $t $e { lex Update }
     $f $r $o $m { lex From }
     $w $h $e $r $e { lex Where }
     $i $n $t $o { lex Into }
     $v $a $l $u $e $s { lex Values }
+    $s $e $t { lex Set }
     "(" { lex LParen }
     "," { lex Comma }
     ")" { lex RParen }
@@ -87,8 +89,8 @@ data LocToken = LocToken
      , unLoc :: Token
      } deriving Show
 
-data Token = Delete | Select | Insert
-     | From | Where | Into | Values
+data Token = Delete | Select | Insert | Update
+     | From | Where | Into | Values | Set
      | Name Text | String Text | Number Double | Param Word
      | LParen | RParen | Comma
      | Mul | Div | Add | Sub | Exponent
@@ -120,10 +122,12 @@ unLex t = case t of
     Delete -> "DELETE"
     Select  -> "SELECT "
     Insert -> "INSERT"
+    Update -> "UPDATE"
     From  -> "FROM"
     Where  -> "WHERE"
     Into  -> "INTO"
     Values -> "VALUES"
+    Set -> "SET"
     Name n -> T.unpack n 
     String s -> T.unpack s
     Number n -> show n

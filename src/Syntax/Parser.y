@@ -39,11 +39,13 @@ import qualified Data.List.NonEmpty as NE
     delete { LocToken _ L.Delete }
     select { LocToken _ L.Select }
     insert { LocToken _ L.Insert }
+    update { LocToken _ L.Update }
 
     from { LocToken _ L.From }
     where { LocToken _ L.Where }
     into { LocToken _ L.Into }
     values { LocToken _ L.Values }
+    set { LocToken _ L.Set }
     '(' { LocToken _ L.LParen }
     ')' { LocToken _ L.RParen }
     comma { LocToken _ L.Comma }
@@ -83,6 +85,7 @@ Query
     : Delete { QD $1 }
     | Select { QS $1 }
     | Insert { QI $1 }
+    | Update { QU $1 }
 
 Delete
     : delete from Name where Condition { Delete $3 (Just $5) }
@@ -95,15 +98,21 @@ Select
 Insert : insert into Name '(' NameList ')' values '(' ExprList ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
 
+Update :: { Update }
+    : update Name set SettingList where Condition { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
+    | update Name set SettingList { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Nothing } }
+
 {- These lists are non-empty by construction, but not by type. List head is the right-most element. -}
 
-NameList
-    : Name { [$1] }
-    | NameList comma Name { $3 : $1 }
+list(el)
+    : el { [$1] }
+    | list(el) comma el { $3 : $1 }
 
-ExprList
-    : Expr { [$1] }
-    | ExprList comma Expr { $3 : $1 }
+NameList : list(Name) { $1 }
+
+ExprList : list(Expr) { $1 }
+
+SettingList : list(Setting) { $1 }
 
 Compare :: { Compare }
     : '=' { Eq }
@@ -121,6 +130,9 @@ Condition
     | Condition or Condition { Or $1 $3 }
     | not Condition { Not $2 }
     | '(' Condition ')' { $2 }
+
+Setting :: { Setting }
+    : Name '=' Expr { Setting $1 $3 }
 
 Name : name { mkName $1 }
 

@@ -8,8 +8,28 @@ import Database.PostgreSQL.Simple
 newtype TypedQuery p r = TypedQuery Query
     deriving Show
 
-runQuery :: (ToRow p, FromRow r) => Connection -> TypedQuery p r -> p -> IO [r]
-runQuery conn (TypedQuery q) p = query conn q p
+buildActions :: PS.Connection -> PS.Query -> [PS.Action] -> IO Params
+buildActions conn q row =
+    Params . fmap toTextBuilder <$> traverse (PS.buildAction conn q row) (V.fromList row)
+    where
+      toTextBuilder :: BS.Builder -> B.Builder
+      toTextBuilder = B.fromText . decodeUtf8 . BSL.toStrict . BS.toLazyByteString
 
-executeSql :: ToRow p => Connection -> TypedQuery p () -> p -> IO Int64
-executeSql conn (TypedQuery q) p = execute conn q p
+-- | compare @query conn q p@
+query :: (PS.ToRow p, PS.FromRow r) => PS.Connection -> TypedQuery p r -> p -> IO [r]
+query conn (TypedQuery raw parsed) p = do
+    let q = fromString raw :: PS.Query
+    substitutions <- buildActions conn q (PS.toRow p)
+    let formatted = formatAsByteString substitutions parsed
+    result <- PS.exec conn formatted
+    finishQueryWith PS.fromRow conn q result
+
+execute :: PS.ToRow p => PS.Connection -> TypedQuery p () -> p -> IO Int64
+execute conn (TypedQuery raw parsed) p = do
+    let
+        row = PS.toRow p
+        q = fromString raw :: PS.Query
+    substitutions <- buildActions conn q row
+    let formatted = formatAsByteString substitutions parsed
+    result <- PS.exec conn formatted
+    PS.finishExecute conn q result

@@ -23,28 +23,28 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import qualified TypedQuery as TQ
 
 class Monad m => SQL (m :: * -> *) where
-    runQuery :: (ToRow p, FromRow r) => TypedQuery p r -> p -> m [r]
-    runQuery_ :: FromRow r => TypedQuery () r -> m [r]
-    executeSql :: ToRow p => TypedQuery p () -> p -> m Int64
+    query :: (ToRow p, FromRow r) => TypedQuery p r -> p -> m [r]
+    query_ :: FromRow r => TypedQuery () r -> m [r]
+    execute :: ToRow p => TypedQuery p () -> p -> m Int64
 
-    default runQuery :: (MonadTrans t, SQL m', m ~ t m', ToRow p, FromRow r) => TypedQuery p r -> p -> m [r]
-    runQuery q p = lift (runQuery q p)
+    default query :: (MonadTrans t, SQL m', m ~ t m', ToRow p, FromRow r) => TypedQuery p r -> p -> m [r]
+    query q p = lift (runQuery q p)
 
-    default runQuery_ :: (MonadTrans t, SQL m', m ~ t m', FromRow r) => TypedQuery () r -> m [r]
-    runQuery_ = lift . runQuery_
+    default query_ :: (MonadTrans t, SQL m', m ~ t m', FromRow r) => TypedQuery () r -> m [r]
+    query_ = lift . runQuery_
 
-    default executeSql :: (MonadTrans t, SQL m', m ~ t m', ToRow p) => TypedQuery p () -> p -> m Int64
-    executeSql q p = lift (executeSql q p)
+    default execute :: (MonadTrans t, SQL m', m ~ t m', ToRow p) => TypedQuery p () -> p -> m Int64
+    execute q p = lift (executeSql q p)
 
 -- | Most larger applications will define an instance; this one is suitable to test out the library.
 instance SQL (ReaderT Connection IO) where
-    runQuery (TypedQuery q) p = do
+    query q p = do
         conn <- ask
-        lift $ query conn q p
-    runQuery_ (TypedQuery q) = do
+        lift $ TQ.query conn q p
+    query_ q = do
         conn <- ask
-        lift $ query_ conn q
-    executeSql (TypedQuery q) p = do
+        lift $ TQ.query_ conn q
+    execute q p = do
         conn <- ask
         lift $ execute conn q p
 

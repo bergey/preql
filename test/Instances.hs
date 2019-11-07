@@ -1,7 +1,7 @@
 module Instances where
 
-import           Syntax.Name
-import           Syntax.Untyped
+import           Untyped.Name
+import           Untyped.Syntax
 
 import           Control.Applicative
 import           Data.Char           (toUpper)

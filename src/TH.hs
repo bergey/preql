@@ -1,18 +1,18 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DuplicateRecordFields    #-}
+{-# LANGUAGE NamedFieldPuns           #-}
+{-# LANGUAGE TemplateHaskell          #-}
 module TH where
 
-import Syntax.Untyped as Syntax
-import Syntax.Parser (parseQuery)
-import TypedQuery
+import           TypedQuery
+import           Untyped.Parser             (parseQuery)
+import           Untyped.Syntax             as Syntax
 
-import Data.String (IsString(..))
-import Database.PostgreSQL.Simple (Only(..))
-import Language.Haskell.TH
-import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax (Lift(..))
+import           Data.String                (IsString (..))
+import           Database.PostgreSQL.Simple (Only (..))
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Quote
+import           Language.Haskell.TH.Syntax (Lift (..))
 
 a1Names :: Int -> [String]
 a1Names n = take n names where
@@ -51,26 +51,26 @@ aritySql = QuasiQuoter
 
 countColumnsReturned :: Syntax.Query -> Int
 countColumnsReturned (QS (Select {columns})) = length columns
-countColumnsReturned _ = 0
+countColumnsReturned _                       = 0
 
 -- TODO update because Expr is allowed more places
 maxParamQuery :: Query -> Word
 maxParamQuery (QS (Select {conditions})) = case conditions of
                           Nothing -> 0
-                          Just c -> maxParamCondition c
+                          Just c  -> maxParamCondition c
 maxParamQuery _ = 0
 
 maxParamCondition :: Condition -> Word
 maxParamCondition condition = case condition of
     Compare _ _ e -> maxParamExpr e
-    Or l r -> max (maxParamCondition l) (maxParamCondition r)
-    And l r -> max (maxParamCondition l) (maxParamCondition r)
-    Not c -> maxParamCondition c
+    Or l r        -> max (maxParamCondition l) (maxParamCondition r)
+    And l r       -> max (maxParamCondition l) (maxParamCondition r)
+    Not c         -> maxParamCondition c
 
 maxParamExpr :: Expr -> Word
 maxParamExpr expr = case expr of
-    Param i -> i
+    Param i     -> i
     BinOp _ l r -> max (maxParamExpr l) (maxParamExpr r)
-    Unary _ e -> maxParamExpr e
-    Lit _ -> 0
-    Var _ -> 0
+    Unary _ e   -> maxParamExpr e
+    Lit _       -> 0
+    Var _       -> 0

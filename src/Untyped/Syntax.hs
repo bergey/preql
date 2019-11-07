@@ -4,9 +4,9 @@
 
 -- | Data types reperesenting SQL query syntax.
 
-module Syntax.Untyped where
+module Untyped.Syntax where
 
-import           Syntax.Name
+import           Untyped.Name
 
 import           Data.List.NonEmpty         (NonEmpty)
 import           Data.Text                  (Text)

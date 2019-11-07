@@ -5,10 +5,10 @@
 -- | Print the types in Syntax as valid SQL.  The emphasis is on
 -- queries to send to the database, not on legibilty; no extra whitespace is introduced.
 
-module Syntax.Printer where
+module Untyped.Printer where
 
-import           Syntax.Name
-import           Syntax.Untyped
+import           Untyped.Name
+import           Untyped.Syntax
 
 import           Data.ByteString                  (ByteString)
 import           Data.Foldable                    (toList)

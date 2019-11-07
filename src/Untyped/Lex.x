@@ -1,5 +1,5 @@
 {
-module Syntax.Lex where
+module Untyped.Lex where
 
 import           Data.Text (Text)
 import           Prelude hiding (LT, GT, lex)

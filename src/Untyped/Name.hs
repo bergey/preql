@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 -- | Definitions which need to be private in order to maintain their invariants.
 
-module Syntax.Name (
+module Untyped.Name (
     Name, mkName, getName
     ) where
 

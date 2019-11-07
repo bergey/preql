@@ -3,8 +3,8 @@
 module TypedQuery where
 
 import           PQResultUtils
-import           Syntax.Printer
-import           Syntax.Untyped                      (Query)
+import           Untyped.Printer
+import           Untyped.Syntax                      (Query)
 
 import           Data.Int                            (Int64)
 import           Data.String

@@ -5,12 +5,12 @@
 import           Instances
 import           Test.Wire                  (database, wire)
 
-import           Syntax.Name                (Name, mkName)
-import           Syntax.Parser
-import           Syntax.Printer
-import           Syntax.Untyped
 import           TH
 import           TypedQuery
+import           Untyped.Name               (Name, mkName)
+import           Untyped.Parser
+import           Untyped.Printer
+import           Untyped.Syntax
 
 import           Data.Either
 import           Data.Int
@@ -21,7 +21,7 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck
 
-import qualified Syntax.Lex                 as L
+import qualified Untyped.Lex                as L
 
 import qualified Data.List.NonEmpty         as NE
 import qualified Data.Text                  as T

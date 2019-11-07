@@ -3,7 +3,7 @@
 module Syntax.Parser where
 
 import Syntax.Untyped
-import Syntax.Internal (mkName)
+import Syntax.Name (mkName)
 import Syntax.Lex (Alex, LocToken(..), Token)
 
 import           Prelude hiding (LT, GT, lex)

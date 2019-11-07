@@ -1,15 +1,15 @@
 module Instances where
 
-import           Syntax.Internal
+import           Syntax.Name
 import           Syntax.Untyped
 
 import           Control.Applicative
-import           Data.Char (toUpper)
-import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.Char           (toUpper)
+import           Data.List.NonEmpty  (NonEmpty (..))
 import           Generic.Random
 import           Test.QuickCheck
 
-import qualified Data.Text as T
+import qualified Data.Text           as T
 
 instance Arbitrary a => Arbitrary (NonEmpty a) where
     arbitrary = liftA2 (:|) arbitrary arbitrary

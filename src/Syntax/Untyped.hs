@@ -1,20 +1,20 @@
-{-# LANGUAGE DeriveLift #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveLift            #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
 -- | Data types reperesenting SQL query syntax.
 
 module Syntax.Untyped where
 
-import           Syntax.Internal
+import           Syntax.Name
 
-import           Data.List.NonEmpty (NonEmpty)
-import           Data.Text (Text)
+import           Data.List.NonEmpty         (NonEmpty)
+import           Data.Text                  (Text)
 import           GHC.Generics
 import           Instances.TH.Lift
-import           Language.Haskell.TH.Syntax (Lift(..))
+import           Language.Haskell.TH.Syntax (Lift (..))
 
-import qualified Data.Text as T
+import qualified Data.Text                  as T
 
 data Literal = I !Int | F !Double | T !Text | B !Bool
     deriving (Show, Eq, Generic, Lift)

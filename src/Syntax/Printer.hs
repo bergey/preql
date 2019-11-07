@@ -7,7 +7,7 @@
 
 module Syntax.Printer where
 
-import           Syntax.Internal
+import           Syntax.Name
 import           Syntax.Untyped
 
 import           Data.ByteString                  (ByteString)
@@ -110,7 +110,7 @@ instance FormatSql Expr where
     fmt ps (Param i) = case ps of
         Placeholders -> B.fromString ('$' : show i)
         Params ps -> case ps !? fromIntegral (i - 1) of
-            Nothing -> error $ "parameter list to short for $" <> show i
+            Nothing    -> error $ "parameter list too short for $" <> show i
             Just value -> value
     fmt ps (BinOp op l r) = "(" <> fmt ps l <> ") " <> fmt ps op <> " (" <> fmt ps r <> ")"
     fmt ps (Unary op expr) = case op of

@@ -1,19 +1,19 @@
+{-# LANGUAGE DeriveGeneric   #-}
+{-# LANGUAGE DeriveLift      #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveLift #-}
-{-# LANGUAGE DeriveGeneric #-}
 -- | Definitions which need to be private in order to maintain their invariants.
 
-module Syntax.Internal (
+module Syntax.Name (
     Name, mkName, getName
     ) where
 
-import           Data.String (IsString (..))
-import           Data.Text (Text)
+import           Data.String                (IsString (..))
+import           Data.Text                  (Text)
 import           GHC.Generics
 import           Instances.TH.Lift
-import           Language.Haskell.TH.Syntax (Lift(..))
+import           Language.Haskell.TH.Syntax (Lift (..))
 
-import qualified Data.Text as T
+import qualified Data.Text                  as T
 
 newtype Name = Name Text
     deriving (Show, Eq, Ord, Generic, Lift)

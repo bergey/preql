@@ -5,7 +5,7 @@
 import           Instances
 import           Test.Wire                  (database, wire)
 
-import           Syntax.Internal            (Name, mkName)
+import           Syntax.Name                (Name, mkName)
 import           Syntax.Parser
 import           Syntax.Printer
 import           Syntax.Untyped

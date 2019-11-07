@@ -1,11 +1,11 @@
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE QuasiQuotes              #-}
 
 import           Instances
-import           Test.Wire (wire, database)
+import           Test.Wire                  (database, wire)
 
-import           Syntax.Internal (Name, mkName)
+import           Syntax.Internal            (Name, mkName)
 import           Syntax.Parser
 import           Syntax.Printer
 import           Syntax.Untyped
@@ -14,19 +14,19 @@ import           TypedQuery
 
 import           Data.Either
 import           Data.Int
-import           Data.List.NonEmpty (NonEmpty (..))
-import           Database.PostgreSQL.Simple (connect, close, Only(..))
-import           Prelude hiding (Ordering(..), lex)
+import           Data.List.NonEmpty         (NonEmpty (..))
+import           Database.PostgreSQL.Simple (Only (..), close, connect)
+import           Prelude                    hiding (Ordering (..), lex)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck
 
-import qualified Syntax.Lex as L
+import qualified Syntax.Lex                 as L
 
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Builder as TLB
+import qualified Data.List.NonEmpty         as NE
+import qualified Data.Text                  as T
+import qualified Data.Text.Lazy             as TL
+import qualified Data.Text.Lazy.Builder     as TLB
 
 main :: IO ()
 main = defaultMain $ testGroup "crispy-broccoli"
@@ -190,9 +190,10 @@ testParseExpr query expected = testCase query $
 
 quickCheck :: TestTree
 quickCheck = testGroup "QuickCheck"
-    [ testProperty "Arbitrary SELECT" (\select -> assertRoundTrip (QS select))
-    , testProperty "Arbitrary INSERT" (\select -> assertRoundTrip (QI select))
-    , testProperty "Arbitrary DELETE" (\select -> assertRoundTrip (QD select))
+    [ testProperty "Arbitrary SELECT" (\q -> assertRoundTrip (QS q))
+    , testProperty "Arbitrary INSERT" (\q -> assertRoundTrip (QI q))
+    , testProperty "Arbitrary DELETE" (\q -> assertRoundTrip (QD q))
+    , testProperty "Arbitrary UPDATE" (\q -> assertRoundTrip (QD q))
     ]
 
 assertRoundTrip :: Query -> Bool

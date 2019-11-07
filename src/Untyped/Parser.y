@@ -139,7 +139,7 @@ Name : name { mkName $1 }
 Expr :: { Expr }
     : Literal { Lit $1 }
     | Name { Var $1 }
-    | param { Param $1 }
+    | param { NumberedParam $1 }
     | '(' Expr ')' { $2 }
     | Expr '^' Expr { BinOp Exponent $1 $3 }
     | Expr '*' Expr { BinOp Mul $1 $3 }

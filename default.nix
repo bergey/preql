@@ -1,7 +1,7 @@
 { mkDerivation, alex, array, attoparsec, base, bytestring
 , contravariant, free, generic-random, happy, hpack
-, postgresql-libpq, postgresql-simple, QuickCheck, stdenv, tasty
-, tasty-hunit, tasty-quickcheck, template-haskell, text
+, postgresql-libpq, postgresql-simple, QuickCheck, stdenv, syb
+, tasty, tasty-hunit, tasty-quickcheck, template-haskell, text
 , th-lift-instances, transformers, vector
 }:
 mkDerivation {
@@ -10,13 +10,13 @@ mkDerivation {
   src = ./.;
   libraryHaskellDepends = [
     array attoparsec base bytestring contravariant free
-    postgresql-libpq postgresql-simple template-haskell text
+    postgresql-libpq postgresql-simple syb template-haskell text
     th-lift-instances transformers vector
   ];
   libraryToolDepends = [ alex happy hpack ];
   testHaskellDepends = [
     array attoparsec base bytestring contravariant free generic-random
-    postgresql-libpq postgresql-simple QuickCheck tasty tasty-hunit
+    postgresql-libpq postgresql-simple QuickCheck syb tasty tasty-hunit
     tasty-quickcheck template-haskell text th-lift-instances
     transformers vector
   ];

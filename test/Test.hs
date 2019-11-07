@@ -55,21 +55,21 @@ printer = testGroup "printer" [
     testCase "DELETE, no condition" $
         assertEqual ""
             "DELETE FROM taffy"
-            (fmt emptyParams (QD Delete
+            (fmt (QD Delete
                   { table = mkName "taffy"
                   , conditions = Nothing
                   }))
     , testCase "DELETE, = condition" $
         assertEqual ""
             "DELETE FROM taffy WHERE flavor = 'blueberry'"
-            (fmt emptyParams (QD Delete
+            (fmt (QD Delete
                   { table = mkName "taffy"
                   , conditions = Just (Compare Eq (mkName "flavor") (Lit (T"blueberry")))
                   }))
     , testCase "INSERT, one column" $
         assertEqual ""
             "INSERT INTO users (email) VALUES ('bergey@teallabs.org')"
-            (fmt emptyParams (QI Insert
+            (fmt (QI Insert
                  { table = mkName "users"
                  , columns = mkName "email" :| []
                  , values = Lit (T "bergey@teallabs.org") :| []
@@ -77,7 +77,7 @@ printer = testGroup "printer" [
     , testCase "INSERT, two columns" $
         assertEqual ""
             "INSERT INTO users (email, first_name) VALUES ('bergey@teallabs.org', 'Daniel')"
-            (fmt emptyParams (QI Insert
+            (fmt (QI Insert
                  { table = mkName "users"
                  , columns = mkName "email" :| [ mkName "first_name" ]
                  , values = Lit (T "bergey@teallabs.org") :| [ Lit (T "Daniel") ]
@@ -85,10 +85,10 @@ printer = testGroup "printer" [
     , testCase "params" $
       assertEqual ""
         "SELECT name, email FROM users WHERE name = $1"
-        (fmt Placeholders (QS Select
+        (fmt(QS Select
               { table = "users"
               , columns = Var "name" :| [ Var "email"]
-              , conditions = Just (Compare Eq "name" (Param 1))
+              , conditions = Just (Compare Eq "name" (NumberedParam 1))
               }))
     ]
 
@@ -199,4 +199,4 @@ quickCheck = testGroup "QuickCheck"
 assertRoundTrip :: Query -> Bool
 assertRoundTrip query =
     Right query == parseQuery "<assertRoundTrip>" printed
-  where printed = TL.unpack . TLB.toLazyText . fmt Placeholders $ query
+  where printed = TL.unpack . TLB.toLazyText . fmt $ query

@@ -69,8 +69,8 @@ maxParamCondition condition = case condition of
 
 maxParamExpr :: Expr -> Word
 maxParamExpr expr = case expr of
-    Param i     -> i
-    BinOp _ l r -> max (maxParamExpr l) (maxParamExpr r)
-    Unary _ e   -> maxParamExpr e
-    Lit _       -> 0
-    Var _       -> 0
+    NumberedParam i -> i
+    BinOp _ l r     -> max (maxParamExpr l) (maxParamExpr r)
+    Unary _ e       -> maxParamExpr e
+    Lit _           -> 0
+    Var _           -> 0

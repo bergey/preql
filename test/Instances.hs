@@ -47,7 +47,7 @@ instance Arbitrary Condition where
         size <- getSize
         if size <= 1
             then Compare <$> arbitrary <*> arbitrary <*> arbitrary
-            else scale (`div` 2) genericArbitraryU
+            else scale  (`div` 2) genericArbitraryU
     shrink = genericShrink
 
 instance Arbitrary Expr where
@@ -55,9 +55,17 @@ instance Arbitrary Expr where
         size <- getSize
         if size <= 1
             then oneof [ Lit <$> arbitrary, Var <$> arbitrary ]
-            else scale (`div` 2) genericArbitraryU
-        genericArbitraryU
-    shrink = genericShrink
+            else scale (`div` 2) $ oneof
+                 [ Lit <$> arbitrary, Var <$> arbitrary
+                 , NumberedParam <$> arbitrary -- never InlineParam
+                 , BinOp <$> arbitrary <*> arbitrary <*> arbitrary
+                 , Unary <$> arbitrary <*> arbitrary
+                 ]
+    shrink expr = case expr of
+        -- either subterm, or shrink one or both subterms
+        BinOp op l r -> l : r : (tail $ BinOp op <$> l : shrink l <*> r : shrink r)
+        Unary op e -> e : (Unary op <$> shrink e)
+        _ -> [] -- remaning terms can't be shrunk
 
 instance Arbitrary BinOp where arbitrary = genericArbitraryU
 instance Arbitrary UnaryOp where arbitrary = genericArbitraryU

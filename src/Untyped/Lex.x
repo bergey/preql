@@ -14,6 +14,7 @@ $unicodeIds = $printable # [$white \,\.\;\'\"\(\)\<\>=\+\-\^\!@]
 $firstLetter = $unicodeIds # [0-9_\$]
 $quoted = $printable # [\']
 $digit = [0-9]
+$haskell = $printable # [\}]
 $a = [aA]
 $b = [bB]
 $c = [cC]
@@ -80,7 +81,8 @@ tokens :-
     [\'] ("''" | $quoted)* [\'] { lex' (String . T.pack . unquoteString) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
     "-"? $digit+ ("." $digit+)? ($e "-"? $digit+)? { lex' (Number . read) }
-    "$" $digit+ { lex' (Param . read . tail) }
+    "$" $digit+ { lex' (NumberedParam . read . tail) }
+    "${" $haskell+ "}" { lex' (HaskellParam . T.pack . init . drop 2) }
 
 {
 
@@ -91,7 +93,8 @@ data LocToken = LocToken
 
 data Token = Delete | Select | Insert | Update
      | From | Where | Into | Values | Set
-     | Name Text | String Text | Number Double | Param Word
+     | Name Text | String Text | Number Double
+     | NumberedParam Word | HaskellParam Text
      | LParen | RParen | Comma
      | Mul | Div | Add | Sub | Exponent
      | Is | Null | IsNull | NotNull
@@ -131,7 +134,8 @@ unLex t = case t of
     Name n -> T.unpack n 
     String s -> T.unpack s
     Number n -> show n
-    Param i -> '$' : show i
+    NumberedParam i -> '$' : show i
+    HaskellParam s -> "${" ++ T.unpack s ++ "}"
     LParen  -> "("
     RParen  -> ")"
     Comma -> ","

@@ -65,7 +65,7 @@ data Condition = Compare !Compare !Name !Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Expr = Lit !Literal | Var !Name
-    | NumberedParam !Word | InlineParam !Text
+    | NumberedParam !Word | InlineParam !Text | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)

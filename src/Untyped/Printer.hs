@@ -103,6 +103,7 @@ instance FormatSql Expr where
     fmt (Var name) = fmt name
     fmt (NumberedParam i) = B.fromString ('$' : show i)
     fmt (InlineParam txt) = B.fromText txt
+    fmt (HaskellParam txt) = "${" <> B.fromText txt <> "}"
     fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
     fmt (Unary op expr) = case op of
         NegateNum  -> "-" <> parens (fmt expr)

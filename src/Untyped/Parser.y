@@ -53,7 +53,8 @@ import qualified Data.List.NonEmpty as NE
     name { LocToken _ (L.Name $$) }
     string { LocToken _ (L.String $$) }
     number { LocToken _ (L.Number $$) }
-    param { LocToken _ (L.Param $$) }
+    param { LocToken _ (L.NumberedParam $$) }
+    haskellParam { LocToken _ (L.HaskellParam $$) }
 
     '*' { LocToken _ L.Mul }
     '/' { LocToken _ L.Div }
@@ -140,6 +141,7 @@ Expr :: { Expr }
     : Literal { Lit $1 }
     | Name { Var $1 }
     | param { NumberedParam $1 }
+    | haskellParam { HaskellParam $1 }
     | '(' Expr ')' { $2 }
     | Expr '^' Expr { BinOp Exponent $1 $3 }
     | Expr '*' Expr { BinOp Mul $1 $3 }

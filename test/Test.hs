@@ -3,36 +3,38 @@
 {-# LANGUAGE QuasiQuotes              #-}
 
 import           Instances
-import           Test.Wire                  (database, wire)
+import           Test.Wire (database, wire)
 
 import           TH
 import           TypedQuery
-import           Untyped.Name               (Name, mkName)
+import           Untyped.Name (Name, mkName)
+import           Untyped.Params
 import           Untyped.Parser
 import           Untyped.Printer
 import           Untyped.Syntax
 
 import           Data.Either
 import           Data.Int
-import           Data.List.NonEmpty         (NonEmpty (..))
+import           Data.List.NonEmpty (NonEmpty (..))
 import           Database.PostgreSQL.Simple (Only (..), close, connect)
-import           Prelude                    hiding (Ordering (..), lex)
+import           Prelude hiding (Ordering (..), lex)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck
 
-import qualified Untyped.Lex                as L
+import qualified Untyped.Lex as L
 
-import qualified Data.List.NonEmpty         as NE
-import qualified Data.Text                  as T
-import qualified Data.Text.Lazy             as TL
-import qualified Data.Text.Lazy.Builder     as TLB
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TLB
 
 main :: IO ()
 main = defaultMain $ testGroup "crispy-broccoli"
     [ parser
     , printer
     , wire
+    , antiquotes
     , quickCheck
     , integration
     ]
@@ -46,6 +48,18 @@ integration = withResource (connect database) close $ \db -> testGroup "integrat
     , testCase "with params" $ do
         conn <- db
         result <- query conn [aritySql| SELECT foo, bar FROM baz WHERE foo = $1|] (Only 1 :: Only Int)
+        assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
+    , testCase "antiquote, 2 params" $ do
+        conn <- db
+        let
+            foo0 = 1 :: Int
+            bar0 = "one" :: T.Text
+        result <- uncurry (query conn) [antiquoteSql| SELECT foo, bar FROM baz WHERE foo = ${foo0} AND bar = ${bar0}|]
+        assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
+    , testCase "antiquote, 1 params" $ do
+        conn <- db
+        let foo0 = 1 :: Int
+        result <- uncurry (query conn) [antiquoteSql| SELECT foo, bar FROM baz WHERE foo = ${foo0}|]
         assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
     ]
 
@@ -187,6 +201,14 @@ testParse query expected = testCase query $
 
 testParseExpr query expected = testCase query $
     assertEqual "" (Right expected) (parseExpr "<testcase>" query)
+
+antiquotes :: TestTree
+antiquotes = testGroup "antiquotes"
+    [ testCase "numberAntiquotes" $
+        assertEqual ""
+            (QS (Select {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (NumberedParam 1))}), AntiquoteState 1 ["foo0"])
+            (numberAntiquotes (QS (Select {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (HaskellParam "foo0"))})))
+    ]
 
 quickCheck :: TestTree
 quickCheck = testGroup "QuickCheck"

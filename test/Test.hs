@@ -43,23 +43,23 @@ integration :: TestTree
 integration = withResource (connect database) close $ \db -> testGroup "integration"
     [ testCase "SELECT foo, bar FROM baz" $ do
         conn <- db
-        result <- query conn [aritySql|SELECT foo, bar FROM baz |] ()
+        result <- query conn ([aritySql|SELECT foo, bar FROM baz |], ())
         assertEqual "" [(1, "one"), (2, "two")] (result :: [(Int, T.Text)])
     , testCase "with params" $ do
         conn <- db
-        result <- query conn [aritySql| SELECT foo, bar FROM baz WHERE foo = $1|] (Only 1 :: Only Int)
+        result <- query conn ([aritySql| SELECT foo, bar FROM baz WHERE foo = $1|], Only 1 :: Only Int)
         assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
     , testCase "antiquote, 2 params" $ do
         conn <- db
         let
             foo0 = 1 :: Int
             bar0 = "one" :: T.Text
-        result <- uncurry (query conn) [antiquoteSql| SELECT foo, bar FROM baz WHERE foo = ${foo0} AND bar = ${bar0}|]
+        result <- query conn [antiquoteSql| SELECT foo, bar FROM baz WHERE foo = ${foo0} AND bar = ${bar0}|]
         assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
     , testCase "antiquote, 1 params" $ do
         conn <- db
         let foo0 = 1 :: Int
-        result <- uncurry (query conn) [antiquoteSql| SELECT foo, bar FROM baz WHERE foo = ${foo0}|]
+        result <- query conn [antiquoteSql| SELECT foo, bar FROM baz WHERE foo = ${foo0}|]
         assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
     ]
 

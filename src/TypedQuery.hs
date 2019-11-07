@@ -38,8 +38,8 @@ buildActions conn q row =
       toText = decodeUtf8 . BSL.toStrict . BS.toLazyByteString
 
 -- | compare @query conn q p@
-query :: (PS.ToRow p, PS.FromRow r) => PS.Connection -> TypedQuery p r -> p -> IO [r]
-query conn (TypedQuery raw parsed) p = do
+query :: (PS.ToRow p, PS.FromRow r) => PS.Connection -> (TypedQuery p r, p) -> IO [r]
+query conn (TypedQuery raw parsed, p) = do
     let q = fromString raw :: PS.Query
     substitutions <- buildActions conn q (PS.toRow p)
     let formatted = formatAsByteString (inlineParams substitutions parsed)
@@ -53,8 +53,8 @@ query_ conn (TypedQuery raw parsed) = do
     result <- PS.exec conn (formatAsByteString parsed)
     finishQueryWith PS.fromRow conn q result
 
-execute :: PS.ToRow p => PS.Connection -> TypedQuery p () -> p -> IO Int64
-execute conn (TypedQuery raw parsed) p = do
+execute :: PS.ToRow p => PS.Connection -> (TypedQuery p (), p) -> IO Int64
+execute conn (TypedQuery raw parsed, p) = do
     let
         row = PS.toRow p
         q = fromString raw :: PS.Query

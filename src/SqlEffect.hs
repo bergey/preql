@@ -22,33 +22,34 @@ import           Control.Monad.Trans.Class (MonadTrans(..))
 
 import qualified TypedQuery as TQ
 
--- | An Effect class for running SQL queries.  Equivalently, a context
--- with a single Postgres connection (or connection pool).
+-- | An Effect class for running SQL queries.  You can think of this
+-- as a context specifying a particular Postgres connection (or connection
+-- pool).
 class Monad m => SQL (m :: * -> *) where
-    query :: (ToRow p, FromRow r) => TypedQuery p r -> p -> m [r]
+    query :: (ToRow p, FromRow r) => (TypedQuery p r , p) -> m [r]
     query_ :: FromRow r => TypedQuery () r -> m [r]
-    execute :: ToRow p => TypedQuery p () -> p -> m Int64
+    execute :: ToRow p => (TypedQuery p (), p) -> m Int64
 
-    default query :: (MonadTrans t, SQL m', m ~ t m', ToRow p, FromRow r) => TypedQuery p r -> p -> m [r]
-    query q p = lift (query q p)
+    default query :: (MonadTrans t, SQL m', m ~ t m', ToRow p, FromRow r) => (TypedQuery p r, p) -> m [r]
+    query qp = lift (query qp)
 
     default query_ :: (MonadTrans t, SQL m', m ~ t m', FromRow r) => TypedQuery () r -> m [r]
     query_ = lift . query_
 
-    default execute :: (MonadTrans t, SQL m', m ~ t m', ToRow p) => TypedQuery p () -> p -> m Int64
-    execute q p = lift (execute q p)
+    default execute :: (MonadTrans t, SQL m', m ~ t m', ToRow p) => (TypedQuery p (), p) -> m Int64
+    execute qp = lift (execute qp)
 
 -- | Most larger applications will define an instance; this one is suitable to test out the library.
 instance SQL (ReaderT Connection IO) where
-    query q p = do
+    query qp = do
         conn <- ask
-        lift $ TQ.query conn q p
+        lift $ TQ.query conn qp
     query_ q = do
         conn <- ask
         lift $ TQ.query_ conn q
-    execute q p = do
+    execute qp = do
         conn <- ask
-        lift $ TQ.execute conn q p
+        lift $ TQ.execute conn qp
 
 instance SQL m => SQL (ExceptT e m)
 instance SQL m => SQL (MaybeT m)

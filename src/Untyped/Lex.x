@@ -83,6 +83,7 @@ tokens :-
     "-"? $digit+ ("." $digit+)? ($e "-"? $digit+)? { lex' (Number . read) }
     "$" $digit+ { lex' (NumberedParam . read . tail) }
     "${" $haskell+ "}" { lex' (HaskellParam . T.pack . init . drop 2) }
+    ";" { lex Semicolon }
 
 {
 
@@ -101,7 +102,7 @@ data Token = Delete | Select | Insert | Update
      | Equals | NotEquals | LT | LTE | GT | GTE
      | Like | ILike
      | And | Or | Not
-     | EOF
+     | Semicolon | EOF
      deriving (Show, Eq, Ord)
 
 /* from https://github.com/dagit/happy-plus-alex/blob/master/src/Lexer.x */
@@ -155,6 +156,7 @@ unLex t = case t of
     And  -> "AND "
     Or -> "OR"
     Not -> "NOT"
+    Semicolon -> ";"
     EOF -> "<EOF>"
 
 -- | remove single quotes, and '' escape sequences

@@ -194,6 +194,14 @@ parser = testGroup "parser"
       (BinOp Add (Lit (F 1)) (BinOp Mul (Lit (F 2)) (Lit (F 3))) )
     , testCase "lex '' escape" $
       assertEqual "" (Right [L.String "foo'bar", L.EOF]) (L.testLex "'foo''bar'")
+    , testCase "lex semicolon" $
+      assertEqual "" (Right [L.Select, L.Number 2.0, L.Add, L.Number 3.0, L.Semicolon, L.EOF]) (L.testLex "SELECT 2 + 3;")
+    , testParse "SELECT foo FROM bar WHERE baz = 2E-2;"
+      (QS Select
+          { table = "bar"
+          , columns = Var "foo" :| []
+          , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
+          })
     ]
 
 testParse query expected = testCase query $

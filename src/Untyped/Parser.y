@@ -80,9 +80,15 @@ import qualified Data.List.NonEmpty as NE
     and  { LocToken _ L.And }
     or { LocToken _ L.Or }
 
+    semicolon { LocToken _ L.Semicolon }
+
 %%
 
-Query
+Query :: { Query }
+    : Query1 { $1 }
+    | Query1 semicolon { $1 }
+
+Query1 :: { Query }
     : Delete { QD $1 }
     | Select { QS $1 }
     | Insert { QI $1 }

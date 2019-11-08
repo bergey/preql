@@ -43,7 +43,7 @@ aritySql  = expressionOnly "aritySql " $ \raw -> do
     case e_ast of
         Right parsed -> do
             let
-                positionalCount = maxParamQuery parsed
+                positionalCount = maxParam parsed
                 (rewritten, aqs) = numberAntiquotes positionalCount parsed
                 antiNames = map (mkName . T.unpack) (haskellExpressions aqs)
             typedQuery <- makeArityQuery raw rewritten
@@ -79,34 +79,3 @@ expressionOnly name qq = QuasiQuoter
 countColumnsReturned :: Syntax.Query -> Int
 countColumnsReturned (QS (Select {columns})) = length columns
 countColumnsReturned _                       = 0
-
--- TODO use SYB instead of all this boilerplate
-maxParamQuery :: Query -> Word
-maxParamQuery (QS (Select {columns, conditions})) = max
-    (maybe 0 maxParamCondition conditions)
-    (maximum $ fmap maxParamExpr columns)
-maxParamQuery (QI (Insert {values})) = maximum $ fmap maxParamExpr values
-maxParamQuery (QD (Delete{conditions})) = maybe 0 maxParamCondition conditions
-maxParamQuery (QU (Update{settings, conditions})) = max
-    (maybe 0 maxParamCondition conditions)
-    (maximum $ fmap maxParamSetting settings)
-
-maxParamCondition :: Condition -> Word
-maxParamCondition condition = case condition of
-    Compare _ _ e -> maxParamExpr e
-    Or l r        -> max (maxParamCondition l) (maxParamCondition r)
-    And l r       -> max (maxParamCondition l) (maxParamCondition r)
-    Not c         -> maxParamCondition c
-
-maxParamExpr :: Expr -> Word
-maxParamExpr expr = case expr of
-    NumberedParam i -> i
-    InlineParam _ -> 0
-    HaskellParam _ -> 0
-    BinOp _ l r     -> max (maxParamExpr l) (maxParamExpr r)
-    Unary _ e       -> maxParamExpr e
-    Lit _           -> 0
-    Var _           -> 0
-
-maxParamSetting :: Setting -> Word
-maxParamSetting (Setting _ expr) = maxParamExpr expr

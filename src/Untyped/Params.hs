@@ -46,3 +46,17 @@ data AntiquoteState = AntiquoteState
 
 initialAntiquoteState :: AntiquoteState
 initialAntiquoteState = AntiquoteState 0 []
+
+-- | Return the highest-numbered $1-style parameter.
+maxParam :: Query -> Word
+maxParam = everything (+) (mkQ 0 maxParamExpr)
+
+maxParamExpr :: Expr -> Word
+maxParamExpr expr = case expr of
+    NumberedParam i -> i
+    InlineParam _ -> 0
+    HaskellParam _ -> 0
+    BinOp _ l r     -> max (maxParamExpr l) (maxParamExpr r)
+    Unary _ e       -> maxParamExpr e
+    Lit _           -> 0
+    Var _           -> 0

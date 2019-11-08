@@ -23,11 +23,11 @@ inlineParamsExpr params (NumberedParam i) =
 inlineParamsExpr _ (HaskellParam _) = error "must replace antiquotes by numbered params before inlining values"
 inlineParamsExpr _ expr = expr
 
-numberAntiquotes :: Query -> (Query, AntiquoteState)
-numberAntiquotes q =
+numberAntiquotes :: Word -> Query -> (Query, AntiquoteState)
+numberAntiquotes count q =
     let (rewritten, aqs) = runState
                    (everywhereM (mkM numberAntiquotesExpr) q)
-                   initialAntiquoteState
+                   (AntiquoteState count [])
     in (rewritten, aqs { haskellExpressions = reverse (haskellExpressions aqs) })
 
 numberAntiquotesExpr :: Expr -> State AntiquoteState Expr
@@ -36,7 +36,6 @@ numberAntiquotesExpr (HaskellParam txt) = do
     let i = paramCount + 1
     put (AntiquoteState i (txt : haskellExpressions))
     return (NumberedParam i)
-numberAntiquotesExpr (NumberedParam _) = error "Cannot mix numbered & antiquated parameters"
 numberAntiquotesExpr expr = return expr
 
 -- invariant: paramCount = length haskellExpressions

@@ -43,23 +43,23 @@ integration :: TestTree
 integration = withResource (connect database) close $ \db -> testGroup "integration"
     [ testCase "SELECT foo, bar FROM baz" $ do
         conn <- db
-        result <- query conn ([aritySql|SELECT foo, bar FROM baz |], ())
+        result <- query conn [aritySql|SELECT foo, bar FROM baz |]
         assertEqual "" [(1, "one"), (2, "two")] (result :: [(Int, T.Text)])
     , testCase "with params" $ do
         conn <- db
-        result <- query conn ([aritySql| SELECT foo, bar FROM baz WHERE foo = $1|], Only 1 :: Only Int)
+        result <- query conn $ [aritySql| SELECT foo, bar FROM baz WHERE foo = $1|] (1 :: Int)
         assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
     , testCase "antiquote, 2 params" $ do
         conn <- db
         let
             foo0 = 1 :: Int
             bar0 = "one" :: T.Text
-        result <- query conn [antiquoteSql| SELECT foo, bar FROM baz WHERE foo = ${foo0} AND bar = ${bar0}|]
+        result <- query conn [aritySql| SELECT foo, bar FROM baz WHERE foo = ${foo0} AND bar = ${bar0}|]
         assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
     , testCase "antiquote, 1 params" $ do
         conn <- db
         let foo0 = 1 :: Int
-        result <- query conn [antiquoteSql| SELECT foo, bar FROM baz WHERE foo = ${foo0}|]
+        result <- query conn [aritySql| SELECT foo, bar FROM baz WHERE foo = ${foo0}|]
         assertEqual "" [(1, "one")] (result :: [(Int, T.Text)])
     ]
 
@@ -207,7 +207,7 @@ antiquotes = testGroup "antiquotes"
     [ testCase "numberAntiquotes" $
         assertEqual ""
             (QS (Select {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (NumberedParam 1))}), AntiquoteState 1 ["foo0"])
-            (numberAntiquotes (QS (Select {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (HaskellParam "foo0"))})))
+            (numberAntiquotes 0 (QS (Select {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (HaskellParam "foo0"))})))
     ]
 
 quickCheck :: TestTree

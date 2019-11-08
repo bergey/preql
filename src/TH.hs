@@ -17,12 +17,8 @@ import Language.Haskell.TH.Syntax (Lift (..))
 
 import qualified Data.Text as T
 
-a1Names :: Int -> [String]
-a1Names n = take n names where
-  names = [c : "" | c <- ['a'..'z']] ++ [ c : show i | i <- [1..], c <- ['a'..'z'] ]
-
 cNames :: Char -> Int -> Q [Name]
-cNames c n = traverse newName [c : show i | i <- [1..n] ]
+cNames c n = traverse newName (replicate n (c : ""))
 
 tupleType :: [Name] -> Type
 tupleType [v] = AppT (ConT ''Only) (VarT v)
@@ -37,32 +33,40 @@ makeArityQuery raw parsed p r =
         params = tupleType <$> cNames 'p' (fromIntegral p)
         result = tupleType <$> cNames 'r' r
 
-aritySql :: QuasiQuoter
-aritySql = expressionOnly "aritySql" $ \q -> do
-    loc <- location
-    let e_ast = parseQuery (show loc) q
-    case e_ast of
-        Right ast -> makeArityQuery q ast
-            (maxParamQuery ast)
-            (countColumnsReturned ast)
-        Left err -> error err
-
--- | Given a SQL query with ${} antiquotes, splice a pair (TypedQuery p r, p)
-antiquoteSql :: QuasiQuoter
-antiquoteSql = expressionOnly "antiquoteSql" $ \raw -> do
+-- | Given a SQL query with ${} antiquotes, splice a pair @(TypedQuery
+-- p r, p)@ or a function @\p' -> (TypedQuery p r, p)@ if the SQL
+-- string includes both antiquote and positional parameters.
+aritySql  :: QuasiQuoter
+aritySql  = expressionOnly "aritySql " $ \raw -> do
     loc <- location
     let e_ast = parseQuery (show loc) raw
     case e_ast of
-        Right parsed -> let
-            (rewritten, aqs) = numberAntiquotes parsed
-            typedQuery = makeArityQuery raw rewritten
+        Right parsed -> do
+            let
+                positionalCount = maxParamQuery parsed
+                (rewritten, aqs) = numberAntiquotes positionalCount parsed
+                antiNames = map (mkName . T.unpack) (haskellExpressions aqs)
+            typedQuery <- makeArityQuery raw rewritten
                 (paramCount aqs)
                 (countColumnsReturned rewritten)
-            varName = VarE . mkName . T.unpack
-            paramTuple = case haskellExpressions aqs of
-                [var] -> AppE (ConE (mkName "Only")) (varName var)
-                vs -> TupE $ map varName vs
-            in [e| ($typedQuery, $(pure paramTuple)) |]
+            case positionalCount of
+                0 -> -- only antiquotes (or no params)
+                    return $ TupE [typedQuery, tupleOrOnly antiNames]
+                1 -> do -- one positional param, doesn't take a tuple
+                    patternName <- newName "c"
+                    return $ LamE [VarP patternName]
+                        (TupE [typedQuery, tupleOrOnly (patternName : antiNames)])
+                _ -> do -- at least one positional parameter
+                    patternNames <- cNames 'q' (fromIntegral positionalCount)
+                    return $ LamE
+                        [TupP (map VarP patternNames)]
+                        (TupE [typedQuery, tupleOrOnly (patternNames ++ antiNames)])
+        Left err -> error err
+
+tupleOrOnly :: [Name] -> Exp
+tupleOrOnly names = case names of
+    [name] -> AppE (ConE (mkName "Only")) (VarE name)
+    vs -> TupE $ map VarE vs
 
 expressionOnly :: String -> (String -> Q Exp) -> QuasiQuoter
 expressionOnly name qq = QuasiQuoter
@@ -76,12 +80,16 @@ countColumnsReturned :: Syntax.Query -> Int
 countColumnsReturned (QS (Select {columns})) = length columns
 countColumnsReturned _                       = 0
 
--- TODO update because Expr is allowed more places
+-- TODO use SYB instead of all this boilerplate
 maxParamQuery :: Query -> Word
-maxParamQuery (QS (Select {conditions})) = case conditions of
-                          Nothing -> 0
-                          Just c  -> maxParamCondition c
-maxParamQuery _ = 0
+maxParamQuery (QS (Select {columns, conditions})) = max
+    (maybe 0 maxParamCondition conditions)
+    (maximum $ fmap maxParamExpr columns)
+maxParamQuery (QI (Insert {values})) = maximum $ fmap maxParamExpr values
+maxParamQuery (QD (Delete{conditions})) = maybe 0 maxParamCondition conditions
+maxParamQuery (QU (Update{settings, conditions})) = max
+    (maybe 0 maxParamCondition conditions)
+    (maximum $ fmap maxParamSetting settings)
 
 maxParamCondition :: Condition -> Word
 maxParamCondition condition = case condition of
@@ -93,7 +101,12 @@ maxParamCondition condition = case condition of
 maxParamExpr :: Expr -> Word
 maxParamExpr expr = case expr of
     NumberedParam i -> i
+    InlineParam _ -> 0
+    HaskellParam _ -> 0
     BinOp _ l r     -> max (maxParamExpr l) (maxParamExpr r)
     Unary _ e       -> maxParamExpr e
     Lit _           -> 0
     Var _           -> 0
+
+maxParamSetting :: Setting -> Word
+maxParamSetting (Setting _ expr) = maxParamExpr expr

@@ -24,3 +24,6 @@ ifeq ("${IN_NIX_SHELL}",)
 else
 	nix-shell -p haskellPackages.hpack --run 'hpack'
 endif
+
+update:
+	./nix/update-nixpkgs-snapshot.sh nix/nixpkgs-snapshot.json

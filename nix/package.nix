@@ -3,11 +3,12 @@
 , postgresql-libpq, postgresql-simple, QuickCheck, stdenv, syb
 , tasty, tasty-hunit, tasty-quickcheck, template-haskell, text
 , th-lift-instances, transformers, vector
+, nix-gitignore
 }:
 mkDerivation {
   pname = "crispy-broccoli";
   version = "0.1";
-  src = ./.;
+  src = nix-gitignore.gitignoreSource [] ./..;
   libraryHaskellDepends = [
     array attoparsec base bytestring contravariant free
     postgresql-libpq postgresql-simple syb template-haskell text

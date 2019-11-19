@@ -1,20 +1,21 @@
 PROJECT := crispy-broccoli
 
-build: default.nix
-	nix-build shell.nix
+build: nix/package.nix
+	nix-build nix/versions.nix -A project
 
-shell: default.nix ${PROJECT}.cabal
-	nix-shell --command "export PS1='[${PROJECT}] $(value PS1)'; return"
+shell: nix/package.nix ${PROJECT}.cabal
+	nix-shell
 
-repl: default.nix ${PROJECT}.cabal
+repl: nix/package.nix ${PROJECT}.cabal
+# TODO check for direnv / run without nix-shell
 	nix-shell --run 'cabal v1-repl ${PROJECT}'
 
 .PHONY: test
-test: default.nix ${PROJECT}.cabal
+test: nix/package.nix ${PROJECT}.cabal
 	nix-shell --run 'cabal v1-test --ghc-option=-O0'
 
-default.nix: package.yaml
-	nix-shell -p cabal2nix --run 'cabal2nix . > default.nix'
+nix/package.nix: package.yaml
+	nix-shell -p cabal2nix --run 'cabal2nix . > nix/package.nix'
 
 ${PROJECT}.cabal: package.yaml
 	find . -name '*_flymake.hs' -delete

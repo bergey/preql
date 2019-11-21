@@ -15,7 +15,7 @@ test: nix/package.nix ${PROJECT}.cabal
 	nix-shell --run 'cabal v1-test --ghc-option=-O0'
 
 nix/package.nix: package.yaml
-	nix-shell -p cabal2nix --run 'cabal2nix . > nix/package.nix'
+	nix-shell -p cabal2nix --run 'cd nix && cabal2nix .. > package.nix'
 
 ${PROJECT}.cabal: package.yaml
 	find . -name '*_flymake.hs' -delete

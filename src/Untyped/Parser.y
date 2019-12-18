@@ -99,10 +99,10 @@ Delete
     | DELETE FROM Name { Delete $3 Nothing }
 
 Select
-    : SELECT ExprList FROM Name WHERE Condition { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
-    | SELECT ExprList FROM Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
+    : SELECT expr_list FROM Name WHERE Condition { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
+    | SELECT expr_list FROM Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
 
-Insert : INSERT INTO Name '(' NameList ')' VALUES '(' ExprList ')'
+Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
 
 Update :: { Update }
@@ -115,9 +115,9 @@ list(el)
     : el { [$1] }
     | list(el) COMMA el { $3 : $1 }
 
-NameList : list(Name) { $1 }
+name_list : list(Name) { $1 }
 
-ExprList : list(Expr) { $1 }
+expr_list : list(Expr) { $1 }
 
 SettingList : list(Setting) { $1 }
 

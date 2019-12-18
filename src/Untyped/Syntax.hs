@@ -52,17 +52,27 @@ data Update = Update
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 -- | Queries of the form @SELECT columns FROM table WHERE conditions@.
-data Select = Select
+data OldSelect = OldSelect
     { table      :: !Name
     , columns    :: NonEmpty Expr
     , conditions :: Maybe Condition
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data SelectStmt = SimpleSelect SimpleSelect
+data SelectStmt
+    = SimpleSelect SimpleSelect
     -- TODO more cases
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SimpleSelect = SelectValues (NonEmpty (NonEmpty Expr))
     -- TODO more cases
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+-- TODO name fields
+data SortBy = SortBy Expr SortOrder -- opt_nulls_order
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data SortOrder = Ascending | Descending | DefaultSortOrder
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Condition = Compare !Compare !Name !Expr
     | Or Condition Condition

@@ -108,7 +108,7 @@ select_with_parens
 
 select_no_parens :: { SelectStmt }
     : simple_select { SimpleSelect $1 }
---            | select_clause sort_clause
+    | select_clause sort_clause
 --                {
 --                    insertSelectOptions((SelectStmt *) $1, $2, NIL,
 --                                        NULL, NULL, NULL,
@@ -165,7 +165,7 @@ select_no_parens :: { SelectStmt }
 --                }
 --        ;
 
-select_clause
+select_clause :: { SelectStmt }
     : simple_select                            { SimpleSelect $1 }
     | select_with_parens                    { $1 }
 
@@ -238,7 +238,7 @@ values_clause
     : VALUES '(' expr_list ')' { NE.fromList (reverse $3) :| [] }
     | values_clause COMMA '(' expr_list ')' { NE.cons (NE.fromList (reverse $4)) $1 }
 
-Select
+Select :: { OldSelect }
     : SELECT expr_list FROM Name WHERE Condition { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
     | SELECT expr_list FROM Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
 
@@ -260,6 +260,34 @@ name_list : list(Name) { $1 }
 expr_list : list(Expr) { $1 }
 
 SettingList : list(Setting) { $1 }
+
+sort_clause
+: ORDER BY sortby_list { $3}
+
+sortby_list : list(sortby)
+
+sortby
+--: a_expr USING qual_all_Op opt_nulls_order
+--				{
+--					$$ = makeNode(SortBy);
+--					$$->node = $1;
+--					$$->sortby_dir = SORTBY_USING;
+--					$$->sortby_nulls = $4;
+--					$$->useOp = $3;
+--					$$->location = @3;
+--				}
+: a_expr opt_asc_desc opt_nulls_order { SortBy $1 $2 }
+
+opt_asc_desc
+    : ASC { Ascending }
+    | DESC { Descending }
+    | {- EMPTY -} { DefaultSortOrder }
+
+opt_nulls_order: NULLS_LA FIRST_P			{ $$ = SORTBY_NULLS_FIRST; }
+			| NULLS_LA LAST_P				{ $$ = SORTBY_NULLS_LAST; }
+			| /*EMPTY*/						{ $$ = SORTBY_NULLS_DEFAULT; }
+		;
+
 
 Compare :: { Compare }
     : '=' { Eq }

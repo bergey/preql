@@ -98,6 +98,146 @@ Delete
     : DELETE FROM Name WHERE Condition { Delete $3 (Just $5) }
     | DELETE FROM Name { Delete $3 Nothing }
 
+SelectStmt :: { SelectStmt }
+    : select_no_parens { $1 }
+    | select_with_parens { $1 }
+
+select_with_parens
+    : '(' select_no_parens ')' { $2 }
+    | '(' select_with_parens ')' { $2 }
+
+select_no_parens :: { SelectStmt }
+    : simple_select { SimpleSelect $1 }
+--            | select_clause sort_clause
+--                {
+--                    insertSelectOptions((SelectStmt *) $1, $2, NIL,
+--                                        NULL, NULL, NULL,
+--                                        yyscanner);
+--                    $$ = $1;
+--                }
+--            | select_clause opt_sort_clause for_locking_clause opt_select_limit
+--                {
+--                    insertSelectOptions((SelectStmt *) $1, $2, $3,
+--                                        list_nth($4, 0), list_nth($4, 1),
+--                                        NULL,
+--                                        yyscanner);
+--                    $$ = $1;
+--                }
+--            | select_clause opt_sort_clause select_limit opt_for_locking_clause
+--                {
+--                    insertSelectOptions((SelectStmt *) $1, $2, $4,
+--                                        list_nth($3, 0), list_nth($3, 1),
+--                                        NULL,
+--                                        yyscanner);
+--                    $$ = $1;
+--                }
+--            | with_clause select_clause
+--                {
+--                    insertSelectOptions((SelectStmt *) $2, NULL, NIL,
+--                                        NULL, NULL,
+--                                        $1,
+--                                        yyscanner);
+--                    $$ = $2;
+--                }
+--            | with_clause select_clause sort_clause
+--                {
+--                    insertSelectOptions((SelectStmt *) $2, $3, NIL,
+--                                        NULL, NULL,
+--                                        $1,
+--                                        yyscanner);
+--                    $$ = $2;
+--                }
+--            | with_clause select_clause opt_sort_clause for_locking_clause opt_select_limit
+--                {
+--                    insertSelectOptions((SelectStmt *) $2, $3, $4,
+--                                        list_nth($5, 0), list_nth($5, 1),
+--                                        $1,
+--                                        yyscanner);
+--                    $$ = $2;
+--                }
+--            | with_clause select_clause opt_sort_clause select_limit opt_for_locking_clause
+--                {
+--                    insertSelectOptions((SelectStmt *) $2, $3, $5,
+--                                        list_nth($4, 0), list_nth($4, 1),
+--                                        $1,
+--                                        yyscanner);
+--                    $$ = $2;
+--                }
+--        ;
+
+select_clause
+    : simple_select                            { SimpleSelect $1 }
+    | select_with_parens                    { $1 }
+
+simple_select :: { SimpleSelect }
+--            : SELECT opt_all_clause opt_target_list
+--            into_clause from_clause where_clause
+--            group_clause having_clause window_clause
+--                {
+--                    SelectStmt *n = makeNode(SelectStmt);
+--                    n->targetList = $3;
+--                    n->intoClause = $4;
+--                    n->fromClause = $5;
+--                    n->whereClause = $6;
+--                    n->groupClause = $7;
+--                    n->havingClause = $8;
+--                    n->windowClause = $9;
+--                    $$ = (Node *)n;
+--                }
+--            | SELECT distinct_clause target_list
+--            into_clause from_clause where_clause
+--            group_clause having_clause window_clause
+--                {
+--                    SelectStmt *n = makeNode(SelectStmt);
+--                    n->distinctClause = $2;
+--                    n->targetList = $3;
+--                    n->intoClause = $4;
+--                    n->fromClause = $5;
+--                    n->whereClause = $6;
+--                    n->groupClause = $7;
+--                    n->havingClause = $8;
+--                    n->windowClause = $9;
+--                    $$ = (Node *)n;
+--                }
+            : values_clause                            { SelectValues $1 }
+-- TODO select * in AST
+--            | TABLE relation_expr
+--                {
+--                    /* same as SELECT * FROM relation_expr */
+--                    ColumnRef *cr = makeNode(ColumnRef);
+--                    ResTarget *rt = makeNode(ResTarget);
+--                    SelectStmt *n = makeNode(SelectStmt);
+--
+--                    cr->fields = list_make1(makeNode(A_Star));
+--                    cr->location = -1;
+--
+--                    rt->name = NULL;
+--                    rt->indirection = NIL;
+--                    rt->val = (Node *)cr;
+--                    rt->location = -1;
+--
+--                    n->targetList = list_make1(rt);
+--                    n->fromClause = list_make1($2);
+--                    $$ = (Node *)n;
+--                }
+-- TODO UNION in AST
+--            | select_clause UNION all_or_distinct select_clause
+--                {
+--                    $$ = makeSetOp(SETOP_UNION, $3, $1, $4);
+--                }
+--            | select_clause INTERSECT all_or_distinct select_clause
+--                {
+--                    $$ = makeSetOp(SETOP_INTERSECT, $3, $1, $4);
+--                }
+--            | select_clause EXCEPT all_or_distinct select_clause
+--                {
+--                    $$ = makeSetOp(SETOP_EXCEPT, $3, $1, $4);
+--                }
+
+values_clause
+    : VALUES '(' expr_list ')' { NE.fromList (reverse $3) :| [] }
+    | values_clause COMMA '(' expr_list ')' { NE.cons (NE.fromList (reverse $4)) $1 }
+
 Select
     : SELECT expr_list FROM Name WHERE Condition { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
     | SELECT expr_list FROM Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }

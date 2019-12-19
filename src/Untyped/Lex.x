@@ -45,8 +45,10 @@ $z = [zZ]
 tokens :-
 
     $white+            ;
-    $a $s $c { lex Ascending }
-    $d $e $s $c { lex Descending }
+    $a $s $c { lex Asc }
+    $d $e $s $c { lex Desc }
+    $o $r $d $e $r { lex Order }
+    $b $y { lex By }
     $d $e $l $e $t $e { lex Delete }
     $s $e $l $e $c $t { lex Select }
     $i $n $s $e $r $t { lex Insert }
@@ -95,7 +97,7 @@ data LocToken = LocToken
      } deriving Show
 
 data Token = Delete | Select | Insert | Update
-    | Ascending | Descending
+    | Asc | Desc | Order | By
      | From | Where | Into | Values | Set
      | Name Text | String Text | Number Double
      | NumberedParam Word | HaskellParam Text

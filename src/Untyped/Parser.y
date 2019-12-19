@@ -41,6 +41,11 @@ import qualified Data.List.NonEmpty as NE
     INSERT { LocToken _ L.Insert }
     UPDATE { LocToken _ L.Update }
 
+    ASC { LocToken _ L.Asc }
+    DESC { LocToken _ L.Desc }
+    ORDER { LocToken _ L.Order }
+    BY { LocToken _ L.By }
+
     FROM { LocToken _ L.From }
     WHERE { LocToken _ L.Where }
     INTO { LocToken _ L.Into }
@@ -108,7 +113,7 @@ select_with_parens
 
 select_no_parens :: { SelectStmt }
     : simple_select { SimpleSelect $1 }
-    | select_clause sort_clause
+    | select_clause sort_clause { SortedSelect $1 $2 }
 --                {
 --                    insertSelectOptions((SelectStmt *) $1, $2, NIL,
 --                                        NULL, NULL, NULL,
@@ -262,9 +267,9 @@ expr_list : list(Expr) { $1 }
 SettingList : list(Setting) { $1 }
 
 sort_clause
-: ORDER BY sortby_list { $3}
+    : ORDER BY sortby_list { $3}
 
-sortby_list : list(sortby)
+sortby_list : list(sortby) { $1 }
 
 sortby
 --: a_expr USING qual_all_Op opt_nulls_order
@@ -276,18 +281,21 @@ sortby
 --					$$->useOp = $3;
 --					$$->location = @3;
 --				}
-: a_expr opt_asc_desc opt_nulls_order { SortBy $1 $2 }
+    : a_expr opt_asc_desc opt_nulls_order { SortBy $1 $2 }
 
 opt_asc_desc
     : ASC { Ascending }
     | DESC { Descending }
     | {- EMPTY -} { DefaultSortOrder }
 
-opt_nulls_order: NULLS_LA FIRST_P			{ $$ = SORTBY_NULLS_FIRST; }
-			| NULLS_LA LAST_P				{ $$ = SORTBY_NULLS_LAST; }
-			| /*EMPTY*/						{ $$ = SORTBY_NULLS_DEFAULT; }
-		;
+opt_nulls_order
+    : { Nothing }
+    -- : NULLS_LA FIRST_P			{ $$ = SORTBY_NULLS_FIRST; }
+	-- | NULLS_LA LAST_P				{ $$ = SORTBY_NULLS_LAST; }
+	-- | {- EMPTY -} { $$ = SORTBY_NULLS_DEFAULT; }
 
+-- TODO
+a_expr : Expr { $1 }
 
 Compare :: { Compare }
     : '=' { Eq }

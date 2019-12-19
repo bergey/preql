@@ -60,6 +60,7 @@ data OldSelect = OldSelect
 
 data SelectStmt
     = SimpleSelect SimpleSelect
+    | SortedSelect SelectStmt SortBy
     -- TODO more cases
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 

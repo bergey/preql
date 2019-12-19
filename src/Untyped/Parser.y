@@ -58,6 +58,11 @@ import qualified Data.List.NonEmpty as NE
     NULLS { LocToken _ L.Nulls }
     FIRST { LocToken _ L.First }
     LAST { LocToken _ L.Last }
+    ALL { LocToken _ L.All }
+    DISTINCT { LocToken _ L.Distinct }
+    ON { LocToken _ L.On }
+    AS { LocToken _ L.As }
+
     UNION { LocToken _ L.By }
     EXCEPT { LocToken _ L.Except }
 
@@ -70,7 +75,7 @@ import qualified Data.List.NonEmpty as NE
     ')' { LocToken _ L.RParen }
     COMMA { LocToken _ L.Comma }
 
-    NAME { LocToken _ (L.Name $$) }
+    IDENT { LocToken _ (L.Name $$) }
     STRING { LocToken _ (L.String $$) }
     NUMBER { LocToken _ (L.Number $$) }
     PARAM { LocToken _ (L.NumberedParam $$) }
@@ -177,13 +182,7 @@ select_with_parens
 select_no_parens :: { SelectStmt }
     : simple_select { SimpleSelect $1 }
     | select_clause sort_clause { SortedSelect $1 $2 }
---                {
---                    insertSelectOptions((SelectStmt *) $1, $2, NIL,
---                                        NULL, NULL, NULL,
---                                        yyscanner);
---                    $$ = $1;
---                }
---            | select_clause opt_sort_clause for_locking_clause opt_select_limit
+    --            | select_clause opt_sort_clause for_locking_clause opt_select_limit
 --                {
 --                    insertSelectOptions((SelectStmt *) $1, $2, $3,
 --                                        list_nth($4, 0), list_nth($4, 1),
@@ -260,9 +259,10 @@ select_clause :: { SelectStmt }
 -- However, this is not checked by the grammar; parse analysis must check it.
 
 simple_select :: { SimpleSelect }
---            : SELECT opt_all_clause opt_target_list
---            into_clause from_clause where_clause
---            group_clause having_clause window_clause
+           : SELECT opt_all_clause opt_target_list
+           into_clause from_clause where_clause
+           group_clause having_clause window_clause { SelectUnordered (Unordered Nothing $3) }
+-- TODO WIP
 --                {
 --                    SelectStmt *n = makeNode(SelectStmt);
 --                    n->targetList = $3;
@@ -289,7 +289,7 @@ simple_select :: { SimpleSelect }
 --                    n->windowClause = $9;
 --                    $$ = (Node *)n;
 --                }
-            : values_clause                            { SelectValues $1 }
+            | values_clause                            { SelectValues $1 }
 -- TODO select * in AST
 --            | TABLE relation_expr
 --                {
@@ -351,6 +351,25 @@ expr_list : list(Expr) { $1 }
 
 SettingList : list(Setting) { $1 }
 
+all_or_distinct :: { AllOrDistinct }
+    : ALL { All }
+    | DISTINCT { Distinct }
+    | { Distinct }
+
+-- We use (DistinctAll) as a placeholder to indicate that all target expressions
+-- should be placed in the DISTINCT list during parsetree analysis.
+distinct_clause :: { DistinctClause }
+    : DISTINCT { DistinctAll }
+    | DISTINCT ON '(' expr_list ')' { DistinctOn $4 }
+
+opt_all_clause
+    : ALL { () }
+    | { () }
+
+opt_sort_clause :: { [SortBy ] }
+    : sort_clause { NE.toList $1 }
+    | { [] }
+
 sort_clause :: { NonEmpty SortBy }
     : ORDER BY sortby_list { NE.fromList (reverse $3) }
 
@@ -399,7 +418,7 @@ qual_all_Op
     : all_Op { $1 }
     | OPERATOR '(' any_operator ')' { $3 }
 
--- TODO
+-- TODO a_expr, b_expr from bison
 a_expr : Expr { $1 }
 
 Compare :: { Compare }
@@ -422,7 +441,7 @@ Condition
 Setting :: { Setting }
     : Name '=' Expr { Setting $1 $3 }
 
-Name : NAME { mkName $1 }
+Name : IDENT { mkName $1 }
 
 Expr :: { Expr }
     : Literal { Lit $1 }
@@ -456,6 +475,539 @@ Null
         | ISNULL { IsNull }
         | IS NOT NULL { NotNull }
         | NOTNULL { NotNull }
+
+opt_target_list :: { [ResTarget] }
+    : target_list { NE.toList $1 }
+    | { [] }
+
+target_list : list(target_el) { NE.fromList (reverse $1) }
+
+target_el :: { ResTarget }
+    : a_expr AS ColLabel { ColumnTarget (ColumnRef $1 (Just $3)) }
+    | a_expr IDENT { ColumnTarget (ColumnRef $1 (Just $2)) }
+    | a_expr { ColumnTarget (ColumnRef $1 Nothing) }
+    | '*' { Star }
+
+-- Name classification hierarchy.
+--
+-- IDENT is the lexeme returned by the lexer for identifiers that match
+-- no known keyword.  In most cases, we can accept certain keywords as
+-- names, not only IDENTs.	We prefer to accept as many such keywords
+-- as possible to minimize the impact of "reserved words" on programmers.
+-- So, we divide names into several possible classes.  The classification
+-- is chosen in part to make keywords acceptable as names wherever possible.
+--
+
+-- Column identifier --- names that can be column, table, etc names.
+ColId
+    :		IDENT									{ $1 }
+    | unreserved_keyword					{ $1 }
+
+-- Type/function identifier --- names that can be type or function names.
+type_function_name
+    :	IDENT							{ $1 }
+    | unreserved_keyword					{ $1 }
+    | type_func_name_keyword				{ $1 }
+
+-- Any not-fully-reserved word --- these names can be, eg, role names.
+NonReservedWord
+     :	IDENT							{ $1 }
+			| unreserved_keyword					{ $1 }
+			| col_name_keyword						{ $1 }
+			| type_func_name_keyword				{ $1 }
+
+-- Column label --- allowed labels in "AS" clauses.
+-- This presently includes *all* Postgres keywords.
+ColLabel:	IDENT									{  $1 }
+			| unreserved_keyword					{  $1 }
+			| col_name_keyword						{  $1 }
+			| type_func_name_keyword				{  $1 }
+			| reserved_keyword						{  $1 }
+
+-- Keyword category lists.  Generally, every keyword present in
+-- the Postgres grammar should appear in exactly one of these lists.
+--
+-- Put a new keyword into the first list that it can go into without causing
+-- shift or reduce conflicts.  The earlier lists define "less reserved"
+-- categories of keywords.
+--
+-- Make sure that each keyword's category in kwlist.h matches where
+-- it is listed here.  (Someday we may be able to generate these lists and
+-- kwlist.h's table from a common master list.)
+
+-- "Unreserved" keywords --- available for use as any kind of name.
+unreserved_keyword:
+			  ABORT_P
+			| ABSOLUTE_P
+			| ACCESS
+			| ACTION
+			| ADD_P
+			| ADMIN
+			| AFTER
+			| AGGREGATE
+			| ALSO
+			| ALTER
+			| ALWAYS
+			| ASSERTION
+			| ASSIGNMENT
+			| AT
+			| ATTACH
+			| ATTRIBUTE
+			| BACKWARD
+			| BEFORE
+			| BEGIN_P
+			| BY
+			| CACHE
+			| CALL
+			| CALLED
+			| CASCADE
+			| CASCADED
+			| CATALOG_P
+			| CHAIN
+			| CHARACTERISTICS
+			| CHECKPOINT
+			| CLASS
+			| CLOSE
+			| CLUSTER
+			| COLUMNS
+			| COMMENT
+			| COMMENTS
+			| COMMIT
+			| COMMITTED
+			| CONFIGURATION
+			| CONFLICT
+			| CONNECTION
+			| CONSTRAINTS
+			| CONTENT_P
+			| CONTINUE_P
+			| CONVERSION_P
+			| COPY
+			| COST
+			| CSV
+			| CUBE
+			| CURRENT_P
+			| CURSOR
+			| CYCLE
+			| DATA_P
+			| DATABASE
+			| DAY_P
+			| DEALLOCATE
+			| DECLARE
+			| DEFAULTS
+			| DEFERRED
+			| DEFINER
+			| DELETE_P
+			| DELIMITER
+			| DELIMITERS
+			| DEPENDS
+			| DETACH
+			| DICTIONARY
+			| DISABLE_P
+			| DISCARD
+			| DOCUMENT_P
+			| DOMAIN_P
+			| DOUBLE_P
+			| DROP
+			| EACH
+			| ENABLE_P
+			| ENCODING
+			| ENCRYPTED
+			| ENUM_P
+			| ESCAPE
+			| EVENT
+			| EXCLUDE
+			| EXCLUDING
+			| EXCLUSIVE
+			| EXECUTE
+			| EXPLAIN
+			| EXTENSION
+			| EXTERNAL
+			| FAMILY
+			| FILTER
+			| FIRST_P
+			| FOLLOWING
+			| FORCE
+			| FORWARD
+			| FUNCTION
+			| FUNCTIONS
+			| GENERATED
+			| GLOBAL
+			| GRANTED
+			| GROUPS
+			| HANDLER
+			| HEADER_P
+			| HOLD
+			| HOUR_P
+			| IDENTITY_P
+			| IF_P
+			| IMMEDIATE
+			| IMMUTABLE
+			| IMPLICIT_P
+			| IMPORT_P
+			| INCLUDE
+			| INCLUDING
+			| INCREMENT
+			| INDEX
+			| INDEXES
+			| INHERIT
+			| INHERITS
+			| INLINE_P
+			| INPUT_P
+			| INSENSITIVE
+			| INSERT
+			| INSTEAD
+			| INVOKER
+			| ISOLATION
+			| KEY
+			| LABEL
+			| LANGUAGE
+			| LARGE_P
+			| LAST_P
+			| LEAKPROOF
+			| LEVEL
+			| LISTEN
+			| LOAD
+			| LOCAL
+			| LOCATION
+			| LOCK_P
+			| LOCKED
+			| LOGGED
+			| MAPPING
+			| MATCH
+			| MATERIALIZED
+			| MAXVALUE
+			| METHOD
+			| MINUTE_P
+			| MINVALUE
+			| MODE
+			| MONTH_P
+			| MOVE
+			| NAME_P
+			| NAMES
+			| NEW
+			| NEXT
+			| NO
+			| NOTHING
+			| NOTIFY
+			| NOWAIT
+			| NULLS_P
+			| OBJECT_P
+			| OF
+			| OFF
+			| OIDS
+			| OLD
+			| OPERATOR
+			| OPTION
+			| OPTIONS
+			| ORDINALITY
+			| OTHERS
+			| OVER
+			| OVERRIDING
+			| OWNED
+			| OWNER
+			| PARALLEL
+			| PARSER
+			| PARTIAL
+			| PARTITION
+			| PASSING
+			| PASSWORD
+			| PLANS
+			| POLICY
+			| PRECEDING
+			| PREPARE
+			| PREPARED
+			| PRESERVE
+			| PRIOR
+			| PRIVILEGES
+			| PROCEDURAL
+			| PROCEDURE
+			| PROCEDURES
+			| PROGRAM
+			| PUBLICATION
+			| QUOTE
+			| RANGE
+			| READ
+			| REASSIGN
+			| RECHECK
+			| RECURSIVE
+			| REF
+			| REFERENCING
+			| REFRESH
+			| REINDEX
+			| RELATIVE_P
+			| RELEASE
+			| RENAME
+			| REPEATABLE
+			| REPLACE
+			| REPLICA
+			| RESET
+			| RESTART
+			| RESTRICT
+			| RETURNS
+			| REVOKE
+			| ROLE
+			| ROLLBACK
+			| ROLLUP
+			| ROUTINE
+			| ROUTINES
+			| ROWS
+			| RULE
+			| SAVEPOINT
+			| SCHEMA
+			| SCHEMAS
+			| SCROLL
+			| SEARCH
+			| SECOND_P
+			| SECURITY
+			| SEQUENCE
+			| SEQUENCES
+			| SERIALIZABLE
+			| SERVER
+			| SESSION
+			| SET
+			| SETS
+			| SHARE
+			| SHOW
+			| SIMPLE
+			| SKIP
+			| SNAPSHOT
+			| SQL_P
+			| STABLE
+			| STANDALONE_P
+			| START
+			| STATEMENT
+			| STATISTICS
+			| STDIN
+			| STDOUT
+			| STORAGE
+			| STORED
+			| STRICT_P
+			| STRIP_P
+			| SUBSCRIPTION
+			| SUPPORT
+			| SYSID
+			| SYSTEM_P
+			| TABLES
+			| TABLESPACE
+			| TEMP
+			| TEMPLATE
+			| TEMPORARY
+			| TEXT_P
+			| TIES
+			| TRANSACTION
+			| TRANSFORM
+			| TRIGGER
+			| TRUNCATE
+			| TRUSTED
+			| TYPE_P
+			| TYPES_P
+			| UNBOUNDED
+			| UNCOMMITTED
+			| UNENCRYPTED
+			| UNKNOWN
+			| UNLISTEN
+			| UNLOGGED
+			| UNTIL
+			| UPDATE
+			| VACUUM
+			| VALID
+			| VALIDATE
+			| VALIDATOR
+			| VALUE_P
+			| VARYING
+			| VERSION_P
+			| VIEW
+			| VIEWS
+			| VOLATILE
+			| WHITESPACE_P
+			| WITHIN
+			| WITHOUT
+			| WORK
+			| WRAPPER
+			| WRITE
+			| XML_P
+			| YEAR_P
+			| YES_P
+			| ZONE
+
+-- Column identifier --- keywords that can be column, table, etc names.
+--
+-- Many of these keywords will in fact be recognized as type or function
+-- names too; but they have special productions for the purpose, and so
+-- can't be treated as "generic" type or function names.
+--
+-- The type names appearing here are not usable as function names
+-- because they can be followed by '(' in typename productions, which
+-- looks too much like a function call for an LR(1) parser.
+col_name_keyword:
+			  BETWEEN
+			| BIGINT
+			| BIT
+			| BOOLEAN_P
+			| CHAR_P
+			| CHARACTER
+			| COALESCE
+			| DEC
+			| DECIMAL_P
+			| EXISTS
+			| EXTRACT
+			| FLOAT_P
+			| GREATEST
+			| GROUPING
+			| INOUT
+			| INT_P
+			| INTEGER
+			| INTERVAL
+			| LEAST
+			| NATIONAL
+			| NCHAR
+			| NONE
+			| NULLIF
+			| NUMERIC
+			| OUT_P
+			| OVERLAY
+			| POSITION
+			| PRECISION
+			| REAL
+			| ROW
+			| SETOF
+			| SMALLINT
+			| SUBSTRING
+			| TIME
+			| TIMESTAMP
+			| TREAT
+			| TRIM
+			| VALUES
+			| VARCHAR
+			| XMLATTRIBUTES
+			| XMLCONCAT
+			| XMLELEMENT
+			| XMLEXISTS
+			| XMLFOREST
+			| XMLNAMESPACES
+			| XMLPARSE
+			| XMLPI
+			| XMLROOT
+			| XMLSERIALIZE
+			| XMLTABLE
+
+-- Type/function identifier --- keywords that can be type or function names.
+--
+-- Most of these are keywords that are used as operators in expressions;
+-- in general such keywords can't be column names because they would be
+-- ambiguous with variables, but they are unambiguous as function identifiers.
+--
+-- Do not include POSITION, SUBSTRING, etc here since they have explicit
+-- productions in a_expr to support the goofy SQL9x argument syntax.
+-- - thomas 2000-11-28
+type_func_name_keyword:
+			  AUTHORIZATION
+			| BINARY
+			| COLLATION
+			| CONCURRENTLY
+			| CROSS
+			| CURRENT_SCHEMA
+			| FREEZE
+			| FULL
+			| ILIKE
+			| INNER_P
+			| IS
+			| ISNULL
+			| JOIN
+			| LEFT
+			| LIKE
+			| NATURAL
+			| NOTNULL
+			| OUTER_P
+			| OVERLAPS
+			| RIGHT
+			| SIMILAR
+			| TABLESAMPLE
+			| VERBOSE
+
+-- Reserved keyword --- these keywords are usable only as a ColLabel.
+--
+-- Keywords appear here if they could not be distinguished from variable,
+-- type, or function names in some contexts.  Don't put things here unless
+-- forced to.
+reserved_keyword:
+			  ALL
+			| ANALYSE
+			| ANALYZE
+			| AND
+			| ANY
+			| ARRAY
+			| AS
+			| ASC
+			| ASYMMETRIC
+			| BOTH
+			| CASE
+			| CAST
+			| CHECK
+			| COLLATE
+			| COLUMN
+			| CONSTRAINT
+			| CREATE
+			| CURRENT_CATALOG
+			| CURRENT_DATE
+			| CURRENT_ROLE
+			| CURRENT_TIME
+			| CURRENT_TIMESTAMP
+			| CURRENT_USER
+			| DEFAULT
+			| DEFERRABLE
+			| DESC
+			| DISTINCT
+			| DO
+			| ELSE
+			| END_P
+			| EXCEPT
+			| FALSE_P
+			| FETCH
+			| FOR
+			| FOREIGN
+			| FROM
+			| GRANT
+			| GROUP_P
+			| HAVING
+			| IN_P
+			| INITIALLY
+			| INTERSECT
+			| INTO
+			| LATERAL_P
+			| LEADING
+			| LIMIT
+			| LOCALTIME
+			| LOCALTIMESTAMP
+			| NOT
+			| NULL_P
+			| OFFSET
+			| ON
+			| ONLY
+			| OR
+			| ORDER
+			| PLACING
+			| PRIMARY
+			| REFERENCES
+			| RETURNING
+			| SELECT
+			| SESSION_USER
+			| SOME
+			| SYMMETRIC
+			| TABLE
+			| THEN
+			| TO
+			| TRAILING
+			| TRUE_P
+			| UNION
+			| UNIQUE
+			| USER
+			| USING
+			| VARIADIC
+			| WHEN
+			| WHERE
+			| WINDOW
+			| WITH
 
 {
 

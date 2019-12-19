@@ -58,15 +58,25 @@ data OldSelect = OldSelect
     , conditions :: Maybe Condition
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
+-- TODO unifiy SelectStmt & SimpleSelect
+-- parser & printer need to know the difference, for parentheses
 data SelectStmt
     = SimpleSelect SimpleSelect
     | SortedSelect SelectStmt (NonEmpty SortBy)
     -- TODO more cases
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data SimpleSelect = SelectValues (NonEmpty (NonEmpty Expr))
+data SimpleSelect
+    = SelectValues (NonEmpty (NonEmpty Expr))
+    | SelectUnordered Unordered
     -- TODO more cases
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data Unordered = Unordered
+    { distinct :: Maybe DistinctClause
+    , targetList :: [ResTarget]
+    -- TODO remaining fields
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SortBy = SortBy
     { column :: Expr
@@ -103,3 +113,15 @@ data UnaryOp = NegateNum | NegateBool | IsNull | NotNull
 
 data Compare = Eq | LT | LTE | GT | GTE | NEq |  Like | ILike
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data AllOrDistinct = All | Distinct
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
+
+data ResTarget = Star | ColumnTarget ColumnRef
+
+data ColumnRef = ColumnRef
+    { value :: Text
+    , name :: Maybe Text
+    }

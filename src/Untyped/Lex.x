@@ -56,6 +56,10 @@ tokens :-
     $n $u $l $l $s { lex Nulls }
     $f $i $r $s $t { lex First }
     $l $a $s $t { lex Last }
+    $a $l $l  {lex All }
+    $d $i $s $t $i $n $c $t { lex Distinct }
+    $o $n { lex On }
+    AS { LocToken _ L.As }
     $d $e $l $e $t $e { lex Delete }
     $s $e $l $e $c $t { lex Select }
     $i $n $s $e $r $t { lex Insert }
@@ -105,8 +109,10 @@ data LocToken = LocToken
 
 data Token = Delete | Select | Insert | Update
     | Asc | Desc | Order | By | Using | Operator | Nulls | First | Last
+    | All | Distinct | On | As
     | Union | Except
      | From | Where | Into | Values | Set
+-- TODO rename Name -> Ident to match bison
      | Name Text | String Text | Number Double
      | NumberedParam Word | HaskellParam Text
      | LParen | RParen | Comma
@@ -142,6 +148,11 @@ unLex t = case t of
     By -> "BY"
     Using -> "USING"
     Operator -> "OPERATOR"
+    All -> "ALL"
+    Distinct -> "DISTINCT"
+    On -> "ON"
+    As -> "AS"
+
     Union -> "UNION"
     Except -> "EXCEPT"
     Delete -> "DELETE"

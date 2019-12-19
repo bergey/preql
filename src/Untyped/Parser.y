@@ -349,20 +349,20 @@ Null
 
 -- from https://github.com/dagit/happy-plus-alex/blob/master/src/Parser.y
 
-lexwrap :: (L.LocToken -> Alex a) -> Alex a
-lexwrap = (L.alexMonadScan' >>=)
-
 happyError :: L.LocToken -> Alex a
 happyError (L.LocToken p t) =
-  L.alexError' p ("parse error at token '" ++ L.unLex t ++ "'")
+  L.alexErrorPosn p ("parse error at token '" ++ L.unLex t ++ "'")
 
 parseQuery :: FilePath -> String -> Either String Query
-parseQuery = L.runAlex' parseQuery_
+parseQuery = L.runAlexWithFilepath parseQuery_
 
 parseCondition :: FilePath -> String -> Either String Condition
-parseCondition = L.runAlex' parseCondition_
+parseCondition = L.runAlexWithFilepath parseCondition_
 
 parseExpr :: FilePath -> String -> Either String Expr
-parseExpr = L.runAlex' parseExpr_
+parseExpr = L.runAlexWithFilepath parseExpr_
+
+lexwrap :: (L.LocToken -> Alex a) -> Alex a
+lexwrap = (L.alexMonadScan' >>=)
 
 }

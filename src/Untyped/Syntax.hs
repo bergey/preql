@@ -68,11 +68,19 @@ data SimpleSelect = SelectValues (NonEmpty (NonEmpty Expr))
     -- TODO more cases
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
--- TODO name fields
-data SortBy = SortBy Expr SortOrder -- opt_nulls_order
+data SortBy = SortBy
+    { column :: Expr
+    , direction :: SortOrderOrUsing
+    , nulls :: NullsOrder
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data SortOrderOrUsing = SortOrder SortOrder | Using BinOp
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SortOrder = Ascending | Descending | DefaultSortOrder
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data NullsOrder = NullsFirst | NullsLast | NullsOrderDefault
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Condition = Compare !Compare !Name !Expr
@@ -87,7 +95,7 @@ data Expr = Lit !Literal | Var !Name
     | Unary !UnaryOp !Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data BinOp = Mul | Div | Add | Sub | Exponent | Comp !Compare
+data BinOp = Mul | Div | Add | Sub | Exponent | Mod | Comp !Compare
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data UnaryOp = NegateNum | NegateBool | IsNull | NotNull

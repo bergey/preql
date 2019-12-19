@@ -142,6 +142,20 @@ instance FormatSql SimpleSelect where
     fmt (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
 
 instance FormatSql SortBy where
-    fmt (SortBy expr DefaultSortOrder) = fmt expr
-    fmt (SortBy expr Ascending) = fmt expr <> " ASC"
-    fmt (SortBy expr Descending) = fmt expr <> " DESC"
+    fmt (SortBy expr order nulls) = fmt expr <> fmt order <> fmt nulls
+
+instance FormatSql SortOrderOrUsing where
+    fmt (SortOrder order) = fmt order
+    fmt (Using op) = "USING " <> fmt op
+
+instance FormatSql SortOrder where
+    -- leading space
+    fmt Ascending = " ASC"
+    fmt Descending = " DESC"
+    fmt DefaultSortOrder = ""
+
+instance FormatSql NullsOrder where
+    -- leading space
+    fmt NullsFirst = " NULLS FIRST"
+    fmt NullsLast = " NULLS LAST"
+    fmt NullsOrderDefault = ""

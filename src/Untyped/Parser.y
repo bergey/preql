@@ -21,6 +21,14 @@ import qualified Data.List.NonEmpty as NE
 %lexer { lexwrap } {  L.LocToken _ L.EOF }
 %error { happyError }
 
+ -- NOTES
+ --	  CAPITALS are used to represent terminal symbols.
+ --	  non-capitals are used to represent non-terminals.
+
+-- This Haskell port generally follows the convention above, taken from the PostgreSQL bison source.
+
+%left		UNION EXCEPT
+%left		INTERSECT
 %left OR
 %left AND
 %right NOT
@@ -45,6 +53,13 @@ import qualified Data.List.NonEmpty as NE
     DESC { LocToken _ L.Desc }
     ORDER { LocToken _ L.Order }
     BY { LocToken _ L.By }
+    USING { LocToken _ L.Using }
+    OPERATOR { LocToken _ L.Operator }
+    NULLS { LocToken _ L.Nulls }
+    FIRST { LocToken _ L.First }
+    LAST { LocToken _ L.Last }
+    UNION { LocToken _ L.By }
+    EXCEPT { LocToken _ L.Except }
 
     FROM { LocToken _ L.From }
     WHERE { LocToken _ L.Where }
@@ -61,10 +76,11 @@ import qualified Data.List.NonEmpty as NE
     PARAM { LocToken _ (L.NumberedParam $$) }
     HASKELL_PARAM { LocToken _ (L.HaskellParam $$) }
 
-    '*' { LocToken _ L.Mul }
-    '/' { LocToken _ L.Div }
     '+' { LocToken _ L.Add }
     '-' { LocToken _ L.Sub }
+    '*' { LocToken _ L.Mul }
+    '/' { LocToken _ L.Div }
+    '%' { LocToken _ L.Mod }
     '^' { LocToken _ L.Exponent }
 
     IS { LocToken _ L.Is }
@@ -341,16 +357,8 @@ sort_clause :: { NonEmpty SortBy }
 sortby_list : list(sortby) { $1 }
 
 sortby
---: a_expr USING qual_all_Op opt_nulls_order
---				{
---					$$ = makeNode(SortBy);
---					$$->node = $1;
---					$$->sortby_dir = SORTBY_USING;
---					$$->sortby_nulls = $4;
---					$$->useOp = $3;
---					$$->location = @3;
---				}
-    : a_expr opt_asc_desc opt_nulls_order { SortBy $1 $2 }
+    : a_expr USING qual_all_Op opt_nulls_order { SortBy $1 (Using $3) $4 }
+    | a_expr opt_asc_desc opt_nulls_order { SortBy $1 (SortOrder $2) $3 }
 
 opt_asc_desc
     : ASC { Ascending }
@@ -358,10 +366,38 @@ opt_asc_desc
     | {- EMPTY -} { DefaultSortOrder }
 
 opt_nulls_order
-    : { Nothing }
-    -- : NULLS_LA FIRST_P			{ $$ = SORTBY_NULLS_FIRST; }
-	-- | NULLS_LA LAST_P				{ $$ = SORTBY_NULLS_LAST; }
-	-- | {- EMPTY -} { $$ = SORTBY_NULLS_DEFAULT; }
+    : NULLS FIRST			{ NullsFirst }
+	| NULLS LAST				{ NullsLast }
+	|  { NullsOrderDefault }
+
+any_operator: all_Op { $1 }
+-- We don't yet support schema-qualified operators (they're more useful if user-defined)
+
+all_Op : MathOp { $1 }
+-- We don't (yet?) support user-defined operators
+
+MathOp :: { BinOp }
+    : '+'									{ Add }
+    | '-'									{ Sub }
+    | '*'									{ Mul }
+    | '/'									{ Div }
+    | '%'									{ Mod }
+    | '^'									{ Exponent }
+    | '<'									{ Comp LT }
+    | '>'									{ Comp GT }
+    | '='									{ Comp Eq }
+    | '<='							{ Comp LTE }
+    | '>='						{ Comp GTE }
+    | '!='							{ Comp NEq }
+
+qual_Op
+    -- We don't (yet?) support user-defined operators
+    -- :	Op { $1 }
+    : OPERATOR '(' any_operator ')' { $3 }
+
+qual_all_Op
+    : all_Op { $1 }
+    | OPERATOR '(' any_operator ')' { $3 }
 
 -- TODO
 a_expr : Expr { $1 }
@@ -420,7 +456,6 @@ Null
         | ISNULL { IsNull }
         | IS NOT NULL { NotNull }
         | NOTNULL { NotNull }
-
 
 {
 

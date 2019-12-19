@@ -49,6 +49,13 @@ tokens :-
     $d $e $s $c { lex Desc }
     $o $r $d $e $r { lex Order }
     $b $y { lex By }
+    $u $s $i $n $g { lex Using }
+    $o $p $e $r $a $t $o $r { lex Operator }
+    $u $n $i $o $n { lex Union }
+    $e $x $c $e $p $t { lex Except }
+    $n $u $l $l $s { lex Nulls }
+    $f $i $r $s $t { lex First }
+    $l $a $s $t { lex Last }
     $d $e $l $e $t $e { lex Delete }
     $s $e $l $e $c $t { lex Select }
     $i $n $s $e $r $t { lex Insert }
@@ -97,12 +104,13 @@ data LocToken = LocToken
      } deriving Show
 
 data Token = Delete | Select | Insert | Update
-    | Asc | Desc | Order | By
+    | Asc | Desc | Order | By | Using | Operator | Nulls | First | Last
+    | Union | Except
      | From | Where | Into | Values | Set
      | Name Text | String Text | Number Double
      | NumberedParam Word | HaskellParam Text
      | LParen | RParen | Comma
-     | Mul | Div | Add | Sub | Exponent
+     | Mul | Div | Add | Sub | Mod | Exponent
      | Is | Null | IsNull | NotNull
      | Equals | NotEquals | LT | LTE | GT | GTE
      | Like | ILike
@@ -132,6 +140,10 @@ unLex t = case t of
     Desc -> "DESC"
     Order -> "ORDER"
     By -> "BY"
+    Using -> "USING"
+    Operator -> "OPERATOR"
+    Union -> "UNION"
+    Except -> "EXCEPT"
     Delete -> "DELETE"
     Select  -> "SELECT "
     Insert -> "INSERT"

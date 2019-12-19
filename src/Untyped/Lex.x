@@ -128,8 +128,10 @@ setFilePath = alexSetUserState . AlexUserState
 -- For nice parser error messages.
 unLex :: Token -> String
 unLex t = case t of
-    Ascending -> "ASCENDING"
-    Descending -> "DESCENDING"
+    Asc -> "ASC"
+    Desc -> "DESC"
+    Order -> "ORDER"
+    By -> "BY"
     Delete -> "DELETE"
     Select  -> "SELECT "
     Insert -> "INSERT"
@@ -199,7 +201,7 @@ alexMonadScan' = do
   case alexScan inp sc of
     AlexEOF -> alexEOF
     AlexError (p, _, _, s) ->
-        alexError' p ("lexical error at character '" ++ take 1 s ++ "'")
+        alexErrorPosn p ("lexical error at character '" ++ take 1 s ++ "'")
     AlexSkip  inp' len -> do
         alexSetInput inp'
         alexMonadScan'

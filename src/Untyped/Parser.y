@@ -21,16 +21,16 @@ import qualified Data.List.NonEmpty as NE
 %lexer { lexwrap } {  L.LocToken _ L.EOF }
 %error { happyError }
 
-%left or
-%left and
-%right not
+%left OR
+%left AND
+%right NOT
 %right '='
 %left '<' '>'
-%nonassoc like ilike
+%nonassoc LIKE ILIKE
 %left '!=' '<=' '>='
-%nonassoc notnull
-%nonassoc isnull
-%nonassoc is
+%nonassoc NOTNULL
+%nonassoc ISNULL
+%nonassoc IS
 %left '+' '-'
 %left '*' '/'
 %left '^'
@@ -313,8 +313,8 @@ values_clause
     | values_clause COMMA '(' expr_list ')' { NE.cons (NE.fromList (reverse $4)) $1 }
 
 Select :: { OldSelect }
-    : SELECT expr_list FROM Name WHERE Condition { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
-    | SELECT expr_list FROM Name { Select { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
+    : SELECT expr_list FROM Name WHERE Condition { OldSelect { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
+    | SELECT expr_list FROM Name { OldSelect { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
 
 Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
@@ -335,8 +335,8 @@ expr_list : list(Expr) { $1 }
 
 SettingList : list(Setting) { $1 }
 
-sort_clause
-    : ORDER BY sortby_list { $3}
+sort_clause :: { NonEmpty SortBy }
+    : ORDER BY sortby_list { NE.fromList (reverse $3) }
 
 sortby_list : list(sortby) { $1 }
 

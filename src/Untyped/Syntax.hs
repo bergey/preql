@@ -21,7 +21,7 @@ import qualified Data.Text                  as T
 data Literal = I !Int | F !Double | T !Text | B !Bool
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Query = QI !Insert | QD !Delete | QU !Update | QS !Select
+data Query = QI !Insert | QD !Delete | QU !Update | QS !OldSelect
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 -- | Queries of the form @INSERT INTO table (columns) VALUES (values);@
@@ -60,7 +60,7 @@ data OldSelect = OldSelect
 
 data SelectStmt
     = SimpleSelect SimpleSelect
-    | SortedSelect SelectStmt SortBy
+    | SortedSelect SelectStmt (NonEmpty SortBy)
     -- TODO more cases
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 

@@ -536,8 +536,8 @@ ColLabel:	IDENT									{  $1 }
 -- kwlist.h's table from a common master list.)
 
 -- "Unreserved" keywords --- available for use as any kind of name.
-unreserved_keyword:
-			  ABORT_P
+unreserved_keyword
+            : ABORT_P
 			| ABSOLUTE_P
 			| ACCESS
 			| ACTION

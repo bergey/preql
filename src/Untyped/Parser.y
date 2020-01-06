@@ -73,6 +73,14 @@ import qualified Data.List.NonEmpty as NE
 %left '+' '-'
 %left '*' '/' '%'
 %left '^'
+-- * Unary Operators
+%left		AT  -- * sets precedence for AT TIME ZONE
+%left		COLLATE
+%right		UMINUS
+%left		'[' ']'
+%left		'(' ')'
+%left		TYPECAST
+%left		'.'
 
 %token
     DELETE { LocToken _ L.Delete }
@@ -103,8 +111,9 @@ import qualified Data.List.NonEmpty as NE
     VALUES { LocToken _ L.Values }
     SET { LocToken _ L.Set }
     '(' { LocToken _ L.LParen }
-    ')' { LocToken _ L.RParen }
     COMMA { LocToken _ L.Comma }
+    ')' { LocToken _ L.RParen }
+    '.' { LocToken _ L.Dot }
 
     IDENT { LocToken _ (L.Name $$) }
     STRING { LocToken _ (L.String $$) }
@@ -1099,11 +1108,176 @@ a_expr :: { Expr }
 -- TODO 											   list_make2($5, $1),
 -- TODO 											   @2);
 
--- TODO b_expr
+-- * Restricted expressions
+-- *
+-- * b_expr is a subset of the complete expression syntax defined by a_expr.
+-- *
+-- * Presently, AND, NOT, IS, and IN are the a_expr keywords that would
+-- * cause trouble in the places where b_expr is used.  For simplicity, we
+-- * just eliminate all the boolean-keyword-operator productions from b_expr.
+b_expr :: { Expr }
+    : c_expr { $1 }
+-- TODO | b_expr TYPECAST Typename
+-- TODO 				{ $$ = makeTypeCast($1, $3, @2); }
+| '+' b_expr					%prec UMINUS { $2 } -- TODO keep + for round-trip?
+-- TODO 				{ $$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "+", NULL, $2, @1); }
+| '-' b_expr					%prec UMINUS { Unary NegateNum $2 }
+| b_expr '+' b_expr { BinOp Add $1 $3 }
+| b_expr '-' b_expr { BinOp Sub $1 $3 }
+| b_expr '*' b_expr { BinOp Mul $1 $3 }
+| b_expr '/' b_expr { BinOp Div $1 $3 }
+| b_expr '%' b_expr { BinOp Mod $1 $3 }
+| b_expr '^' b_expr { BinOp Exponent $1 $3 }
+| b_expr '<' b_expr { BinOp (Comp LT) $1 $3 }
+| b_expr '>' b_expr { BinOp (Comp GT) $1 $3 }
+| b_expr '=' b_expr { BinOp (Comp Eq) $1 $3 }
+| b_expr '<=' b_expr { BinOp (Comp LTE) $1 $3 }
+| b_expr '>=' b_expr { BinOp (Comp GTE) $1 $3 }
+| b_expr '!=' b_expr { BinOp (Comp NEq) $1 $3 }
+| b_expr qual_Op b_expr				%prec Op { BinOp $2 $1 $3 } 
+-- FIXME exclude user-defined operators, or give up on Syntax allowing only correct operator arity?
+-- TODO 			| qual_Op b_expr					%prec Op
+-- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $1, NULL, $2, @1); }
+-- TODO 			| b_expr qual_Op					%prec POSTFIXOP
+-- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $2, $1, NULL, @2); }
+| b_expr IS DISTINCT FROM b_expr		%prec IS { BinOp IsDistinctFrom $1 $5 }
+| b_expr IS NOT DISTINCT FROM b_expr	%prec IS { BinOp IsNotDistinctFrom $1 $6 }
+-- TODO 			| b_expr IS OF '(' type_list ')'		%prec IS
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OF, "=", $1, (Node *) $5, @2);
+-- TODO 				}
+-- TODO 			| b_expr IS NOT OF '(' type_list ')'	%prec IS
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OF, "<>", $1, (Node *) $6, @2);
+-- TODO 				}
+-- TODO 			| b_expr IS DOCUMENT_P					%prec IS
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_DOCUMENT, NULL, NIL,
+-- TODO 									 list_make1($1), @2);
+-- TODO 				}
+-- TODO 			| b_expr IS NOT DOCUMENT_P				%prec IS
+-- TODO 				{
+-- TODO 					$$ = makeNotExpr(makeXmlExpr(IS_DOCUMENT, NULL, NIL,
+-- TODO 												 list_make1($1), @2),
+-- TODO 									 @2);
+-- TODO 				}
 
+-- * Productions that can be used in both a_expr and b_expr.
+-- *
+-- * Note: productions that refer recursively to a_expr or b_expr mostly
+-- * cannot appear here.	However, it's OK to refer to a_exprs that occur
+-- * inside parentheses, such as function arguments; that cannot introduce
+-- * ambiguity to the b_expr syntax.
 c_expr :: { Expr }
     : columnref { CRef $1 }
     | AexprConst { Lit $1 }
+    -- TODO check_indirection
+    | PARAM opt_indirection { NumberedParam $1 (reverse $2) }
+    | '(' a_expr ')' opt_indirection { Indirection $2 (reverse $4) }
+-- TODO 				{
+-- TODO 					if ($4)
+-- TODO 					{
+-- TODO 						A_Indirection *n = makeNode(A_Indirection);
+-- TODO 						n->arg = $2;
+-- TODO 						n->indirection = check_indirection($4, yyscanner);
+-- TODO 						$$ = (Node *)n;
+-- TODO 					}
+-- TODO 					else if (operator_precedence_warning)
+-- TODO 					{
+-- TODO 						/*
+-- TODO 						 * If precedence warnings are enabled, insert
+-- TODO 						 * AEXPR_PAREN nodes wrapping all explicitly
+-- TODO 						 * parenthesized subexpressions; this prevents bogus
+-- TODO 						 * warnings from being issued when the ordering has
+-- TODO 						 * been forced by parentheses.  Take care that an
+-- TODO 						 * AEXPR_PAREN node has the same exprLocation as its
+-- TODO 						 * child, so as not to cause surprising changes in
+-- TODO 						 * error cursor positioning.
+-- TODO 						 *
+-- TODO 						 * In principle we should not be relying on a GUC to
+-- TODO 						 * decide whether to insert AEXPR_PAREN nodes.
+-- TODO 						 * However, since they have no effect except to
+-- TODO 						 * suppress warnings, it's probably safe enough; and
+-- TODO 						 * we'd just as soon not waste cycles on dummy parse
+-- TODO 						 * nodes if we don't have to.
+-- TODO 						 */
+-- TODO 						$$ = (Node *) makeA_Expr(AEXPR_PAREN, NIL, $2, NULL,
+-- TODO 												 exprLocation($2));
+-- TODO 					}
+-- TODO 					else
+-- TODO 						$$ = $2;
+-- TODO 				}
+-- TODO 			| case_expr
+-- TODO 				{ $$ = $1; }
+-- TODO 			| func_expr
+-- TODO 				{ $$ = $1; }
+    | select_with_parens			%prec UMINUS { SelectExpr $1 [] }
+    | select_with_parens indirection { SelectExpr $1 $2 }
+-- * Because the select_with_parens nonterminal is designed
+-- * to "eat" as many levels of parens as possible, the
+-- * '(' a_expr ')' opt_indirection production above will
+-- * fail to match a sub-SELECT with indirection decoration;
+-- * the sub-SELECT won't be regarded as an a_expr as long
+-- * as there are parens around it.  To support applying
+-- * subscripting or field selection to a sub-SELECT result,
+-- * we need this redundant-looking production.
+-- TODO 			| EXISTS select_with_parens
+-- TODO 				{
+-- TODO 					SubLink *n = makeNode(SubLink);
+-- TODO 					n->subLinkType = EXISTS_SUBLINK;
+-- TODO 					n->subLinkId = 0;
+-- TODO 					n->testexpr = NULL;
+-- TODO 					n->operName = NIL;
+-- TODO 					n->subselect = $2;
+-- TODO 					n->location = @1;
+-- TODO 					$$ = (Node *)n;
+-- TODO 				}
+-- TODO 			| ARRAY select_with_parens
+-- TODO 				{
+-- TODO 					SubLink *n = makeNode(SubLink);
+-- TODO 					n->subLinkType = ARRAY_SUBLINK;
+-- TODO 					n->subLinkId = 0;
+-- TODO 					n->testexpr = NULL;
+-- TODO 					n->operName = NIL;
+-- TODO 					n->subselect = $2;
+-- TODO 					n->location = @1;
+-- TODO 					$$ = (Node *)n;
+-- TODO 				}
+-- TODO 			| ARRAY array_expr
+-- TODO 				{
+-- TODO 					A_ArrayExpr *n = castNode(A_ArrayExpr, $2);
+-- TODO 					/* point outermost A_ArrayExpr to the ARRAY keyword */
+-- TODO 					n->location = @1;
+-- TODO 					$$ = (Node *)n;
+-- TODO 				}
+-- TODO 			| explicit_row
+-- TODO 				{
+-- TODO 					RowExpr *r = makeNode(RowExpr);
+-- TODO 					r->args = $1;
+-- TODO 					r->row_typeid = InvalidOid;	/* not analyzed yet */
+-- TODO 					r->colnames = NIL;	/* to be filled in during analysis */
+-- TODO 					r->row_format = COERCE_EXPLICIT_CALL; /* abuse */
+-- TODO 					r->location = @1;
+-- TODO 					$$ = (Node *)r;
+-- TODO 				}
+-- TODO 			| implicit_row
+-- TODO 				{
+-- TODO 					RowExpr *r = makeNode(RowExpr);
+-- TODO 					r->args = $1;
+-- TODO 					r->row_typeid = InvalidOid;	/* not analyzed yet */
+-- TODO 					r->colnames = NIL;	/* to be filled in during analysis */
+-- TODO 					r->row_format = COERCE_IMPLICIT_CAST; /* abuse */
+-- TODO 					r->location = @1;
+-- TODO 					$$ = (Node *)r;
+-- TODO 				}
+-- TODO 			| GROUPING '(' expr_list ')'
+-- TODO 			  {
+-- TODO 				  GroupingFunc *g = makeNode(GroupingFunc);
+-- TODO 				  g->args = $3;
+-- TODO 				  g->location = @1;
+-- TODO 				  $$ = (Node *)g;
+-- TODO 			  }
+-- TODO 		;
 
 -- * Window Definitions
 window_clause
@@ -1295,9 +1469,9 @@ Null
 columnref
 : ColId { ColumnRef $1 Nothing }
 -- TODO | ColId indirection { ColumnRef $1 (Just $2) }
--- TODO 
--- TODO indirection_el:
--- TODO 			'.' attr_name
+
+indirection_el :: { Name } -- TODO bigger type
+    : '.' attr_name { $2 }
 -- TODO 				{
 -- TODO 					$$ = (Node *) makeString($2);
 -- TODO 				}
@@ -1322,27 +1496,23 @@ columnref
 -- TODO 					$$ = (Node *) ai;
 -- TODO 				}
 -- TODO 		;
--- TODO 
+
 -- TODO opt_slice_bound:
 -- TODO 			a_expr									{ $$ = $1; }
 -- TODO 			| /*EMPTY*/								{ $$ = NULL; }
 -- TODO 		;
--- TODO 
--- TODO indirection:
--- TODO 			indirection_el							{ $$ = list_make1($1); }
--- TODO 			| indirection indirection_el			{ $$ = lappend($1, $2); }
--- TODO 		;
--- TODO 
--- TODO opt_indirection:
--- TODO 			/*EMPTY*/								{ $$ = NIL; }
--- TODO 			| opt_indirection indirection_el		{ $$ = lappend($1, $2); }
--- TODO 		;
--- TODO 
+
+indirection : list(indirection_el) { $1 }
+
+opt_indirection :: { [Name] }
+			: { [] }
+			| indirection { $1 }
+
 -- TODO opt_asymmetric: ASYMMETRIC
 -- TODO 			| /*EMPTY*/
 -- TODO 		;
--- TODO 
- -- *	target list for SELECT
+
+-- *	target list for SELECT
 
 opt_target_list :: { [ResTarget] }
     : target_list { NE.toList $1 }

@@ -72,6 +72,7 @@ tokens :-
     "(" { lex LParen }
     "," { lex Comma }
     ")" { lex RParen }
+    "." { lex Dot }
     "*" { lex Mul }
     "/" { lex Div }
     "+" { lex Add }
@@ -125,7 +126,7 @@ data Token = -- Delete | Select | Insert | Update
     | Equals | NotEquals | LT | LTE | GT | GTE
     -- | Like | ILike
     -- | And | Or | Not
-    | Semicolon | EOF
+    | Dot | Semicolon | EOF
     -- all the keywords, from bison
     | ABORT_P | AUTHORIZATION | BETWEEN | ABSOLUTE_P | ACCESS | ACTION | ADD_P
     | ADMIN | AFTER | AGGREGATE | ALL | ALSO | ALTER | ALWAYS | ANALYSE | ANALYZE | AND

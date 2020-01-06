@@ -114,13 +114,19 @@ data Condition = Compare !Compare !Name !Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Expr = Lit !Literal | Var !Name
-    | NumberedParam !Word | InlineParam !Text | HaskellParam !Text
+    | NumberedParam !Word [Indirection]
+    | Indirection Expr [Indirection]
+    | SelectExpr SelectStmt [Indirection]
+    | InlineParam !Text | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
     | CRef ColumnRef
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
+type Indirection = Name -- FIXME
+
 data BinOp = Mul | Div | Add | Sub | Exponent | Mod | Comp !Compare
+           | IsDistinctFrom | IsNotDistinctFrom
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data UnaryOp = NegateNum | NegateBool | IsNull | NotNull

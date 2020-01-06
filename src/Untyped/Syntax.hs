@@ -75,7 +75,13 @@ data SimpleSelect
 data Unordered = Unordered
     { distinct :: Maybe DistinctClause
     , targetList :: [ResTarget]
+    , from :: [TableRef]
     -- TODO remaining fields
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data TableRef =
+    { relation :: Name -- TODO
+    , alias :: Maybe Name
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SortBy = SortBy

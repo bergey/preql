@@ -765,15 +765,16 @@ values_clause
  -- *	clauses common to all Optimizable Stmts:
  -- *		from_clause		- allow list of both JOIN expressions and table names
  -- *		where_clause	- qualifications for joins or restrictions
-
-from_clause:
-			FROM from_list							{ $$ = $2; }
-			| /*EMPTY*/								{ $$ = NIL; }
+ 
+from_clause :: { [TableRef] }
+    : FROM from_list { reverse $1 }
+	| 							{ [] }
 
 from_list : list(table_ref) { $1 }
 
 -- * table_ref is where an alias clause can be attached.
-table_ref:	relation_expr opt_alias_clause
+table_ref :: { TableRef }
+    :	relation_expr opt_alias_clause { TableRef $1 $2 }
 -- TODO				{
 -- TODO					$1->alias = $2;
 -- TODO					$$ = (Node *) $1;
@@ -882,7 +883,41 @@ table_ref:	relation_expr opt_alias_clause
 -- TODO				{
 -- TODO					$2->alias = $4;
 -- TODO					$$ = (Node *) $2;
-				}
+-- TODO }
+
+-- TODO joined_table:
+-- TODO alias_clause:
+-- TODO opt_alias_clause: 
+-- TODO func_alias_clause:
+-- TODO join_type:	
+-- TODO join_outer:
+-- TODO join_qual:
+
+relation_expr :: { Name } -- TODO FIXME
+    : qualified_name { $1 } -- * inheritance query, implicitly
+-- TODO 			| qualified_name '*'
+-- TODO 				{
+-- TODO 					/* inheritance query, explicitly */
+-- TODO 					$$ = $1;
+-- TODO 					$$->inh = true;
+-- TODO 					$$->alias = NULL;
+-- TODO 				}
+-- TODO 			| ONLY qualified_name
+-- TODO 				{
+-- TODO 					/* no inheritance */
+-- TODO 					$$ = $2;
+-- TODO 					$$->inh = false;
+-- TODO 					$$->alias = NULL;
+-- TODO 				}
+-- TODO 			| ONLY '(' qualified_name ')'
+-- TODO 				{
+-- TODO 					/* no inheritance, SQL99-style syntax */
+-- TODO 					$$ = $3;
+-- TODO 					$$->inh = false;
+-- TODO 					$$->alias = NULL;
+-- TODO 				}
+
+relation_expr_list : list(relation_expr) { $1 }
 
 -- FIXME handwritten
 Select :: { OldSelect }
@@ -1032,6 +1067,8 @@ Null
         | ISNULL { IsNull }
         | IS NOT NULL { NotNull }
         | NOTNULL { NotNull }
+
+ -- *	target list for SELECT
 
 opt_target_list :: { [ResTarget] }
     : target_list { NE.toList $1 }

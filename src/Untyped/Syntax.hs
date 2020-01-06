@@ -18,7 +18,8 @@ import           Language.Haskell.TH.Syntax (Lift (..))
 
 import qualified Data.Text                  as T
 
-data Literal = I !Int | F !Double | T !Text | B !Bool
+-- FIXME rename to Constant?
+data Literal = I !Int | F !Double | T !Text | B !Bool | Null
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Query = QI !Insert | QD !Delete | QU !Update | QS !OldSelect

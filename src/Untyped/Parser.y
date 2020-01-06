@@ -1058,9 +1058,52 @@ where_clause :: { Maybe Expr }
     : WHERE a_expr { Just $2 }
     | { Nothing }
 
--- TODO a_expr
+-- *	expression grammar
+
+-- * General expressions
+-- * This is the heart of the expression syntax.
+-- *
+-- * We have two expression types: a_expr is the unrestricted kind, and
+-- * b_expr is a subset that must be used in some places to avoid shift/reduce
+-- * conflicts.  For example, we can't do BETWEEN as "BETWEEN a_expr AND a_expr"
+-- * because that use of AND conflicts with AND as a boolean operator.  So,
+-- * b_expr is used in BETWEEN and we remove boolean keywords from b_expr.
+-- *
+-- * Note that '(' a_expr ')' is a b_expr, so an unrestricted expression can
+-- * always be used by surrounding it with parens.
+-- *
+-- * c_expr is all the productions that are common to a_expr and b_expr;
+-- * it's factored out just to eliminate redundant coding.
+-- *
+-- * Be careful of productions involving more than one terminal token.
+-- * By default, bison will assign such productions the precedence of their
+-- * last terminal, but in nearly all cases you want it to be the precedence
+-- * of the first terminal instead; otherwise you will not get the behavior
+-- * you expect!  So we use %prec annotations freely to set precedences.
+
+a_expr :: { Expr }
+    : c_expr { $1 }
+-- TODO 			| a_expr TYPECAST Typename
+-- TODO 					{ $$ = makeTypeCast($1, $3, @2); }
+-- TODO 			| a_expr COLLATE any_name
+-- TODO 				{
+-- TODO 					CollateClause *n = makeNode(CollateClause);
+-- TODO 					n->arg = $1;
+-- TODO 					n->collname = $3;
+-- TODO 					n->location = @2;
+-- TODO 					$$ = (Node *) n;
+-- TODO 				}
+-- TODO 			| a_expr AT TIME ZONE a_expr			%prec AT
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("timezone"),
+-- TODO 											   list_make2($5, $1),
+-- TODO 											   @2);
+
 -- TODO b_expr
--- TODO c_expr
+
+c_expr :: { Expr }
+    : columnref { CRef $1 }
+    | AexprConst { Lit $1 }
 
 -- * Window Definitions
 window_clause
@@ -1195,9 +1238,6 @@ qual_all_Op
     : all_Op { $1 }
     | OPERATOR '(' any_operator ')' { $3 }
 
--- TODO a_expr, b_expr from bison
-a_expr : Expr { $1 }
-
 Compare :: { Compare }
     : '=' { Eq }
     | '!=' { NEq }
@@ -1243,9 +1283,8 @@ Expr :: { Expr }
     | '-' Expr { Unary NegateNum $2 }
     | Expr Null { Unary $2 $1 }
 
-Literal
-        : STRING { T $1 }
-        | NUMBER { F $1 }
+-- FIXME remove this alias
+Literal : AexprConst { $1 }
 
 Null
         : IS NULL { IsNull }
@@ -1253,6 +1292,56 @@ Null
         | IS NOT NULL { NotNull }
         | NOTNULL { NotNull }
 
+columnref
+: ColId { ColumnRef $1 Nothing }
+-- TODO | ColId indirection { ColumnRef $1 (Just $2) }
+-- TODO 
+-- TODO indirection_el:
+-- TODO 			'.' attr_name
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeString($2);
+-- TODO 				}
+-- TODO 			| '.' '*'
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeNode(A_Star);
+-- TODO 				}
+-- TODO 			| '[' a_expr ']'
+-- TODO 				{
+-- TODO 					A_Indices *ai = makeNode(A_Indices);
+-- TODO 					ai->is_slice = false;
+-- TODO 					ai->lidx = NULL;
+-- TODO 					ai->uidx = $2;
+-- TODO 					$$ = (Node *) ai;
+-- TODO 				}
+-- TODO 			| '[' opt_slice_bound ':' opt_slice_bound ']'
+-- TODO 				{
+-- TODO 					A_Indices *ai = makeNode(A_Indices);
+-- TODO 					ai->is_slice = true;
+-- TODO 					ai->lidx = $2;
+-- TODO 					ai->uidx = $4;
+-- TODO 					$$ = (Node *) ai;
+-- TODO 				}
+-- TODO 		;
+-- TODO 
+-- TODO opt_slice_bound:
+-- TODO 			a_expr									{ $$ = $1; }
+-- TODO 			| /*EMPTY*/								{ $$ = NULL; }
+-- TODO 		;
+-- TODO 
+-- TODO indirection:
+-- TODO 			indirection_el							{ $$ = list_make1($1); }
+-- TODO 			| indirection indirection_el			{ $$ = lappend($1, $2); }
+-- TODO 		;
+-- TODO 
+-- TODO opt_indirection:
+-- TODO 			/*EMPTY*/								{ $$ = NIL; }
+-- TODO 			| opt_indirection indirection_el		{ $$ = lappend($1, $2); }
+-- TODO 		;
+-- TODO 
+-- TODO opt_asymmetric: ASYMMETRIC
+-- TODO 			| /*EMPTY*/
+-- TODO 		;
+-- TODO 
  -- *	target list for SELECT
 
 opt_target_list :: { [ResTarget] }
@@ -1317,6 +1406,112 @@ attr_name : ColLabel { $1 }
 index_name : ColId { $1 }
 
 -- TODO file_name:	Sconst									{ $$ = $1; };
+
+-- * The production for a qualified func_name has to exactly match the
+-- * production for a qualified columnref, because we cannot tell which we
+-- * are parsing until we see what comes after it ('(' or Sconst for a func_name,
+-- * anything else for a columnref).  Therefore we allow 'indirection' which
+-- * may contain subscripts, and reject that case in the C code.  (If we
+-- * ever implement SQL99-like methods, such syntax may actually become legal!)
+-- TODO func_name
+-- TODO :	type_function_name
+-- TODO 					{ $$ = list_make1(makeString($1)); }
+-- TODO 			| ColId indirection
+-- TODO 					{
+-- TODO 						$$ = check_func_name(lcons(makeString($1), $2),
+-- TODO 											 yyscanner);
+-- TODO 					}
+-- TODO 		;
+
+-- * Constants
+
+AexprConst :: { Literal }
+-- TODO     : Iconst
+    : NUMBER { F $1 }
+    | Sconst { T $1 }
+-- TODO 			| BCONST
+-- TODO 				{
+-- TODO 					$$ = makeBitStringConst($1, @1);
+-- TODO 				}
+-- TODO 			| XCONST
+-- TODO 				{
+-- TODO 					/* This is a bit constant per SQL99:
+-- TODO 					 * Without Feature F511, "BIT data type",
+-- TODO 					 * a <general literal> shall not be a
+-- TODO 					 * <bit string literal> or a <hex string literal>.
+-- TODO 					 */
+-- TODO 					$$ = makeBitStringConst($1, @1);
+-- TODO 				}
+-- TODO 			| func_name Sconst
+-- TODO 				{
+-- TODO 					/* generic type 'literal' syntax */
+-- TODO 					TypeName *t = makeTypeNameFromNameList($1);
+-- TODO 					t->location = @1;
+-- TODO 					$$ = makeStringConstCast($2, @2, t);
+-- TODO 				}
+-- TODO 			| func_name '(' func_arg_list opt_sort_clause ')' Sconst
+-- TODO 				{
+-- TODO 					/* generic syntax with a type modifier */
+-- TODO 					TypeName *t = makeTypeNameFromNameList($1);
+-- TODO 					ListCell *lc;
+-- TODO 
+-- TODO 					/*
+-- TODO 					 * We must use func_arg_list and opt_sort_clause in the
+-- TODO 					 * production to avoid reduce/reduce conflicts, but we
+-- TODO 					 * don't actually wish to allow NamedArgExpr in this
+-- TODO 					 * context, nor ORDER BY.
+-- TODO 					 */
+-- TODO 					foreach(lc, $3)
+-- TODO 					{
+-- TODO 						NamedArgExpr *arg = (NamedArgExpr *) lfirst(lc);
+-- TODO 
+-- TODO 						if (IsA(arg, NamedArgExpr))
+-- TODO 							ereport(ERROR,
+-- TODO 									(errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO 									 errmsg("type modifier cannot have parameter name"),
+-- TODO 									 parser_errposition(arg->location)));
+-- TODO 					}
+-- TODO 					if ($4 != NIL)
+-- TODO 							ereport(ERROR,
+-- TODO 									(errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO 									 errmsg("type modifier cannot have ORDER BY"),
+-- TODO 									 parser_errposition(@4)));
+-- TODO 
+-- TODO 					t->typmods = $3;
+-- TODO 					t->location = @1;
+-- TODO 					$$ = makeStringConstCast($6, @6, t);
+-- TODO 				}
+-- TODO 			| ConstTypename Sconst
+-- TODO 				{
+-- TODO 					$$ = makeStringConstCast($2, @2, $1);
+-- TODO 				}
+-- TODO 			| ConstInterval Sconst opt_interval
+-- TODO 				{
+-- TODO 					TypeName *t = $1;
+-- TODO 					t->typmods = $3;
+-- TODO 					$$ = makeStringConstCast($2, @2, t);
+-- TODO 				}
+-- TODO 			| ConstInterval '(' Iconst ')' Sconst
+-- TODO 				{
+-- TODO 					TypeName *t = $1;
+-- TODO 					t->typmods = list_make2(makeIntConst(INTERVAL_FULL_RANGE, -1),
+-- TODO 											makeIntConst($3, @3));
+-- TODO 					$$ = makeStringConstCast($5, @5, t);
+-- TODO 				}
+    | TRUE_P { B True }
+    | FALSE_P { B False }
+    | NULL_P { Null }
+
+-- TODO Iconst : ICONST { $1 }
+-- TODO rename STRING -> SCONST to match bison
+-- TODO Sconst : SCONST { $1 }
+Sconst : STRING { $1 }
+
+-- TODO SignedIconst
+-- TODO     : Iconst								{ $1 }
+-- TODO     | '+' Iconst							{ + $2 }
+-- TODO     | '-' Iconst							{ - $2 }
+-- TODO 
 
 -- * Name classification hierarchy.
 -- *

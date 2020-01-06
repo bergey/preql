@@ -95,6 +95,7 @@ tokens :-
     $o $r { lex OR }
     [\'] ("''" | $quoted)* [\'] { lex' (String . T.pack . unquoteString) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
+    -- FIXME integer literal
     "-"? $digit+ ("." $digit+)? ($e "-"? $digit+)? { lex' (Number . read) }
     "$" $digit+ { lex' (NumberedParam . read . tail) }
     "${" $haskell+ "}" { lex' (HaskellParam . T.pack . init . drop 2) }

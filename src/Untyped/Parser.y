@@ -1173,6 +1173,7 @@ c_expr :: { Expr }
     | AexprConst { Lit $1 }
     -- TODO check_indirection
     | PARAM opt_indirection { NumberedParam $1 (reverse $2) }
+    | HASKELL_PARAM { HaskellParam $1 }
     | '(' a_expr ')' opt_indirection { Indirection $2 (reverse $4) }
 -- TODO 				{
 -- TODO 					if ($4)

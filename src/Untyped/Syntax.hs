@@ -85,6 +85,7 @@ data TableRef =
     { relation :: Name -- TODO
     , alias :: Maybe Alias
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
 data Alias = Alias
     { aliasName :: Name
     , columnNames :: [ Name ]
@@ -115,6 +116,7 @@ data Expr = Lit !Literal | Var !Name
     | NumberedParam !Word | InlineParam !Text | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
+    | CRef ColumnRef
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data BinOp = Mul | Div | Add | Sub | Exponent | Mod | Comp !Compare
@@ -137,3 +139,11 @@ data ColumnRef = ColumnRef
     { value :: Text
     , name :: Maybe Text
     }
+
+data Window = Window
+    { name :: Maybe Name
+    , refName :: Maybe Name
+    , partitionClause :: [Expr]
+    , orderClause :: [SortBy ]
+    , frameOptions :: () -- FIXME implement
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)

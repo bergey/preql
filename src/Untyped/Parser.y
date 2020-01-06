@@ -29,20 +29,49 @@ import qualified Data.List.NonEmpty as NE
 -- Comments with a leading * are taken from the PostgreSQL source.
 -- Unimplemnted parts of the official parser are marked TODO, and generally contain bison & C syntax.
 
+-- * Precedence: lowest to highest
+%nonassoc	SET -- * see relation_expr_opt_alias
 %left		UNION EXCEPT
 %left		INTERSECT
 %left OR
 %left AND
 %right NOT
-%right '='
-%left '<' '>'
 %nonassoc LIKE ILIKE
-%left '!=' '<=' '>='
-%nonassoc NOTNULL
-%nonassoc ISNULL
-%nonassoc IS
+%nonassoc	IS ISNULL NOTNULL -- * IS sets precedence for IS NULL, etc
+%nonassoc '<' '>' '=' '!=' '<=' '>='
+%nonassoc	BETWEEN IN_P LIKE ILIKE SIMILAR NOT_LA
+%nonassoc	ESCAPE			-- * ESCAPE must be just above LIKE/ILIKE/SIMILAR
+%left		POSTFIXOP		-- * dummy for postfix Op rules
+-- * To support target_el without AS, we must give IDENT an explicit priority
+-- * between POSTFIXOP and Op.  We can safely assign the same priority to
+-- * various unreserved keywords as needed to resolve ambiguities (this can't
+-- * have any bad effects since obviously the keywords will still behave the
+-- * same as if they weren't keywords).  We need to do this:
+-- * for PARTITION, RANGE, ROWS, GROUPS to support opt_existing_window_name;
+-- * for RANGE, ROWS, GROUPS so that they can follow a_expr without creating
+-- * postfix-operator problems;
+-- * for GENERATED so that it can follow b_expr;
+-- * and for NULL so that it can follow b_expr in ColQualList without creating
+-- * postfix-operator problems.
+-- *
+-- * To support CUBE and ROLLUP in GROUP BY without reserving them, we give them
+-- * an explicit priority lower than '(', so that a rule with CUBE '(' will shift
+-- * rather than reducing a conflicting rule that takes CUBE as a function name.
+-- * Using the same precedence as IDENT seems right for the reasons given above.
+-- *
+-- * The frame_bound productions UNBOUNDED PRECEDING and UNBOUNDED FOLLOWING
+-- * are even messier: since UNBOUNDED is an unreserved keyword (per spec!),
+-- * there is no principled way to distinguish these from the productions
+-- * a_expr PRECEDING/FOLLOWING.  We hack this up by giving UNBOUNDED slightly
+-- * lower precedence than PRECEDING and FOLLOWING.  At present this doesn't
+-- * appear to cause UNBOUNDED to be treated differently from other unreserved
+-- * keywords anywhere else in the grammar, but it's definitely risky.  We can
+-- * blame any funny behavior of UNBOUNDED on the SQL standard, though.
+%nonassoc	UNBOUNDED		-- * ideally should have same precedence as IDENT
+%nonassoc	IDENT GENERATED NULL_P PARTITION RANGE ROWS GROUPS PRECEDING FOLLOWING CUBE ROLLUP
+%left		Op OPERATOR		-- * multi-character ops and user-defined operators
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %left '^'
 
 %token
@@ -1028,6 +1057,81 @@ relation_expr_list : list(relation_expr) { $1 }
 where_clause :: { Maybe Expr }
     : WHERE a_expr { Just $2 }
     | { Nothing }
+
+-- TODO a_expr
+-- TODO b_expr
+-- TODO c_expr
+
+-- * Window Definitions
+window_clause
+: WINDOW window_definition_list { reverse $2 }
+| { [] }
+
+window_definition_list : list(window_definition) { $1 }
+
+window_definition
+    : ColId AS window_specification { $2 { name = $1 } }
+
+over_clause :: { Maybe Window }
+: OVER window_specification { Just $2 }
+| OVER ColId { Just (Window (Just $2) Nothing Nothing Nothing }
+| { Nothing }
+
+window_specification :: { Window }
+: '(' opt_existing_window_name opt_partition_clause opt_sort_clause opt_frame_clause ')'
+    { Window Nothing $2 $3 $4 $5 }
+
+-- * If we see PARTITION, RANGE, ROWS or GROUPS as the first token after the '('
+-- * of a window_specification, we want the assumption to be that there is
+-- * no existing_window_name; but those keywords are unreserved and so could
+-- * be ColIds.  We fix this by making them have the same precedence as IDENT
+-- * and giving the empty production here a slightly higher precedence, so
+-- * that the shift/reduce conflict is resolved in favor of reducing the rule.
+-- * These keywords are thus precluded from being an existing_window_name but
+-- * are not reserved for any other purpose.
+opt_existing_window_name :: { Maybe Name }
+    : ColId						{ Just $1 }
+    | 	%prec Op		{ Nothing }
+
+opt_partition_clause :: { [Expr] }
+    : PARTITION BY expr_list		{ reverse $1 }
+    | { [] }
+
+-- * For frame clauses, we return a WindowDef, but only some fields are used:
+-- * frameOptions, startOffset, and endOffset.
+-- FIXME What is this, how do I want to handle the bitflags?
+opt_frame_clause : { () }
+-- TODO 			RANGE frame_extent opt_window_exclusion_clause
+-- TODO 				{
+-- TODO 					WindowDef *n = $2;
+-- TODO 					n->frameOptions |= FRAMEOPTION_NONDEFAULT | FRAMEOPTION_RANGE;
+-- TODO 					n->frameOptions |= $3;
+-- TODO 					$$ = n;
+-- TODO 				}
+-- TODO 			| ROWS frame_extent opt_window_exclusion_clause
+-- TODO 				{
+-- TODO 					WindowDef *n = $2;
+-- TODO 					n->frameOptions |= FRAMEOPTION_NONDEFAULT | FRAMEOPTION_ROWS;
+-- TODO 					n->frameOptions |= $3;
+-- TODO 					$$ = n;
+-- TODO 				}
+-- TODO 			| GROUPS frame_extent opt_window_exclusion_clause
+-- TODO 				{
+-- TODO 					WindowDef *n = $2;
+-- TODO 					n->frameOptions |= FRAMEOPTION_NONDEFAULT | FRAMEOPTION_GROUPS;
+-- TODO 					n->frameOptions |= $3;
+-- TODO 					$$ = n;
+-- TODO 				}
+-- TODO 			| /*EMPTY*/
+-- TODO 				{
+-- TODO 					WindowDef *n = makeNode(WindowDef);
+-- TODO 					n->frameOptions = FRAMEOPTION_DEFAULTS;
+-- TODO 					n->startOffset = NULL;
+-- TODO 					n->endOffset = NULL;
+-- TODO 					$$ = n;
+-- TODO 				}
+-- TODO 		;
+
 
 -- FIXME handwritten
 Select :: { OldSelect }

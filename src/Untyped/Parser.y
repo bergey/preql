@@ -755,6 +755,95 @@ into_clause:
 				-- }
     { Nothing }
 
+-- TODO OptTempTableName:
+
+opt_table :: { () }
+    : TABLE { () }
+    | { () }
+
+all_or_distinct :: { AllOrDistinct }
+    : ALL { All }
+    | DISTINCT { Distinct }
+    | { Distinct }
+
+-- * We use (DistinctAll) as a placeholder to indicate that all target expressions
+-- * should be placed in the DISTINCT list during parsetree analysis.
+distinct_clause :: { DistinctClause }
+    : DISTINCT { DistinctAll }
+    | DISTINCT ON '(' expr_list ')' { DistinctOn $4 }
+
+opt_all_clause
+    : ALL { () }
+    | { () }
+
+opt_sort_clause :: { [SortBy ] }
+    : sort_clause { NE.toList $1 }
+    | { [] }
+
+sort_clause :: { NonEmpty SortBy }
+    : ORDER BY sortby_list { NE.fromList (reverse $3) }
+
+sortby_list : list(sortby) { $1 }
+
+sortby
+    : a_expr USING qual_all_Op opt_nulls_order { SortBy $1 (Using $3) $4 }
+    | a_expr opt_asc_desc opt_nulls_order { SortBy $1 (SortOrder $2) $3 }
+
+-- TODO select_limit:
+-- TODO opt_select_limit:
+-- TODO limit_clause:
+-- TODO offset_clause:
+-- TODO select_limit_value:
+-- TODO select_offset_value:
+-- TODO select_fetch_first_value:
+-- TODO I_or_F_const:
+-- TODO row_or_rows
+-- TODO first_or_next
+
+-- * This syntax for group_clause tries to follow the spec quite closely.
+-- * However, the spec allows only column references, not expressions,
+-- * which introduces an ambiguity between implicit row constructors
+-- * (a,b) and lists of column references.
+-- *
+-- * We handle this by using the a_expr production for what the spec calls
+-- * <ordinary grouping set>, which in the spec represents either one column
+-- * reference or a parenthesized list of column references. Then, we check the
+-- * top node of the a_expr to see if it's an implicit RowExpr, and if so, just
+-- * grab and use the list, discarding the node. (this is done in parse analysis,
+-- * not here)
+-- *
+-- * (we abuse the row_format field of RowExpr to distinguish implicit and
+-- * explicit row constructors; it's debatable if anyone sanely wants to use them
+-- * in a group clause, but if they have a reason to, we make it possible.)
+-- *
+-- * Each item in the group_clause list is either an expression tree or a
+-- * GroupingSet node of some type.
+group_clause :: { [Expr] }
+			: GROUP_P BY group_by_list				{ reverse $3 }
+			| { [] }
+
+group_by_list : list(group_by_item) { $1 }
+
+group_by_item
+			: a_expr									{ $1 }
+-- TODO 			| empty_grouping_set					{ $$ = $1; }
+-- TODO 			| cube_clause							{ $$ = $1; }
+-- TODO 			| rollup_clause							{ $$ = $1; }
+-- TODO 			| grouping_sets_clause					{ $$ = $1; }
+
+-- TODO empty_grouping_set:
+-- TODO 			'(' ')'
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeGroupingSet(GROUPING_SET_EMPTY, NIL, @1);
+
+-- TODO rollup_clause:
+-- TODO cube_clause:
+-- TODO grouping_sets_clause:
+
+having_clause :: { Maybe Expr }
+    : HAVING a_expr { Just $2 }
+    | { Nothing }
+
 -- * We should allow ROW '(' expr_list ')' too, but that seems to require
 -- * making VALUES a fully reserved word, which will probably break more apps
 -- * than allowing the noise-word is worth.
@@ -927,6 +1016,19 @@ relation_expr :: { Name } -- TODO FIXME
 
 relation_expr_list : list(relation_expr) { $1 }
 
+-- TODO relation_expr_opt_alias
+-- TODO tablesample_clause
+-- TODO opt_repeatable_clause:
+-- TODO func_table
+-- TODO rowsfrom_item
+-- TODO rowsfrom_list:
+-- TODO opt_col_def_list
+-- TODO opt_ordinality
+
+where_clause :: { Maybe Expr }
+    : WHERE a_expr { Just $2 }
+    | { Nothing }
+
 -- FIXME handwritten
 Select :: { OldSelect }
     : SELECT expr_list FROM Name WHERE Condition { OldSelect { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
@@ -949,33 +1051,6 @@ expr_list : list(Expr) { $1 }
 
 SettingList : list(Setting) { $1 }
 
-all_or_distinct :: { AllOrDistinct }
-    : ALL { All }
-    | DISTINCT { Distinct }
-    | { Distinct }
-
--- * We use (DistinctAll) as a placeholder to indicate that all target expressions
--- * should be placed in the DISTINCT list during parsetree analysis.
-distinct_clause :: { DistinctClause }
-    : DISTINCT { DistinctAll }
-    | DISTINCT ON '(' expr_list ')' { DistinctOn $4 }
-
-opt_all_clause
-    : ALL { () }
-    | { () }
-
-opt_sort_clause :: { [SortBy ] }
-    : sort_clause { NE.toList $1 }
-    | { [] }
-
-sort_clause :: { NonEmpty SortBy }
-    : ORDER BY sortby_list { NE.fromList (reverse $3) }
-
-sortby_list : list(sortby) { $1 }
-
-sortby
-    : a_expr USING qual_all_Op opt_nulls_order { SortBy $1 (Using $3) $4 }
-    | a_expr opt_asc_desc opt_nulls_order { SortBy $1 (SortOrder $2) $3 }
 
 opt_asc_desc
     : ASC { Ascending }

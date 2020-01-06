@@ -76,6 +76,8 @@ data Unordered = Unordered
     { distinct :: Maybe DistinctClause
     , targetList :: [ResTarget]
     , from :: [TableRef]
+    , groupBy :: [Expr] -- TODO more accurate type than Expr?
+    , having :: Maybe Expr
     -- TODO remaining fields
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 

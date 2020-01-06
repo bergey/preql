@@ -77,12 +77,14 @@ data Unordered = Unordered
     { distinct :: Maybe DistinctClause
     , targetList :: [ResTarget]
     , from :: [TableRef]
+    , whereClause :: Maybe Expr
     , groupBy :: [Expr] -- TODO more accurate type than Expr?
     , having :: Maybe Expr
+    , window :: [Window]
     -- TODO remaining fields
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data TableRef =
+data TableRef = TableRef
     { relation :: Name -- TODO
     , alias :: Maybe Alias
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
@@ -115,12 +117,13 @@ data Condition = Compare !Compare !Name !Expr
 
 data Expr = Lit !Literal | Var !Name
     | NumberedParam !Word [Indirection]
-    | Indirection Expr [Indirection]
-    | SelectExpr SelectStmt [Indirection]
-    | InlineParam !Text | HaskellParam !Text
+    | InlineParam !Text [Indirection]
+    | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
     | CRef ColumnRef
+    | Indirection Expr [Indirection]
+    | SelectExpr SelectStmt [Indirection]
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 type Indirection = Name -- FIXME
@@ -139,13 +142,15 @@ data AllOrDistinct = All | Distinct
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data ResTarget = Star | ColumnTarget ColumnRef
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data ColumnRef = ColumnRef
-    { value :: Text
-    , name :: Maybe Text
-    }
+    { value :: Expr
+    , name :: Maybe Name
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Window = Window
     { name :: Maybe Name

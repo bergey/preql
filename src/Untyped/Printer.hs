@@ -104,8 +104,8 @@ instance FormatSql Condition where
 instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit
     fmt (Var name) = fmt name
-    fmt (NumberedParam i) = B.fromString ('$' : show i)
-    fmt (InlineParam txt) = B.fromText txt
+    fmt (NumberedParam i indirect) = B.fromString ('$' : show i) <> mconcat (intersperse "." (map fmt indirect))
+    fmt (InlineParam txt indirect ) = B.fromText txt <> mconcat (intersperse "." (map fmt indirect))
     fmt (HaskellParam txt) = "${" <> B.fromText txt <> "}"
     fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
     fmt (Unary op expr) = case op of

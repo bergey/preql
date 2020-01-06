@@ -59,8 +59,8 @@ tokens :-
     $a $l $l  {lex ALL }
     $d $i $s $t $i $n $c $t { lex DISTINCT }
     $o $n { lex ON }
-    AS { LocToken _ L.AS }
-    $d $e $l $e $t $e { lex DELETE }
+    $a $s { lex AS }
+    $d $e $l $e $t $e { lex DELETE_P }
     $s $e $l $e $c $t { lex SELECT }
     $i $n $s $e $r $t { lex INSERT }
     $u $p $d $a $t $e { lex UPDATE }
@@ -80,8 +80,8 @@ tokens :-
     "^" { lex Exponent }
     $i $s { lex IS }
     $n $o $t { lex NOT }
-    $n $u $l $l { lex NULL }
-    $i $s $n $u $l $l { lex IsNull }
+    $n $u $l $l { lex NULL_P }
+    $i $s $n $u $l $l { lex ISNULL }
     $n $o $t $n $u $l $l { lex NOTNULL }
     "<>" { lex NotEquals }
     "!=" { lex NotEquals }
@@ -112,7 +112,7 @@ data LocToken = LocToken
 -- commented out PascallCase, where I've added CAPS
 data Token = -- Delete | Select | Insert | Update
     -- | Asc | Desc | Order | By | Using | Operator
-    | Nulls | First | Last
+    Nulls | First | Last
     -- | All | Distinct | On | As
     -- | Union | Except
     -- | From | Where | Into | Values | Set
@@ -121,8 +121,6 @@ data Token = -- Delete | Select | Insert | Update
     | NumberedParam Word | HaskellParam Text
     | LParen | RParen | Comma
     | Mul | Div | Add | Sub | Mod | Exponent
-    | IsNull 
-    -- | Is | Null | NotNull
     | Equals | NotEquals | LT | LTE | GT | GTE
     -- | Like | ILike
     -- | And | Or | Not
@@ -181,14 +179,14 @@ data Token = -- Delete | Select | Insert | Update
     | TRUE_P | TRUNCATE | TRUSTED | TYPES_P | TYPE_P | UNBOUNDED | UNCOMMITTED
     | UNENCRYPTED | UNION | UNIQUE | UNKNOWN | UNLISTEN | UNLOGGED | UNTIL | UPDATE
     | USER | USING | VACUUM | VALID | VALIDATE | VALIDATOR | VALUES | VALUE_P
-    | VARCHAR | VARIADIC | VARYING | VERBOSE | VERSION_P | VIEW | VIEWS |
+    | VARCHAR | VARIADIC | VARYING | VERBOSE | VERSION_P | VIEW | VIEWS
     | VOLATILE | WHEN | WHERE | WHITESPACE_P | WINDOW | WITH | WITHIN
     | WITHOUT | WORK | WRAPPER | WRITE | XMLATTRIBUTES | XMLCONCAT
     | XMLELEMENT | XMLEXISTS | XMLFOREST | XMLNAMESPACES | XMLPARSE
     | XMLPI | XMLROOT | XMLSERIALIZE | XMLTABLE | XML_P | YEAR_P
     | YES_P | ZONE
 
-     deriving (Show, Eq, Ord)
+     deriving (Show, Read, Eq, Ord)
 
 /* from https://github.com/dagit/happy-plus-alex/blob/master/src/Lexer.x */
 
@@ -208,28 +206,6 @@ setFilePath = alexSetUserState . AlexUserState
 -- For nice parser error messages.
 unLex :: Token -> String
 unLex t = case t of
-    Asc -> "ASC"
-    Desc -> "DESC"
-    Order -> "ORDER"
-    By -> "BY"
-    Using -> "USING"
-    Operator -> "OPERATOR"
-    All -> "ALL"
-    Distinct -> "DISTINCT"
-    On -> "ON"
-    As -> "AS"
-
-    Union -> "UNION"
-    Except -> "EXCEPT"
-    Delete -> "DELETE"
-    Select  -> "SELECT "
-    Insert -> "INSERT"
-    Update -> "UPDATE"
-    From  -> "FROM"
-    Where  -> "WHERE"
-    Into  -> "INTO"
-    Values -> "VALUES"
-    Set -> "SET"
     Name n -> T.unpack n 
     String s -> T.unpack s
     Number n -> show n
@@ -243,19 +219,13 @@ unLex t = case t of
     Add -> "+"
     Sub -> "-"
     Exponent -> "^"
-    Is -> "IS"
-    Null -> "NULL"
-    IsNull -> "IsNull"
-    NotNull -> "NotNull"
+    ISNULL -> "IsNull"
+    NOTNULL -> "NotNull"
     Equals -> "="
     NotEquals -> "!="
-    Like -> "LIKE"
-    ILike -> "ILIKE"
-    And  -> "AND "
-    Or -> "OR"
-    Not -> "NOT"
     Semicolon -> ";"
     EOF -> "<EOF>"
+    _ -> show t
 
 -- | remove single quotes, and '' escape sequences
 unquoteString :: String -> String

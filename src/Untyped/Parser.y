@@ -1,9 +1,10 @@
 {
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Untyped.Parser where
 
 import Untyped.Syntax
-import Untyped.Name (mkName)
+import Untyped.Name
 import Untyped.Lex (Alex, LocToken(..), Token)
 
 import           Prelude hiding (LT, GT, lex)
@@ -83,33 +84,33 @@ import qualified Data.List.NonEmpty as NE
 %left		'.'
 
 %token
-    DELETE { LocToken _ L.Delete }
-    SELECT { LocToken _ L.Select }
-    INSERT { LocToken _ L.Insert }
-    UPDATE { LocToken _ L.Update }
+    DELETE { LocToken _ L.DELETE_P }
+    SELECT { LocToken _ L.SELECT }
+    INSERT { LocToken _ L.INSERT }
+    UPDATE { LocToken _ L.UPDATE }
 
-    ASC { LocToken _ L.Asc }
-    DESC { LocToken _ L.Desc }
-    ORDER { LocToken _ L.Order }
-    BY { LocToken _ L.By }
-    USING { LocToken _ L.Using }
-    OPERATOR { LocToken _ L.Operator }
+    ASC { LocToken _ L.ASC }
+    DESC { LocToken _ L.DESC }
+    ORDER { LocToken _ L.ORDER }
+    BY { LocToken _ L.BY }
+    USING { LocToken _ L.USING }
+    OPERATOR { LocToken _ L.OPERATOR }
     NULLS { LocToken _ L.Nulls }
     FIRST { LocToken _ L.First }
     LAST { LocToken _ L.Last }
-    ALL { LocToken _ L.All }
-    DISTINCT { LocToken _ L.Distinct }
-    ON { LocToken _ L.On }
-    AS { LocToken _ L.As }
+    ALL { LocToken _ L.ALL }
+    DISTINCT { LocToken _ L.DISTINCT }
+    ON { LocToken _ L.ON }
+    AS { LocToken _ L.AS }
 
-    UNION { LocToken _ L.By }
-    EXCEPT { LocToken _ L.Except }
+    UNION { LocToken _ L.BY }
+    EXCEPT { LocToken _ L.EXCEPT }
 
-    FROM { LocToken _ L.From }
-    WHERE { LocToken _ L.Where }
-    INTO { LocToken _ L.Into }
-    VALUES { LocToken _ L.Values }
-    SET { LocToken _ L.Set }
+    FROM { LocToken _ L.FROM }
+    WHERE { LocToken _ L.WHERE }
+    INTO { LocToken _ L.INTO }
+    VALUES { LocToken _ L.VALUES }
+    SET { LocToken _ L.SET }
     '(' { LocToken _ L.LParen }
     COMMA { LocToken _ L.Comma }
     ')' { LocToken _ L.RParen }
@@ -128,10 +129,10 @@ import qualified Data.List.NonEmpty as NE
     '%' { LocToken _ L.Mod }
     '^' { LocToken _ L.Exponent }
 
-    IS { LocToken _ L.Is }
-    NULL { LocToken _ L.Null }
-    ISNULL { LocToken _ L.IsNull }
-    NOTNULL { LocToken _ L.NotNull }
+    IS { LocToken _ L.IS }
+    NULL { LocToken _ L.NULL_P }
+    ISNULL { LocToken _ L.ISNULL }
+    NOTNULL { LocToken _ L.NOTNULL }
 
     '=' { LocToken _ L.Equals }
     '!=' { LocToken _ L.NotEquals }
@@ -139,12 +140,12 @@ import qualified Data.List.NonEmpty as NE
     '>' { L.LocToken _ L.GT }
     '<=' { L.LocToken _ L.LTE }
     '>=' { L.LocToken _ L.GTE }
-    NOT { L.LocToken _ L.Not }
-    LIKE { L.LocToken _ L.Like }
-    ILIKE { L.LocToken _ L.ILike }
+    NOT { L.LocToken _ L.NOT }
+    LIKE { L.LocToken _ L.LIKE }
+    ILIKE { L.LocToken _ L.ILIKE }
 
-    AND  { LocToken _ L.And }
-    OR { LocToken _ L.Or }
+    AND  { LocToken _ L.AND }
+    OR { LocToken _ L.OR }
 
     SEMICOLON { LocToken _ L.Semicolon }
     -- all the keywords not mentioned above, from bison
@@ -716,7 +717,7 @@ select_clause :: { SelectStmt }
 simple_select :: { SimpleSelect }
            : SELECT opt_all_clause opt_target_list
            into_clause from_clause where_clause
-           group_clause having_clause window_clause { SelectUnordered (Unordered Nothing $3) }
+           group_clause having_clause window_clause { SelectUnordered (Unordered Nothing $3 $5 $6 $7 $8 $9) }
 -- TODO WIP
 -- TODO                {
 -- TODO                    SelectStmt *n = makeNode(SelectStmt);
@@ -808,7 +809,7 @@ all_or_distinct :: { AllOrDistinct }
 -- * should be placed in the DISTINCT list during parsetree analysis.
 distinct_clause :: { DistinctClause }
     : DISTINCT { DistinctAll }
-    | DISTINCT ON '(' expr_list ')' { DistinctOn $4 }
+    | DISTINCT ON '(' expr_list ')' { DistinctOn (NE.fromList (reverse $4)) }
 
 opt_all_clause
     : ALL { () }
@@ -885,7 +886,7 @@ having_clause :: { Maybe Expr }
 -- * We should allow ROW '(' expr_list ')' too, but that seems to require
 -- * making VALUES a fully reserved word, which will probably break more apps
 -- * than allowing the noise-word is worth.
-values_clause
+values_clause :: { NE.NonEmpty (NE.NonEmpty Expr) }
     : VALUES '(' expr_list ')' { NE.fromList (reverse $3) :| [] }
     | values_clause COMMA '(' expr_list ')' { NE.cons (NE.fromList (reverse $4)) $1 }
 
@@ -894,7 +895,7 @@ values_clause
  -- *		where_clause	- qualifications for joins or restrictions
  
 from_clause :: { [TableRef] }
-    : FROM from_list { reverse $1 }
+    : FROM from_list { reverse $2 }
 	| 							{ [] }
 
 from_list : list(table_ref) { $1 }
@@ -1018,7 +1019,7 @@ alias_clause :: { Alias }
 			: AS ColId '(' name_list ')' { Alias $2 (reverse $4) }
 			| AS ColId { Alias $2 [] }
 			| ColId '(' name_list ')' { Alias $1 (reverse $3) }
-			| ColId { Alias $1 }
+			| ColId { Alias $1 [] }
 
 opt_alias_clause :: { Maybe Alias }
     : alias_clause { Just $1 }
@@ -1287,12 +1288,12 @@ window_clause
 
 window_definition_list : list(window_definition) { $1 }
 
-window_definition
-    : ColId AS window_specification { $2 { name = $1 } }
+window_definition :: { Window }
+    : ColId AS window_specification { ($3 :: Window) { name = Just $1 } }
 
 over_clause :: { Maybe Window }
 : OVER window_specification { Just $2 }
-| OVER ColId { Just (Window (Just $2) Nothing Nothing Nothing }
+| OVER ColId { Just (Window (Just $2) Nothing [] [] () ) }
 | { Nothing }
 
 window_specification :: { Window }
@@ -1312,7 +1313,7 @@ opt_existing_window_name :: { Maybe Name }
     | 	%prec Op		{ Nothing }
 
 opt_partition_clause :: { [Expr] }
-    : PARTITION BY expr_list		{ reverse $1 }
+    : PARTITION BY expr_list		{ reverse $3 }
     | { [] }
 
 -- * For frame clauses, we return a WindowDef, but only some fields are used:
@@ -1438,8 +1439,7 @@ Name : IDENT { mkName $1 }
 Expr :: { Expr }
     : Literal { Lit $1 }
     | Name { Var $1 }
-    | PARAM { NumberedParam $1 }
-    | HASKELL_PARAM { HaskellParam $1 }
+    | c_expr { $1 }
     | '(' Expr ')' { $2 }
     | Expr '^' Expr { BinOp Exponent $1 $3 }
     | Expr '*' Expr { BinOp Mul $1 $3 }
@@ -1467,8 +1467,8 @@ Null
         | IS NOT NULL { NotNull }
         | NOTNULL { NotNull }
 
-columnref
-: ColId { ColumnRef $1 Nothing }
+columnref :: { ColumnRef }
+: ColId { ColumnRef (Var $1) Nothing }
 -- TODO | ColId indirection { ColumnRef $1 (Just $2) }
 
 indirection_el :: { Name } -- TODO bigger type
@@ -1523,7 +1523,7 @@ target_list : list(target_el) { NE.fromList (reverse $1) }
 
 target_el :: { ResTarget }
     : a_expr AS ColLabel { ColumnTarget (ColumnRef $1 (Just $3)) }
-    | a_expr IDENT { ColumnTarget (ColumnRef $1 (Just $2)) }
+    | a_expr Name { ColumnTarget (ColumnRef $1 (Just $2)) }
     | a_expr { ColumnTarget (ColumnRef $1 Nothing) }
     | '*' { Star }
 
@@ -1694,26 +1694,27 @@ Sconst : STRING { $1 }
 -- * is chosen in part to make keywords acceptable as names wherever possible.
 
 -- Column identifier --- names that can be column, table, etc names.
-ColId
-    :		IDENT									{ $1 }
+ColId :: { Name }
+    :		Name									{ $1 }
     | unreserved_keyword					{ $1 }
 
 -- * Type/function identifier -- *- names that can be type or function names.
-type_function_name
-    :	IDENT							{ $1 }
+type_function_name :: { Name }
+    :	Name							{ $1 }
     | unreserved_keyword					{ $1 }
     | type_func_name_keyword				{ $1 }
 
 -- * Any not-fully-reserved word -- *- these names can be, eg, role names.
-NonReservedWord
-     :	IDENT							{ $1 }
+NonReservedWord  :: { Name }
+     :	Name							{ $1 }
 			| unreserved_keyword					{ $1 }
 			| col_name_keyword						{ $1 }
 			| type_func_name_keyword				{ $1 }
 
 -- * Column label -- *- allowed labels in "AS" clauses.
 -- * This presently includes *all* Postgres keywords.
-ColLabel:	IDENT									{  $1 }
+ColLabel :: { Name }
+    :	Name									{  $1 }
 			| unreserved_keyword					{  $1 }
 			| col_name_keyword						{  $1 }
 			| type_func_name_keyword				{  $1 }

@@ -21,11 +21,13 @@ import qualified Data.List.NonEmpty as NE
 %lexer { lexwrap } {  L.LocToken _ L.EOF }
 %error { happyError }
 
- -- NOTES
- --	  CAPITALS are used to represent terminal symbols.
- --	  non-capitals are used to represent non-terminals.
+ -- * NOTES
+ -- *	  CAPITALS are used to represent terminal symbols.
+ -- *	  non-capitals are used to represent non-terminals.
 
 -- This Haskell port generally follows the convention above, taken from the PostgreSQL bison source.
+-- Comments with a leading * are taken from the PostgreSQL source.
+-- Unimplemnted parts of the official parser are marked TODO, and generally contain bison & C syntax.
 
 %left		UNION EXCEPT
 %left		INTERSECT
@@ -539,42 +541,42 @@ Delete
     : DELETE FROM Name WHERE Condition { Delete $3 (Just $5) }
     | DELETE FROM Name { Delete $3 Nothing }
 
--- A complete SELECT statement looks like this.
---
--- The rule returns either a single SelectStmt node or a tree of them,
--- representing a set-operation tree.
---
--- There is an ambiguity when a sub-SELECT is within an a_expr and there
--- are excess parentheses: do the parentheses belong to the sub-SELECT or
--- to the surrounding a_expr?  We don't really care, but bison wants to know.
--- To resolve the ambiguity, we are careful to define the grammar so that
--- the decision is staved off as long as possible: as long as we can keep
--- absorbing parentheses into the sub-SELECT, we will do so, and only when
--- it's no longer possible to do that will we decide that parens belong to
--- the expression.	For example, in "SELECT (((SELECT 2)) + 3)" the extra
--- parentheses are treated as part of the sub-select.  The necessity of doing
--- it that way is shown by "SELECT (((SELECT 2)) UNION SELECT 2)".	Had we
--- parsed "((SELECT 2))" as an a_expr, it'd be too late to go back to the
--- SELECT viewpoint when we see the UNION.
---
--- This approach is implemented by defining a nonterminal select_with_parens,
--- which represents a SELECT with at least one outer layer of parentheses,
--- and being careful to use select_with_parens, never '(' SelectStmt ')',
--- in the expression grammar.  We will then have shift-reduce conflicts
--- which we can resolve in favor of always treating '(' <select> ')' as
--- a select_with_parens.  To resolve the conflicts, the productions that
--- conflict with the select_with_parens productions are manually given
--- precedences lower than the precedence of ')', thereby ensuring that we
--- shift ')' (and then reduce to select_with_parens) rather than trying to
--- reduce the inner <select> nonterminal to something else.  We use UMINUS
--- precedence for this, which is a fairly arbitrary choice.
---
--- To be able to define select_with_parens itself without ambiguity, we need
--- a nonterminal select_no_parens that represents a SELECT structure with no
--- outermost parentheses.  This is a little bit tedious, but it works.
---
--- In non-expression contexts, we use SelectStmt which can represent a SELECT
--- with or without outer parentheses.
+-- * A complete SELECT statement looks like this.
+-- *
+-- * The rule returns either a single SelectStmt node or a tree of them,
+-- * representing a set-operation tree.
+-- *
+-- * There is an ambiguity when a sub-SELECT is within an a_expr and there
+-- * are excess parentheses: do the parentheses belong to the sub-SELECT or
+-- * to the surrounding a_expr?  We don't really care, but bison wants to know.
+-- * To resolve the ambiguity, we are careful to define the grammar so that
+-- * the decision is staved off as long as possible: as long as we can keep
+-- * absorbing parentheses into the sub-SELECT, we will do so, and only when
+-- * it's no longer possible to do that will we decide that parens belong to
+-- * the expression.	For example, in "SELECT (((SELECT 2)) + 3)" the extra
+-- * parentheses are treated as part of the sub-select.  The necessity of doing
+-- * it that way is shown by "SELECT (((SELECT 2)) UNION SELECT 2)".	Had we
+-- * parsed "((SELECT 2))" as an a_expr, it'd be too late to go back to the
+-- * SELECT viewpoint when we see the UNION.
+-- *
+-- * This approach is implemented by defining a nonterminal select_with_parens,
+-- * which represents a SELECT with at least one outer layer of parentheses,
+-- * and being careful to use select_with_parens, never '(' SelectStmt ')',
+-- * in the expression grammar.  We will then have shift-reduce conflicts
+-- * which we can resolve in favor of always treating '(' <select> ')' as
+-- * a select_with_parens.  To resolve the conflicts, the productions that
+-- * conflict with the select_with_parens productions are manually given
+-- * precedences lower than the precedence of ')', thereby ensuring that we
+-- * shift ')' (and then reduce to select_with_parens) rather than trying to
+-- * reduce the inner <select> nonterminal to something else.  We use UMINUS
+-- * precedence for this, which is a fairly arbitrary choice.
+-- *
+-- * To be able to define select_with_parens itself without ambiguity, we need
+-- * a nonterminal select_no_parens that represents a SELECT structure with no
+-- * outermost parentheses.  This is a little bit tedious, but it works.
+-- *
+-- * In non-expression contexts, we use SelectStmt which can represent a SELECT
+-- * with or without outer parentheses.
 
 SelectStmt :: { SelectStmt }
     : select_no_parens { $1 }
@@ -584,165 +586,305 @@ select_with_parens
     : '(' select_no_parens ')' { $2 }
     | '(' select_with_parens ')' { $2 }
 
---  This rule parses the equivalent of the standard's <query expression>.
---  The duplicative productions are annoying, but hard to get rid of without
---  creating shift/reduce conflicts.
---
--- 	The locking clause (FOR UPDATE etc) may be before or after LIMIT/OFFSET.
--- 	In <=7.2.X, LIMIT/OFFSET had to be after FOR UPDATE
--- 	We now support both orderings, but prefer LIMIT/OFFSET before the locking
---  clause.
--- 	2002-08-28 bjm
+-- *  This rule parses the equivalent of the standard's <query expression>.
+-- *  The duplicative productions are annoying, but hard to get rid of without
+-- *  creating shift/reduce conflicts.
+-- *
+-- * 	The locking clause (FOR UPDATE etc) may be before or after LIMIT/OFFSET.
+-- * 	In <=7.2.X, LIMIT/OFFSET had to be after FOR UPDATE
+-- * 	We now support both orderings, but prefer LIMIT/OFFSET before the locking
+-- *  clause.
+-- * 	2002-08-28 bjm
 
 select_no_parens :: { SelectStmt }
     : simple_select { SimpleSelect $1 }
     | select_clause sort_clause { SortedSelect $1 $2 }
-    --            | select_clause opt_sort_clause for_locking_clause opt_select_limit
---                {
---                    insertSelectOptions((SelectStmt *) $1, $2, $3,
---                                        list_nth($4, 0), list_nth($4, 1),
---                                        NULL,
---                                        yyscanner);
---                    $$ = $1;
---                }
---            | select_clause opt_sort_clause select_limit opt_for_locking_clause
---                {
---                    insertSelectOptions((SelectStmt *) $1, $2, $4,
---                                        list_nth($3, 0), list_nth($3, 1),
---                                        NULL,
---                                        yyscanner);
---                    $$ = $1;
---                }
---            | with_clause select_clause
---                {
---                    insertSelectOptions((SelectStmt *) $2, NULL, NIL,
---                                        NULL, NULL,
---                                        $1,
---                                        yyscanner);
---                    $$ = $2;
---                }
---            | with_clause select_clause sort_clause
---                {
---                    insertSelectOptions((SelectStmt *) $2, $3, NIL,
---                                        NULL, NULL,
---                                        $1,
---                                        yyscanner);
---                    $$ = $2;
---                }
---            | with_clause select_clause opt_sort_clause for_locking_clause opt_select_limit
---                {
---                    insertSelectOptions((SelectStmt *) $2, $3, $4,
---                                        list_nth($5, 0), list_nth($5, 1),
---                                        $1,
---                                        yyscanner);
---                    $$ = $2;
---                }
---            | with_clause select_clause opt_sort_clause select_limit opt_for_locking_clause
---                {
---                    insertSelectOptions((SelectStmt *) $2, $3, $5,
---                                        list_nth($4, 0), list_nth($4, 1),
---                                        $1,
---                                        yyscanner);
---                    $$ = $2;
---                }
---        ;
+    -- TODO            | select_clause opt_sort_clause for_locking_clause opt_select_limit
+-- TODO                {
+-- TODO                    insertSelectOptions((SelectStmt *) $1, $2, $3,
+-- TODO                                        list_nth($4, 0), list_nth($4, 1),
+-- TODO                                        NULL,
+-- TODO                                        yyscanner);
+-- TODO                    $$ = $1;
+-- TODO                }
+-- TODO            | select_clause opt_sort_clause select_limit opt_for_locking_clause
+-- TODO                {
+-- TODO                    insertSelectOptions((SelectStmt *) $1, $2, $4,
+-- TODO                                        list_nth($3, 0), list_nth($3, 1),
+-- TODO                                        NULL,
+-- TODO                                        yyscanner);
+-- TODO                    $$ = $1;
+-- TODO                }
+-- TODO            | with_clause select_clause
+-- TODO                {
+-- TODO                    insertSelectOptions((SelectStmt *) $2, NULL, NIL,
+-- TODO                                        NULL, NULL,
+-- TODO                                        $1,
+-- TODO                                        yyscanner);
+-- TODO                    $$ = $2;
+-- TODO                }
+-- TODO            | with_clause select_clause sort_clause
+-- TODO                {
+-- TODO                    insertSelectOptions((SelectStmt *) $2, $3, NIL,
+-- TODO                                        NULL, NULL,
+-- TODO                                        $1,
+-- TODO                                        yyscanner);
+-- TODO                    $$ = $2;
+-- TODO                }
+-- TODO            | with_clause select_clause opt_sort_clause for_locking_clause opt_select_limit
+-- TODO                {
+-- TODO                    insertSelectOptions((SelectStmt *) $2, $3, $4,
+-- TODO                                        list_nth($5, 0), list_nth($5, 1),
+-- TODO                                        $1,
+-- TODO                                        yyscanner);
+-- TODO                    $$ = $2;
+-- TODO                }
+-- TODO            | with_clause select_clause opt_sort_clause select_limit opt_for_locking_clause
+-- TODO                {
+-- TODO                    insertSelectOptions((SelectStmt *) $2, $3, $5,
+-- TODO                                        list_nth($4, 0), list_nth($4, 1),
+-- TODO                                        $1,
+-- TODO                                        yyscanner);
+-- TODO                    $$ = $2;
+-- TODO                }
+-- TODO        ;
 
 select_clause :: { SelectStmt }
     : simple_select                            { SimpleSelect $1 }
     | select_with_parens                    { $1 }
 
--- This rule parses SELECT statements that can appear within set operations,
--- including UNION, INTERSECT and EXCEPT.  '(' and ')' can be used to specify
--- the ordering of the set operations.	Without '(' and ')' we want the
--- operations to be ordered per the precedence specs at the head of this file.
---
--- As with select_no_parens, simple_select cannot have outer parentheses,
--- but can have parenthesized subclauses.
---
--- Note that sort clauses cannot be included at this level --- SQL requires
---		SELECT foo UNION SELECT bar ORDER BY baz
--- to be parsed as
---		(SELECT foo UNION SELECT bar) ORDER BY baz
--- not
---		SELECT foo UNION (SELECT bar ORDER BY baz)
--- Likewise for WITH, FOR UPDATE and LIMIT.  Therefore, those clauses are
--- described as part of the select_no_parens production, not simple_select.
--- This does not limit functionality, because you can reintroduce these
--- clauses inside parentheses.
---
--- NOTE: only the leftmost component SelectStmt should have INTO.
--- However, this is not checked by the grammar; parse analysis must check it.
+-- * This rule parses SELECT statements that can appear within set operations,
+-- * including UNION, INTERSECT and EXCEPT.  '(' and ')' can be used to specify
+-- * the ordering of the set operations.	Without '(' and ')' we want the
+-- * operations to be ordered per the precedence specs at the head of this file.
+-- *
+-- * As with select_no_parens, simple_select cannot have outer parentheses,
+-- * but can have parenthesized subclauses.
+-- *
+-- * Note that sort clauses cannot be included at this level -- *- SQL requires
+-- *		SELECT foo UNION SELECT bar ORDER BY baz
+-- * to be parsed as
+-- *		(SELECT foo UNION SELECT bar) ORDER BY baz
+-- * not
+-- *		SELECT foo UNION (SELECT bar ORDER BY baz)
+-- * Likewise for WITH, FOR UPDATE and LIMIT.  Therefore, those clauses are
+-- * described as part of the select_no_parens production, not simple_select.
+-- * This does not limit functionality, because you can reintroduce these
+-- * clauses inside parentheses.
+-- *
+-- * NOTE: only the leftmost component SelectStmt should have INTO.
+-- * However, this is not checked by the grammar; parse analysis must check it.
 
 simple_select :: { SimpleSelect }
            : SELECT opt_all_clause opt_target_list
            into_clause from_clause where_clause
            group_clause having_clause window_clause { SelectUnordered (Unordered Nothing $3) }
 -- TODO WIP
---                {
---                    SelectStmt *n = makeNode(SelectStmt);
---                    n->targetList = $3;
---                    n->intoClause = $4;
---                    n->fromClause = $5;
---                    n->whereClause = $6;
---                    n->groupClause = $7;
---                    n->havingClause = $8;
---                    n->windowClause = $9;
---                    $$ = (Node *)n;
---                }
---            | SELECT distinct_clause target_list
---            into_clause from_clause where_clause
---            group_clause having_clause window_clause
---                {
---                    SelectStmt *n = makeNode(SelectStmt);
---                    n->distinctClause = $2;
---                    n->targetList = $3;
---                    n->intoClause = $4;
---                    n->fromClause = $5;
---                    n->whereClause = $6;
---                    n->groupClause = $7;
---                    n->havingClause = $8;
---                    n->windowClause = $9;
---                    $$ = (Node *)n;
---                }
+-- TODO                {
+-- TODO                    SelectStmt *n = makeNode(SelectStmt);
+-- TODO                    n->targetList = $3;
+-- TODO                    n->intoClause = $4;
+-- TODO                    n->fromClause = $5;
+-- TODO                    n->whereClause = $6;
+-- TODO                    n->groupClause = $7;
+-- TODO                    n->havingClause = $8;
+-- TODO                    n->windowClause = $9;
+-- TODO                    $$ = (Node *)n;
+-- TODO                }
+-- TODO            | SELECT distinct_clause target_list
+-- TODO            into_clause from_clause where_clause
+-- TODO            group_clause having_clause window_clause
+-- TODO                {
+-- TODO                    SelectStmt *n = makeNode(SelectStmt);
+-- TODO                    n->distinctClause = $2;
+-- TODO                    n->targetList = $3;
+-- TODO                    n->intoClause = $4;
+-- TODO                    n->fromClause = $5;
+-- TODO                    n->whereClause = $6;
+-- TODO                    n->groupClause = $7;
+-- TODO                    n->havingClause = $8;
+-- TODO                    n->windowClause = $9;
+-- TODO                    $$ = (Node *)n;
+-- TODO                }
             | values_clause                            { SelectValues $1 }
--- TODO select * in AST
---            | TABLE relation_expr
---                {
---                    /* same as SELECT * FROM relation_expr */
---                    ColumnRef *cr = makeNode(ColumnRef);
---                    ResTarget *rt = makeNode(ResTarget);
---                    SelectStmt *n = makeNode(SelectStmt);
---
---                    cr->fields = list_make1(makeNode(A_Star));
---                    cr->location = -1;
---
---                    rt->name = NULL;
---                    rt->indirection = NIL;
---                    rt->val = (Node *)cr;
---                    rt->location = -1;
---
---                    n->targetList = list_make1(rt);
---                    n->fromClause = list_make1($2);
---                    $$ = (Node *)n;
---                }
--- TODO UNION in AST
---            | select_clause UNION all_or_distinct select_clause
---                {
---                    $$ = makeSetOp(SETOP_UNION, $3, $1, $4);
---                }
---            | select_clause INTERSECT all_or_distinct select_clause
---                {
---                    $$ = makeSetOp(SETOP_INTERSECT, $3, $1, $4);
---                }
---            | select_clause EXCEPT all_or_distinct select_clause
---                {
---                    $$ = makeSetOp(SETOP_EXCEPT, $3, $1, $4);
---                }
+-- TODO TODO select * in AST
+-- TODO            | TABLE relation_expr
+-- TODO                {
+-- TODO                    /* same as SELECT * FROM relation_expr */
+-- TODO                    ColumnRef *cr = makeNode(ColumnRef);
+-- TODO                    ResTarget *rt = makeNode(ResTarget);
+-- TODO                    SelectStmt *n = makeNode(SelectStmt);
+-- TODO
+-- TODO                    cr->fields = list_make1(makeNode(A_Star));
+-- TODO                    cr->location = -1;
+-- TODO
+-- TODO                    rt->name = NULL;
+-- TODO                    rt->indirection = NIL;
+-- TODO                    rt->val = (Node *)cr;
+-- TODO                    rt->location = -1;
+-- TODO
+-- TODO                    n->targetList = list_make1(rt);
+-- TODO                    n->fromClause = list_make1($2);
+-- TODO                    $$ = (Node *)n;
+-- TODO                }
+-- TODO TODO UNION in AST
+-- TODO            | select_clause UNION all_or_distinct select_clause
+-- TODO                {
+-- TODO                    $$ = makeSetOp(SETOP_UNION, $3, $1, $4);
+-- TODO                }
+-- TODO            | select_clause INTERSECT all_or_distinct select_clause
+-- TODO                {
+-- TODO                    $$ = makeSetOp(SETOP_INTERSECT, $3, $1, $4);
+-- TODO                }
+-- TODO            | select_clause EXCEPT all_or_distinct select_clause
+-- TODO                {
+-- TODO                    $$ = makeSetOp(SETOP_EXCEPT, $3, $1, $4);
+-- TODO                }
 
+into_clause:
+			-- TODO INTO OptTempTableName
+			-- TODO 	{
+			-- TODO 		$$ = makeNode(IntoClause);
+			-- TODO 		$$->rel = $2;
+			-- TODO 		$$->colNames = NIL;
+			-- TODO 		$$->options = NIL;
+			-- TODO 		$$->onCommit = ONCOMMIT_NOOP;
+			-- TODO 		$$->tableSpaceName = NULL;
+			-- TODO 		$$->viewQuery = NULL;
+			-- TODO 		$$->skipData = false;
+				-- }
+    { Nothing }
+
+-- * We should allow ROW '(' expr_list ')' too, but that seems to require
+-- * making VALUES a fully reserved word, which will probably break more apps
+-- * than allowing the noise-word is worth.
 values_clause
     : VALUES '(' expr_list ')' { NE.fromList (reverse $3) :| [] }
     | values_clause COMMA '(' expr_list ')' { NE.cons (NE.fromList (reverse $4)) $1 }
 
+ -- *	clauses common to all Optimizable Stmts:
+ -- *		from_clause		- allow list of both JOIN expressions and table names
+ -- *		where_clause	- qualifications for joins or restrictions
+
+from_clause:
+			FROM from_list							{ $$ = $2; }
+			| /*EMPTY*/								{ $$ = NIL; }
+
+from_list : list(table_ref) { $1 }
+
+-- * table_ref is where an alias clause can be attached.
+table_ref:	relation_expr opt_alias_clause
+-- TODO				{
+-- TODO					$1->alias = $2;
+-- TODO					$$ = (Node *) $1;
+-- TODO				}
+-- TODO			| relation_expr opt_alias_clause tablesample_clause
+-- TODO				{
+-- TODO					RangeTableSample *n = (RangeTableSample *) $3;
+-- TODO					$1->alias = $2;
+-- TODO					/* relation_expr goes inside the RangeTableSample node */
+-- TODO					n->relation = (Node *) $1;
+-- TODO					$$ = (Node *) n;
+-- TODO				}
+-- TODO			| func_table func_alias_clause
+-- TODO				{
+-- TODO					RangeFunction *n = (RangeFunction *) $1;
+-- TODO					n->alias = linitial($2);
+-- TODO					n->coldeflist = lsecond($2);
+-- TODO					$$ = (Node *) n;
+-- TODO				}
+-- TODO			| LATERAL_P func_table func_alias_clause
+-- TODO				{
+-- TODO					RangeFunction *n = (RangeFunction *) $2;
+-- TODO					n->lateral = true;
+-- TODO					n->alias = linitial($3);
+-- TODO					n->coldeflist = lsecond($3);
+-- TODO					$$ = (Node *) n;
+-- TODO				}
+-- TODO			| xmltable opt_alias_clause
+-- TODO				{
+-- TODO					RangeTableFunc *n = (RangeTableFunc *) $1;
+-- TODO					n->alias = $2;
+-- TODO					$$ = (Node *) n;
+-- TODO				}
+-- TODO			| LATERAL_P xmltable opt_alias_clause
+-- TODO				{
+-- TODO					RangeTableFunc *n = (RangeTableFunc *) $2;
+-- TODO					n->lateral = true;
+-- TODO					n->alias = $3;
+-- TODO					$$ = (Node *) n;
+-- TODO				}
+-- TODO			| select_with_parens opt_alias_clause
+-- TODO				{
+-- TODO					RangeSubselect *n = makeNode(RangeSubselect);
+-- TODO					n->lateral = false;
+-- TODO					n->subquery = $1;
+-- TODO					n->alias = $2;
+-- TODO					/*
+-- TODO					 * The SQL spec does not permit a subselect
+-- TODO					 * (<derived_table>) without an alias clause,
+-- TODO					 * so we don't either.  This avoids the problem
+-- TODO					 * of needing to invent a unique refname for it.
+-- TODO					 * That could be surmounted if there's sufficient
+-- TODO					 * popular demand, but for now let's just implement
+-- TODO					 * the spec and see if anyone complains.
+-- TODO					 * However, it does seem like a good idea to emit
+-- TODO					 * an error message that's better than "syntax error".
+-- TODO					 */
+-- TODO					if ($2 == NULL)
+-- TODO					{
+-- TODO						if (IsA($1, SelectStmt) &&
+-- TODO							((SelectStmt *) $1)->valuesLists)
+-- TODO							ereport(ERROR,
+-- TODO									(errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO									 errmsg("VALUES in FROM must have an alias"),
+-- TODO									 errhint("For example, FROM (VALUES ...) [AS] foo."),
+-- TODO									 parser_errposition(@1)));
+-- TODO						else
+-- TODO							ereport(ERROR,
+-- TODO									(errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO									 errmsg("subquery in FROM must have an alias"),
+-- TODO									 errhint("For example, FROM (SELECT ...) [AS] foo."),
+-- TODO									 parser_errposition(@1)));
+-- TODO					}
+-- TODO					$$ = (Node *) n;
+-- TODO				}
+-- TODO			| LATERAL_P select_with_parens opt_alias_clause
+-- TODO				{
+-- TODO					RangeSubselect *n = makeNode(RangeSubselect);
+-- TODO					n->lateral = true;
+-- TODO					n->subquery = $2;
+-- TODO					n->alias = $3;
+-- TODO					/* same comment as above */
+-- TODO					if ($3 == NULL)
+-- TODO					{
+-- TODO						if (IsA($2, SelectStmt) &&
+-- TODO							((SelectStmt *) $2)->valuesLists)
+-- TODO							ereport(ERROR,
+-- TODO									(errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO									 errmsg("VALUES in FROM must have an alias"),
+-- TODO									 errhint("For example, FROM (VALUES ...) [AS] foo."),
+-- TODO									 parser_errposition(@2)));
+-- TODO						else
+-- TODO							ereport(ERROR,
+-- TODO									(errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO									 errmsg("subquery in FROM must have an alias"),
+-- TODO									 errhint("For example, FROM (SELECT ...) [AS] foo."),
+-- TODO									 parser_errposition(@2)));
+-- TODO					}
+-- TODO					$$ = (Node *) n;
+-- TODO				}
+-- TODO			| joined_table
+-- TODO				{
+-- TODO					$$ = (Node *) $1;
+-- TODO				}
+-- TODO			| '(' joined_table ')' alias_clause
+-- TODO				{
+-- TODO					$2->alias = $4;
+-- TODO					$$ = (Node *) $2;
+				}
+
+-- FIXME handwritten
 Select :: { OldSelect }
     : SELECT expr_list FROM Name WHERE Condition { OldSelect { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
     | SELECT expr_list FROM Name { OldSelect { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
@@ -771,8 +913,8 @@ all_or_distinct :: { AllOrDistinct }
     | DISTINCT { Distinct }
     | { Distinct }
 
--- We use (DistinctAll) as a placeholder to indicate that all target expressions
--- should be placed in the DISTINCT list during parsetree analysis.
+-- * We use (DistinctAll) as a placeholder to indicate that all target expressions
+-- * should be placed in the DISTINCT list during parsetree analysis.
 distinct_clause :: { DistinctClause }
     : DISTINCT { DistinctAll }
     | DISTINCT ON '(' expr_list ')' { DistinctOn $4 }
@@ -903,54 +1045,53 @@ target_el :: { ResTarget }
     | a_expr { ColumnTarget (ColumnRef $1 Nothing) }
     | '*' { Star }
 
--- Name classification hierarchy.
---
--- IDENT is the lexeme returned by the lexer for identifiers that match
--- no known keyword.  In most cases, we can accept certain keywords as
--- names, not only IDENTs.	We prefer to accept as many such keywords
--- as possible to minimize the impact of "reserved words" on programmers.
--- So, we divide names into several possible classes.  The classification
--- is chosen in part to make keywords acceptable as names wherever possible.
---
+-- * Name classification hierarchy.
+-- *
+-- * IDENT is the lexeme returned by the lexer for identifiers that match
+-- * no known keyword.  In most cases, we can accept certain keywords as
+-- * names, not only IDENTs.	We prefer to accept as many such keywords
+-- * as possible to minimize the impact of "reserved words" on programmers.
+-- * So, we divide names into several possible classes.  The classification
+-- * is chosen in part to make keywords acceptable as names wherever possible.
 
--- Column identifier --- names that can be column, table, etc names.
+-- Column identifier -- *- names that can be column, table, etc names.
 ColId
     :		IDENT									{ $1 }
     | unreserved_keyword					{ $1 }
 
--- Type/function identifier --- names that can be type or function names.
+-- * Type/function identifier -- *- names that can be type or function names.
 type_function_name
     :	IDENT							{ $1 }
     | unreserved_keyword					{ $1 }
     | type_func_name_keyword				{ $1 }
 
--- Any not-fully-reserved word --- these names can be, eg, role names.
+-- * Any not-fully-reserved word -- *- these names can be, eg, role names.
 NonReservedWord
      :	IDENT							{ $1 }
 			| unreserved_keyword					{ $1 }
 			| col_name_keyword						{ $1 }
 			| type_func_name_keyword				{ $1 }
 
--- Column label --- allowed labels in "AS" clauses.
--- This presently includes *all* Postgres keywords.
+-- * Column label -- *- allowed labels in "AS" clauses.
+-- * This presently includes *all* Postgres keywords.
 ColLabel:	IDENT									{  $1 }
 			| unreserved_keyword					{  $1 }
 			| col_name_keyword						{  $1 }
 			| type_func_name_keyword				{  $1 }
 			| reserved_keyword						{  $1 }
 
--- Keyword category lists.  Generally, every keyword present in
--- the Postgres grammar should appear in exactly one of these lists.
---
--- Put a new keyword into the first list that it can go into without causing
--- shift or reduce conflicts.  The earlier lists define "less reserved"
--- categories of keywords.
---
--- Make sure that each keyword's category in kwlist.h matches where
--- it is listed here.  (Someday we may be able to generate these lists and
--- kwlist.h's table from a common master list.)
+-- * Keyword category lists.  Generally, every keyword present in
+-- * the Postgres grammar should appear in exactly one of these lists.
+-- *
+-- * Put a new keyword into the first list that it can go into without causing
+-- * shift or reduce conflicts.  The earlier lists define "less reserved"
+-- * categories of keywords.
+-- *
+-- * Make sure that each keyword's category in kwlist.h matches where
+-- * it is listed here.  (Someday we may be able to generate these lists and
+-- * kwlist.h's table from a common master list.)
 
--- "Unreserved" keywords --- available for use as any kind of name.
+-- * "Unreserved" keywords --- available for use as any kind of name.
 unreserved_keyword :: { Name }
     : ABORT_P { Name "abort" }
     | ABSOLUTE_P { Name "absolute" }
@@ -1245,15 +1386,15 @@ unreserved_keyword :: { Name }
     | YES_P { Name "yes" }
     | ZONE { Name "zone" }
 
--- Column identifier --- keywords that can be column, table, etc names.
---
--- Many of these keywords will in fact be recognized as type or function
--- names too; but they have special productions for the purpose, and so
--- can't be treated as "generic" type or function names.
---
--- The type names appearing here are not usable as function names
--- because they can be followed by '(' in typename productions, which
--- looks too much like a function call for an LR(1) parser.
+-- * Column identifier -- *- keywords that can be column, table, etc names.
+-- *
+-- * Many of these keywords will in fact be recognized as type or function
+-- * names too; but they have special productions for the purpose, and so
+-- * can't be treated as "generic" type or function names.
+-- *
+-- * The type names appearing here are not usable as function names
+-- * because they can be followed by '(' in typename productions, which
+-- * looks too much like a function call for an LR(1) parser.
 col_name_keyword :: { Name }
     : BETWEEN { Name "between" }
     | BIGINT { Name "bigint" }
@@ -1306,15 +1447,15 @@ col_name_keyword :: { Name }
     | XMLSERIALIZE { Name "xmlserialize" }
     | XMLTABLE { Name "xmltable" }
 
--- Type/function identifier --- keywords that can be type or function names.
---
--- Most of these are keywords that are used as operators in expressions;
--- in general such keywords can't be column names because they would be
--- ambiguous with variables, but they are unambiguous as function identifiers.
---
--- Do not include POSITION, SUBSTRING, etc here since they have explicit
--- productions in a_expr to support the goofy SQL9x argument syntax.
--- - thomas 2000-11-28
+-- * Type/function identifier -- *- keywords that can be type or function names.
+-- *
+-- * Most of these are keywords that are used as operators in expressions;
+-- * in general such keywords can't be column names because they would be
+-- * ambiguous with variables, but they are unambiguous as function identifiers.
+-- *
+-- * Do not include POSITION, SUBSTRING, etc here since they have explicit
+-- * productions in a_expr to support the goofy SQL9x argument syntax.
+-- * - thomas 2000-11-28
 type_func_name_keyword :: { Name }
 			: AUTHORIZATION { Name "authorization" }
 			| BINARY { Name "binary" }
@@ -1340,11 +1481,11 @@ type_func_name_keyword :: { Name }
 			| TABLESAMPLE { Name "tablesample" }
 			| VERBOSE { Name "verbose" }
 
--- Reserved keyword --- these keywords are usable only as a ColLabel.
---
--- Keywords appear here if they could not be distinguished from variable,
--- type, or function names in some contexts.  Don't put things here unless
--- forced to.
+-- * Reserved keyword -- *- these keywords are usable only as a ColLabel.
+-- *
+-- * Keywords appear here if they could not be distinguished from variable,
+-- * type, or function names in some contexts.  Don't put things here unless
+-- * forced to.
 reserved_keyword :: { Name }
 			: ALL { Name "all" }
 			| ANALYSE { Name "analyse" }

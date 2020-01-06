@@ -107,6 +107,421 @@ import qualified Data.List.NonEmpty as NE
     OR { LocToken _ L.Or }
 
     SEMICOLON { LocToken _ L.Semicolon }
+    -- all the keywords not mentioned above, from bison
+    ABORT_P { L.LocToken _ L.ABORT_P }
+    AUTHORIZATION { L.LocToken _ L.AUTHORIZATION }
+    BETWEEN { L.LocToken _ L.BETWEEN }
+    ABSOLUTE_P { L.LocToken _ L.ABSOLUTE_P }
+    ACCESS { L.LocToken _ L.ACCESS }
+    ACTION { L.LocToken _ L.ACTION }
+    ADD_P { L.LocToken _ L.ADD_P }
+    ADMIN { L.LocToken _ L.ADMIN }
+    AFTER { L.LocToken _ L.AFTER }
+    AGGREGATE { L.LocToken _ L.AGGREGATE }
+    ALSO { L.LocToken _ L.ALSO }
+    ALTER { L.LocToken _ L.ALTER }
+    ALWAYS { L.LocToken _ L.ALWAYS }
+    ANALYSE { L.LocToken _ L.ANALYSE }
+    ANALYZE { L.LocToken _ L.ANALYZE }
+    ANY { L.LocToken _ L.ANY }
+    ARRAY { L.LocToken _ L.ARRAY }
+    ASSERTION { L.LocToken _ L.ASSERTION }
+    ASSIGNMENT { L.LocToken _ L.ASSIGNMENT }
+    ASYMMETRIC { L.LocToken _ L.ASYMMETRIC }
+    AT { L.LocToken _ L.AT }
+    ATTACH { L.LocToken _ L.ATTACH }
+    ATTRIBUTE { L.LocToken _ L.ATTRIBUTE }
+    BACKWARD { L.LocToken _ L.BACKWARD }
+    BEFORE { L.LocToken _ L.BEFORE }
+    BEGIN_P { L.LocToken _ L.BEGIN_P }
+    BIGINT { L.LocToken _ L.BIGINT }
+    BINARY { L.LocToken _ L.BINARY }
+    BIT { L.LocToken _ L.BIT }
+    BOOLEAN_P { L.LocToken _ L.BOOLEAN_P }
+    BOTH { L.LocToken _ L.BOTH }
+    CACHE { L.LocToken _ L.CACHE }
+    CALL { L.LocToken _ L.CALL }
+    CALLED { L.LocToken _ L.CALLED }
+    CASCADE { L.LocToken _ L.CASCADE }
+    CASCADED { L.LocToken _ L.CASCADED }
+    CASE { L.LocToken _ L.CASE }
+    CAST { L.LocToken _ L.CAST }
+    CATALOG_P { L.LocToken _ L.CATALOG_P }
+    CHAIN { L.LocToken _ L.CHAIN }
+    CHARACTER { L.LocToken _ L.CHARACTER }
+    CHARACTERISTICS { L.LocToken _ L.CHARACTERISTICS }
+    CHAR_P { L.LocToken _ L.CHAR_P }
+    CHECK { L.LocToken _ L.CHECK }
+    CHECKPOINT { L.LocToken _ L.CHECKPOINT }
+    CLASS { L.LocToken _ L.CLASS }
+    CLOSE { L.LocToken _ L.CLOSE }
+    CLUSTER { L.LocToken _ L.CLUSTER }
+    COALESCE { L.LocToken _ L.COALESCE }
+    COLLATE { L.LocToken _ L.COLLATE }
+    COLLATION { L.LocToken _ L.COLLATION }
+    COLUMN { L.LocToken _ L.COLUMN }
+    COLUMNS { L.LocToken _ L.COLUMNS }
+    COMMENT { L.LocToken _ L.COMMENT }
+    COMMENTS { L.LocToken _ L.COMMENTS }
+    COMMIT { L.LocToken _ L.COMMIT }
+    COMMITTED { L.LocToken _ L.COMMITTED }
+    CONCURRENTLY { L.LocToken _ L.CONCURRENTLY }
+    CONFIGURATION { L.LocToken _ L.CONFIGURATION }
+    CONFLICT { L.LocToken _ L.CONFLICT }
+    CONNECTION { L.LocToken _ L.CONNECTION }
+    CONSTRAINT { L.LocToken _ L.CONSTRAINT }
+    CONSTRAINTS { L.LocToken _ L.CONSTRAINTS }
+    CONTENT_P { L.LocToken _ L.CONTENT_P }
+    CONTINUE_P { L.LocToken _ L.CONTINUE_P }
+    CONVERSION_P { L.LocToken _ L.CONVERSION_P }
+    COPY { L.LocToken _ L.COPY }
+    COST { L.LocToken _ L.COST }
+    CREATE { L.LocToken _ L.CREATE }
+    CROSS { L.LocToken _ L.CROSS }
+    CSV { L.LocToken _ L.CSV }
+    CUBE { L.LocToken _ L.CUBE }
+    CURRENT_CATALOG { L.LocToken _ L.CURRENT_CATALOG }
+    CURRENT_DATE { L.LocToken _ L.CURRENT_DATE }
+    CURRENT_P { L.LocToken _ L.CURRENT_P }
+    CURRENT_ROLE { L.LocToken _ L.CURRENT_ROLE }
+    CURRENT_SCHEMA { L.LocToken _ L.CURRENT_SCHEMA }
+    CURRENT_TIME { L.LocToken _ L.CURRENT_TIME }
+    CURRENT_TIMESTAMP { L.LocToken _ L.CURRENT_TIMESTAMP }
+    CURRENT_USER { L.LocToken _ L.CURRENT_USER }
+    CURSOR { L.LocToken _ L.CURSOR }
+    CYCLE { L.LocToken _ L.CYCLE }
+    DATABASE { L.LocToken _ L.DATABASE }
+    DATA_P { L.LocToken _ L.DATA_P }
+    DAY_P { L.LocToken _ L.DAY_P }
+    DEALLOCATE { L.LocToken _ L.DEALLOCATE }
+    DEC { L.LocToken _ L.DEC }
+    DECIMAL_P { L.LocToken _ L.DECIMAL_P }
+    DECLARE { L.LocToken _ L.DECLARE }
+    DEFAULT { L.LocToken _ L.DEFAULT }
+    DEFAULTS { L.LocToken _ L.DEFAULTS }
+    DEFERRABLE { L.LocToken _ L.DEFERRABLE }
+    DEFERRED { L.LocToken _ L.DEFERRED }
+    DEFINER { L.LocToken _ L.DEFINER }
+    DELETE_P { L.LocToken _ L.DELETE_P }
+    DELIMITER { L.LocToken _ L.DELIMITER }
+    DELIMITERS { L.LocToken _ L.DELIMITERS }
+    DEPENDS { L.LocToken _ L.DEPENDS }
+    DETACH { L.LocToken _ L.DETACH }
+    DICTIONARY { L.LocToken _ L.DICTIONARY }
+    DISABLE_P { L.LocToken _ L.DISABLE_P }
+    DISCARD { L.LocToken _ L.DISCARD }
+    DO { L.LocToken _ L.DO }
+    DOCUMENT_P { L.LocToken _ L.DOCUMENT_P }
+    DOMAIN_P { L.LocToken _ L.DOMAIN_P }
+    DOUBLE_P { L.LocToken _ L.DOUBLE_P }
+    DROP { L.LocToken _ L.DROP }
+    EACH { L.LocToken _ L.EACH }
+    ELSE { L.LocToken _ L.ELSE }
+    ENABLE_P { L.LocToken _ L.ENABLE_P }
+    ENCODING { L.LocToken _ L.ENCODING }
+    ENCRYPTED { L.LocToken _ L.ENCRYPTED }
+    END_P { L.LocToken _ L.END_P }
+    ENUM_P { L.LocToken _ L.ENUM_P }
+    ESCAPE { L.LocToken _ L.ESCAPE }
+    EVENT { L.LocToken _ L.EVENT }
+    EXCLUDE { L.LocToken _ L.EXCLUDE }
+    EXCLUDING { L.LocToken _ L.EXCLUDING }
+    EXCLUSIVE { L.LocToken _ L.EXCLUSIVE }
+    EXECUTE { L.LocToken _ L.EXECUTE }
+    EXISTS { L.LocToken _ L.EXISTS }
+    EXPLAIN { L.LocToken _ L.EXPLAIN }
+    EXTENSION { L.LocToken _ L.EXTENSION }
+    EXTERNAL { L.LocToken _ L.EXTERNAL }
+    EXTRACT { L.LocToken _ L.EXTRACT }
+    FALSE_P { L.LocToken _ L.FALSE_P }
+    FAMILY { L.LocToken _ L.FAMILY }
+    FETCH { L.LocToken _ L.FETCH }
+    FILTER { L.LocToken _ L.FILTER }
+    FIRST_P { L.LocToken _ L.FIRST_P }
+    FLOAT_P { L.LocToken _ L.FLOAT_P }
+    FOLLOWING { L.LocToken _ L.FOLLOWING }
+    FOR { L.LocToken _ L.FOR }
+    FORCE { L.LocToken _ L.FORCE }
+    FOREIGN { L.LocToken _ L.FOREIGN }
+    FORWARD { L.LocToken _ L.FORWARD }
+    FREEZE { L.LocToken _ L.FREEZE }
+    FULL { L.LocToken _ L.FULL }
+    FUNCTION { L.LocToken _ L.FUNCTION }
+    FUNCTIONS { L.LocToken _ L.FUNCTIONS }
+    GENERATED { L.LocToken _ L.GENERATED }
+    GLOBAL { L.LocToken _ L.GLOBAL }
+    GRANT { L.LocToken _ L.GRANT }
+    GRANTED { L.LocToken _ L.GRANTED }
+    GREATEST { L.LocToken _ L.GREATEST }
+    GROUPING { L.LocToken _ L.GROUPING }
+    GROUPS { L.LocToken _ L.GROUPS }
+    GROUP_P { L.LocToken _ L.GROUP_P }
+    HANDLER { L.LocToken _ L.HANDLER }
+    HAVING { L.LocToken _ L.HAVING }
+    HEADER_P { L.LocToken _ L.HEADER_P }
+    HOLD { L.LocToken _ L.HOLD }
+    HOUR_P { L.LocToken _ L.HOUR_P }
+    IDENTITY_P { L.LocToken _ L.IDENTITY_P }
+    IF_P { L.LocToken _ L.IF_P }
+    IMMEDIATE { L.LocToken _ L.IMMEDIATE }
+    IMMUTABLE { L.LocToken _ L.IMMUTABLE }
+    IMPLICIT_P { L.LocToken _ L.IMPLICIT_P }
+    IMPORT_P { L.LocToken _ L.IMPORT_P }
+    INCLUDE { L.LocToken _ L.INCLUDE }
+    INCLUDING { L.LocToken _ L.INCLUDING }
+    INCREMENT { L.LocToken _ L.INCREMENT }
+    INDEX { L.LocToken _ L.INDEX }
+    INDEXES { L.LocToken _ L.INDEXES }
+    INHERIT { L.LocToken _ L.INHERIT }
+    INHERITS { L.LocToken _ L.INHERITS }
+    INITIALLY { L.LocToken _ L.INITIALLY }
+    INLINE_P { L.LocToken _ L.INLINE_P }
+    INNER_P { L.LocToken _ L.INNER_P }
+    INOUT { L.LocToken _ L.INOUT }
+    INPUT_P { L.LocToken _ L.INPUT_P }
+    INSENSITIVE { L.LocToken _ L.INSENSITIVE }
+    INSTEAD { L.LocToken _ L.INSTEAD }
+    INTEGER { L.LocToken _ L.INTEGER }
+    INTERSECT { L.LocToken _ L.INTERSECT }
+    INTERVAL { L.LocToken _ L.INTERVAL }
+    INT_P { L.LocToken _ L.INT_P }
+    INVOKER { L.LocToken _ L.INVOKER }
+    IN_P { L.LocToken _ L.IN_P }
+    ISOLATION { L.LocToken _ L.ISOLATION }
+    JOIN { L.LocToken _ L.JOIN }
+    KEY { L.LocToken _ L.KEY }
+    LABEL { L.LocToken _ L.LABEL }
+    LANGUAGE { L.LocToken _ L.LANGUAGE }
+    LARGE_P { L.LocToken _ L.LARGE_P }
+    LAST_P { L.LocToken _ L.LAST_P }
+    LATERAL_P { L.LocToken _ L.LATERAL_P }
+    LEADING { L.LocToken _ L.LEADING }
+    LEAKPROOF { L.LocToken _ L.LEAKPROOF }
+    LEAST { L.LocToken _ L.LEAST }
+    LEFT { L.LocToken _ L.LEFT }
+    LEVEL { L.LocToken _ L.LEVEL }
+    LIMIT { L.LocToken _ L.LIMIT }
+    LISTEN { L.LocToken _ L.LISTEN }
+    LOAD { L.LocToken _ L.LOAD }
+    LOCAL { L.LocToken _ L.LOCAL }
+    LOCALTIME { L.LocToken _ L.LOCALTIME }
+    LOCALTIMESTAMP { L.LocToken _ L.LOCALTIMESTAMP }
+    LOCATION { L.LocToken _ L.LOCATION }
+    LOCKED { L.LocToken _ L.LOCKED }
+    LOCK_P { L.LocToken _ L.LOCK_P }
+    LOGGED { L.LocToken _ L.LOGGED }
+    MAPPING { L.LocToken _ L.MAPPING }
+    MATCH { L.LocToken _ L.MATCH }
+    MATERIALIZED { L.LocToken _ L.MATERIALIZED }
+    MAXVALUE { L.LocToken _ L.MAXVALUE }
+    METHOD { L.LocToken _ L.METHOD }
+    MINUTE_P { L.LocToken _ L.MINUTE_P }
+    MINVALUE { L.LocToken _ L.MINVALUE }
+    MODE { L.LocToken _ L.MODE }
+    MONTH_P { L.LocToken _ L.MONTH_P }
+    MOVE { L.LocToken _ L.MOVE }
+    NAMES { L.LocToken _ L.NAMES }
+    NAME_P { L.LocToken _ L.NAME_P }
+    NATIONAL { L.LocToken _ L.NATIONAL }
+    NATURAL { L.LocToken _ L.NATURAL }
+    NCHAR { L.LocToken _ L.NCHAR }
+    NEW { L.LocToken _ L.NEW }
+    NEXT { L.LocToken _ L.NEXT }
+    NO { L.LocToken _ L.NO }
+    NONE { L.LocToken _ L.NONE }
+    NOTHING { L.LocToken _ L.NOTHING }
+    NOTIFY { L.LocToken _ L.NOTIFY }
+    NOWAIT { L.LocToken _ L.NOWAIT }
+    NULLIF { L.LocToken _ L.NULLIF }
+    NULLS_P { L.LocToken _ L.NULLS_P }
+    NULL_P { L.LocToken _ L.NULL_P }
+    NUMERIC { L.LocToken _ L.NUMERIC }
+    OBJECT_P { L.LocToken _ L.OBJECT_P }
+    OF { L.LocToken _ L.OF }
+    OFF { L.LocToken _ L.OFF }
+    OFFSET { L.LocToken _ L.OFFSET }
+    OIDS { L.LocToken _ L.OIDS }
+    OLD { L.LocToken _ L.OLD }
+    ONLY { L.LocToken _ L.ONLY }
+    OPTION { L.LocToken _ L.OPTION }
+    OPTIONS { L.LocToken _ L.OPTIONS }
+    ORDINALITY { L.LocToken _ L.ORDINALITY }
+    OTHERS { L.LocToken _ L.OTHERS }
+    OUTER_P { L.LocToken _ L.OUTER_P }
+    OUT_P { L.LocToken _ L.OUT_P }
+    OVER { L.LocToken _ L.OVER }
+    OVERLAPS { L.LocToken _ L.OVERLAPS }
+    OVERLAY { L.LocToken _ L.OVERLAY }
+    OVERRIDING { L.LocToken _ L.OVERRIDING }
+    OWNED { L.LocToken _ L.OWNED }
+    OWNER { L.LocToken _ L.OWNER }
+    PARALLEL { L.LocToken _ L.PARALLEL }
+    PARSER { L.LocToken _ L.PARSER }
+    PARTIAL { L.LocToken _ L.PARTIAL }
+    PARTITION { L.LocToken _ L.PARTITION }
+    PASSING { L.LocToken _ L.PASSING }
+    PASSWORD { L.LocToken _ L.PASSWORD }
+    PLACING { L.LocToken _ L.PLACING }
+    PLANS { L.LocToken _ L.PLANS }
+    POLICY { L.LocToken _ L.POLICY }
+    POSITION { L.LocToken _ L.POSITION }
+    PRECEDING { L.LocToken _ L.PRECEDING }
+    PRECISION { L.LocToken _ L.PRECISION }
+    PREPARE { L.LocToken _ L.PREPARE }
+    PREPARED { L.LocToken _ L.PREPARED }
+    PRESERVE { L.LocToken _ L.PRESERVE }
+    PRIMARY { L.LocToken _ L.PRIMARY }
+    PRIOR { L.LocToken _ L.PRIOR }
+    PRIVILEGES { L.LocToken _ L.PRIVILEGES }
+    PROCEDURAL { L.LocToken _ L.PROCEDURAL }
+    PROCEDURE { L.LocToken _ L.PROCEDURE }
+    PROCEDURES { L.LocToken _ L.PROCEDURES }
+    PROGRAM { L.LocToken _ L.PROGRAM }
+    PUBLICATION { L.LocToken _ L.PUBLICATION }
+    QUOTE { L.LocToken _ L.QUOTE }
+    RANGE { L.LocToken _ L.RANGE }
+    READ { L.LocToken _ L.READ }
+    REAL { L.LocToken _ L.REAL }
+    REASSIGN { L.LocToken _ L.REASSIGN }
+    RECHECK { L.LocToken _ L.RECHECK }
+    RECURSIVE { L.LocToken _ L.RECURSIVE }
+    REF { L.LocToken _ L.REF }
+    REFERENCES { L.LocToken _ L.REFERENCES }
+    REFERENCING { L.LocToken _ L.REFERENCING }
+    REFRESH { L.LocToken _ L.REFRESH }
+    REINDEX { L.LocToken _ L.REINDEX }
+    RELATIVE_P { L.LocToken _ L.RELATIVE_P }
+    RELEASE { L.LocToken _ L.RELEASE }
+    RENAME { L.LocToken _ L.RENAME }
+    REPEATABLE { L.LocToken _ L.REPEATABLE }
+    REPLACE { L.LocToken _ L.REPLACE }
+    REPLICA { L.LocToken _ L.REPLICA }
+    RESET { L.LocToken _ L.RESET }
+    RESTART { L.LocToken _ L.RESTART }
+    RESTRICT { L.LocToken _ L.RESTRICT }
+    RETURNING { L.LocToken _ L.RETURNING }
+    RETURNS { L.LocToken _ L.RETURNS }
+    REVOKE { L.LocToken _ L.REVOKE }
+    RIGHT { L.LocToken _ L.RIGHT }
+    ROLE { L.LocToken _ L.ROLE }
+    ROLLBACK { L.LocToken _ L.ROLLBACK }
+    ROLLUP { L.LocToken _ L.ROLLUP }
+    ROUTINE { L.LocToken _ L.ROUTINE }
+    ROUTINES { L.LocToken _ L.ROUTINES }
+    ROW { L.LocToken _ L.ROW }
+    ROWS { L.LocToken _ L.ROWS }
+    RULE { L.LocToken _ L.RULE }
+    SAVEPOINT { L.LocToken _ L.SAVEPOINT }
+    SCHEMA { L.LocToken _ L.SCHEMA }
+    SCHEMAS { L.LocToken _ L.SCHEMAS }
+    SCROLL { L.LocToken _ L.SCROLL }
+    SEARCH { L.LocToken _ L.SEARCH }
+    SECOND_P { L.LocToken _ L.SECOND_P }
+    SECURITY { L.LocToken _ L.SECURITY }
+    SEQUENCE { L.LocToken _ L.SEQUENCE }
+    SEQUENCES { L.LocToken _ L.SEQUENCES }
+    SERIALIZABLE { L.LocToken _ L.SERIALIZABLE }
+    SERVER { L.LocToken _ L.SERVER }
+    SESSION { L.LocToken _ L.SESSION }
+    SESSION_USER { L.LocToken _ L.SESSION_USER }
+    SETOF { L.LocToken _ L.SETOF }
+    SETS { L.LocToken _ L.SETS }
+    SHARE { L.LocToken _ L.SHARE }
+    SHOW { L.LocToken _ L.SHOW }
+    SIMILAR { L.LocToken _ L.SIMILAR }
+    SIMPLE { L.LocToken _ L.SIMPLE }
+    SKIP { L.LocToken _ L.SKIP }
+    SMALLINT { L.LocToken _ L.SMALLINT }
+    SNAPSHOT { L.LocToken _ L.SNAPSHOT }
+    SOME { L.LocToken _ L.SOME }
+    SQL_P { L.LocToken _ L.SQL_P }
+    STABLE { L.LocToken _ L.STABLE }
+    STANDALONE_P { L.LocToken _ L.STANDALONE_P }
+    START { L.LocToken _ L.START }
+    STATEMENT { L.LocToken _ L.STATEMENT }
+    STATISTICS { L.LocToken _ L.STATISTICS }
+    STDIN { L.LocToken _ L.STDIN }
+    STDOUT { L.LocToken _ L.STDOUT }
+    STORAGE { L.LocToken _ L.STORAGE }
+    STORED { L.LocToken _ L.STORED }
+    STRICT_P { L.LocToken _ L.STRICT_P }
+    STRIP_P { L.LocToken _ L.STRIP_P }
+    SUBSCRIPTION { L.LocToken _ L.SUBSCRIPTION }
+    SUBSTRING { L.LocToken _ L.SUBSTRING }
+    SUPPORT { L.LocToken _ L.SUPPORT }
+    SYMMETRIC { L.LocToken _ L.SYMMETRIC }
+    SYSID { L.LocToken _ L.SYSID }
+    SYSTEM_P { L.LocToken _ L.SYSTEM_P }
+    TABLE { L.LocToken _ L.TABLE }
+    TABLES { L.LocToken _ L.TABLES }
+    TABLESAMPLE { L.LocToken _ L.TABLESAMPLE }
+    TABLESPACE { L.LocToken _ L.TABLESPACE }
+    TEMP { L.LocToken _ L.TEMP }
+    TEMPLATE { L.LocToken _ L.TEMPLATE }
+    TEMPORARY { L.LocToken _ L.TEMPORARY }
+    TEXT_P { L.LocToken _ L.TEXT_P }
+    THEN { L.LocToken _ L.THEN }
+    TIES { L.LocToken _ L.TIES }
+    TIME { L.LocToken _ L.TIME }
+    TIMESTAMP { L.LocToken _ L.TIMESTAMP }
+    TO { L.LocToken _ L.TO }
+    TRAILING { L.LocToken _ L.TRAILING }
+    TRANSACTION { L.LocToken _ L.TRANSACTION }
+    TRANSFORM { L.LocToken _ L.TRANSFORM }
+    TREAT { L.LocToken _ L.TREAT }
+    TRIGGER { L.LocToken _ L.TRIGGER }
+    TRIM { L.LocToken _ L.TRIM }
+    TRUE_P { L.LocToken _ L.TRUE_P }
+    TRUNCATE { L.LocToken _ L.TRUNCATE }
+    TRUSTED { L.LocToken _ L.TRUSTED }
+    TYPES_P { L.LocToken _ L.TYPES_P }
+    TYPE_P { L.LocToken _ L.TYPE_P }
+    UNBOUNDED { L.LocToken _ L.UNBOUNDED }
+    UNCOMMITTED { L.LocToken _ L.UNCOMMITTED }
+    UNENCRYPTED { L.LocToken _ L.UNENCRYPTED }
+    UNIQUE { L.LocToken _ L.UNIQUE }
+    UNKNOWN { L.LocToken _ L.UNKNOWN }
+    UNLISTEN { L.LocToken _ L.UNLISTEN }
+    UNLOGGED { L.LocToken _ L.UNLOGGED }
+    UNTIL { L.LocToken _ L.UNTIL }
+    USER { L.LocToken _ L.USER }
+    VACUUM { L.LocToken _ L.VACUUM }
+    VALID { L.LocToken _ L.VALID }
+    VALIDATE { L.LocToken _ L.VALIDATE }
+    VALIDATOR { L.LocToken _ L.VALIDATOR }
+    VALUE_P { L.LocToken _ L.VALUE_P }
+    VARCHAR { L.LocToken _ L.VARCHAR }
+    VARIADIC { L.LocToken _ L.VARIADIC }
+    VARYING { L.LocToken _ L.VARYING }
+    VERBOSE { L.LocToken _ L.VERBOSE }
+    VERSION_P { L.LocToken _ L.VERSION_P }
+    VIEW { L.LocToken _ L.VIEW }
+    VIEWS { L.LocToken _ L.VIEWS }
+    VOLATILE { L.LocToken _ L.VOLATILE }
+    WHEN { L.LocToken _ L.WHEN }
+    WHITESPACE_P { L.LocToken _ L.WHITESPACE_P }
+    WINDOW { L.LocToken _ L.WINDOW }
+    WITH { L.LocToken _ L.WITH }
+    WITHIN { L.LocToken _ L.WITHIN }
+    WITHOUT { L.LocToken _ L.WITHOUT }
+    WORK { L.LocToken _ L.WORK }
+    WRAPPER { L.LocToken _ L.WRAPPER }
+    WRITE { L.LocToken _ L.WRITE }
+    XMLATTRIBUTES { L.LocToken _ L.XMLATTRIBUTES }
+    XMLCONCAT { L.LocToken _ L.XMLCONCAT }
+    XMLELEMENT { L.LocToken _ L.XMLELEMENT }
+    XMLEXISTS { L.LocToken _ L.XMLEXISTS }
+    XMLFOREST { L.LocToken _ L.XMLFOREST }
+    XMLNAMESPACES { L.LocToken _ L.XMLNAMESPACES }
+    XMLPARSE { L.LocToken _ L.XMLPARSE }
+    XMLPI { L.LocToken _ L.XMLPI }
+    XMLROOT { L.LocToken _ L.XMLROOT }
+    XMLSERIALIZE { L.LocToken _ L.XMLSERIALIZE }
+    XMLTABLE { L.LocToken _ L.XMLTABLE }
+    XML_P { L.LocToken _ L.XML_P }
+    YEAR_P { L.LocToken _ L.YEAR_P }
+    YES_P { L.LocToken _ L.YES_P }
+    ZONE { L.LocToken _ L.ZONE }
 
 %%
 
@@ -536,299 +951,299 @@ ColLabel:	IDENT									{  $1 }
 -- kwlist.h's table from a common master list.)
 
 -- "Unreserved" keywords --- available for use as any kind of name.
-unreserved_keyword
-            : ABORT_P
-			| ABSOLUTE_P
-			| ACCESS
-			| ACTION
-			| ADD_P
-			| ADMIN
-			| AFTER
-			| AGGREGATE
-			| ALSO
-			| ALTER
-			| ALWAYS
-			| ASSERTION
-			| ASSIGNMENT
-			| AT
-			| ATTACH
-			| ATTRIBUTE
-			| BACKWARD
-			| BEFORE
-			| BEGIN_P
-			| BY
-			| CACHE
-			| CALL
-			| CALLED
-			| CASCADE
-			| CASCADED
-			| CATALOG_P
-			| CHAIN
-			| CHARACTERISTICS
-			| CHECKPOINT
-			| CLASS
-			| CLOSE
-			| CLUSTER
-			| COLUMNS
-			| COMMENT
-			| COMMENTS
-			| COMMIT
-			| COMMITTED
-			| CONFIGURATION
-			| CONFLICT
-			| CONNECTION
-			| CONSTRAINTS
-			| CONTENT_P
-			| CONTINUE_P
-			| CONVERSION_P
-			| COPY
-			| COST
-			| CSV
-			| CUBE
-			| CURRENT_P
-			| CURSOR
-			| CYCLE
-			| DATA_P
-			| DATABASE
-			| DAY_P
-			| DEALLOCATE
-			| DECLARE
-			| DEFAULTS
-			| DEFERRED
-			| DEFINER
-			| DELETE_P
-			| DELIMITER
-			| DELIMITERS
-			| DEPENDS
-			| DETACH
-			| DICTIONARY
-			| DISABLE_P
-			| DISCARD
-			| DOCUMENT_P
-			| DOMAIN_P
-			| DOUBLE_P
-			| DROP
-			| EACH
-			| ENABLE_P
-			| ENCODING
-			| ENCRYPTED
-			| ENUM_P
-			| ESCAPE
-			| EVENT
-			| EXCLUDE
-			| EXCLUDING
-			| EXCLUSIVE
-			| EXECUTE
-			| EXPLAIN
-			| EXTENSION
-			| EXTERNAL
-			| FAMILY
-			| FILTER
-			| FIRST_P
-			| FOLLOWING
-			| FORCE
-			| FORWARD
-			| FUNCTION
-			| FUNCTIONS
-			| GENERATED
-			| GLOBAL
-			| GRANTED
-			| GROUPS
-			| HANDLER
-			| HEADER_P
-			| HOLD
-			| HOUR_P
-			| IDENTITY_P
-			| IF_P
-			| IMMEDIATE
-			| IMMUTABLE
-			| IMPLICIT_P
-			| IMPORT_P
-			| INCLUDE
-			| INCLUDING
-			| INCREMENT
-			| INDEX
-			| INDEXES
-			| INHERIT
-			| INHERITS
-			| INLINE_P
-			| INPUT_P
-			| INSENSITIVE
-			| INSERT
-			| INSTEAD
-			| INVOKER
-			| ISOLATION
-			| KEY
-			| LABEL
-			| LANGUAGE
-			| LARGE_P
-			| LAST_P
-			| LEAKPROOF
-			| LEVEL
-			| LISTEN
-			| LOAD
-			| LOCAL
-			| LOCATION
-			| LOCK_P
-			| LOCKED
-			| LOGGED
-			| MAPPING
-			| MATCH
-			| MATERIALIZED
-			| MAXVALUE
-			| METHOD
-			| MINUTE_P
-			| MINVALUE
-			| MODE
-			| MONTH_P
-			| MOVE
-			| NAME_P
-			| NAMES
-			| NEW
-			| NEXT
-			| NO
-			| NOTHING
-			| NOTIFY
-			| NOWAIT
-			| NULLS_P
-			| OBJECT_P
-			| OF
-			| OFF
-			| OIDS
-			| OLD
-			| OPERATOR
-			| OPTION
-			| OPTIONS
-			| ORDINALITY
-			| OTHERS
-			| OVER
-			| OVERRIDING
-			| OWNED
-			| OWNER
-			| PARALLEL
-			| PARSER
-			| PARTIAL
-			| PARTITION
-			| PASSING
-			| PASSWORD
-			| PLANS
-			| POLICY
-			| PRECEDING
-			| PREPARE
-			| PREPARED
-			| PRESERVE
-			| PRIOR
-			| PRIVILEGES
-			| PROCEDURAL
-			| PROCEDURE
-			| PROCEDURES
-			| PROGRAM
-			| PUBLICATION
-			| QUOTE
-			| RANGE
-			| READ
-			| REASSIGN
-			| RECHECK
-			| RECURSIVE
-			| REF
-			| REFERENCING
-			| REFRESH
-			| REINDEX
-			| RELATIVE_P
-			| RELEASE
-			| RENAME
-			| REPEATABLE
-			| REPLACE
-			| REPLICA
-			| RESET
-			| RESTART
-			| RESTRICT
-			| RETURNS
-			| REVOKE
-			| ROLE
-			| ROLLBACK
-			| ROLLUP
-			| ROUTINE
-			| ROUTINES
-			| ROWS
-			| RULE
-			| SAVEPOINT
-			| SCHEMA
-			| SCHEMAS
-			| SCROLL
-			| SEARCH
-			| SECOND_P
-			| SECURITY
-			| SEQUENCE
-			| SEQUENCES
-			| SERIALIZABLE
-			| SERVER
-			| SESSION
-			| SET
-			| SETS
-			| SHARE
-			| SHOW
-			| SIMPLE
-			| SKIP
-			| SNAPSHOT
-			| SQL_P
-			| STABLE
-			| STANDALONE_P
-			| START
-			| STATEMENT
-			| STATISTICS
-			| STDIN
-			| STDOUT
-			| STORAGE
-			| STORED
-			| STRICT_P
-			| STRIP_P
-			| SUBSCRIPTION
-			| SUPPORT
-			| SYSID
-			| SYSTEM_P
-			| TABLES
-			| TABLESPACE
-			| TEMP
-			| TEMPLATE
-			| TEMPORARY
-			| TEXT_P
-			| TIES
-			| TRANSACTION
-			| TRANSFORM
-			| TRIGGER
-			| TRUNCATE
-			| TRUSTED
-			| TYPE_P
-			| TYPES_P
-			| UNBOUNDED
-			| UNCOMMITTED
-			| UNENCRYPTED
-			| UNKNOWN
-			| UNLISTEN
-			| UNLOGGED
-			| UNTIL
-			| UPDATE
-			| VACUUM
-			| VALID
-			| VALIDATE
-			| VALIDATOR
-			| VALUE_P
-			| VARYING
-			| VERSION_P
-			| VIEW
-			| VIEWS
-			| VOLATILE
-			| WHITESPACE_P
-			| WITHIN
-			| WITHOUT
-			| WORK
-			| WRAPPER
-			| WRITE
-			| XML_P
-			| YEAR_P
-			| YES_P
-			| ZONE
+unreserved_keyword :: { Name }
+    : ABORT_P { Name "abort" }
+    | ABSOLUTE_P { Name "absolute" }
+    | ACCESS { Name "access" }
+    | ACTION { Name "action" }
+    | ADD_P { Name "add" }
+    | ADMIN { Name "admin" }
+    | AFTER { Name "after" }
+    | AGGREGATE { Name "aggregate" }
+    | ALSO { Name "also" }
+    | ALTER { Name "alter" }
+    | ALWAYS { Name "always" }
+    | ASSERTION { Name "assertion" }
+    | ASSIGNMENT { Name "assignment" }
+    | AT { Name "at" }
+    | ATTACH { Name "attach" }
+    | ATTRIBUTE { Name "attribute" }
+    | BACKWARD { Name "backward" }
+    | BEFORE { Name "before" }
+    | BEGIN_P { Name "begin" }
+    | BY { Name "by" }
+    | CACHE { Name "cache" }
+    | CALL { Name "call" }
+    | CALLED { Name "called" }
+    | CASCADE { Name "cascade" }
+    | CASCADED { Name "cascaded" }
+    | CATALOG_P { Name "catalog" }
+    | CHAIN { Name "chain" }
+    | CHARACTERISTICS { Name "characteristics" }
+    | CHECKPOINT { Name "checkpoint" }
+    | CLASS { Name "class" }
+    | CLOSE { Name "close" }
+    | CLUSTER { Name "cluster" }
+    | COLUMNS { Name "columns" }
+    | COMMENT { Name "comment" }
+    | COMMENTS { Name "comments" }
+    | COMMIT { Name "commit" }
+    | COMMITTED { Name "committed" }
+    | CONFIGURATION { Name "configuration" }
+    | CONFLICT { Name "conflict" }
+    | CONNECTION { Name "connection" }
+    | CONSTRAINTS { Name "constraints" }
+    | CONTENT_P { Name "content" }
+    | CONTINUE_P { Name "continue" }
+    | CONVERSION_P { Name "conversion" }
+    | COPY { Name "copy" }
+    | COST { Name "cost" }
+    | CSV { Name "csv" }
+    | CUBE { Name "cube" }
+    | CURRENT_P { Name "current" }
+    | CURSOR { Name "cursor" }
+    | CYCLE { Name "cycle" }
+    | DATA_P { Name "data" }
+    | DATABASE { Name "database" }
+    | DAY_P { Name "day" }
+    | DEALLOCATE { Name "deallocate" }
+    | DECLARE { Name "declare" }
+    | DEFAULTS { Name "defaults" }
+    | DEFERRED { Name "deferred" }
+    | DEFINER { Name "definer" }
+    | DELETE_P { Name "delete" }
+    | DELIMITER { Name "delimiter" }
+    | DELIMITERS { Name "delimiters" }
+    | DEPENDS { Name "depends" }
+    | DETACH { Name "detach" }
+    | DICTIONARY { Name "dictionary" }
+    | DISABLE_P { Name "disable" }
+    | DISCARD { Name "discard" }
+    | DOCUMENT_P { Name "document" }
+    | DOMAIN_P { Name "domain" }
+    | DOUBLE_P { Name "double" }
+    | DROP { Name "drop" }
+    | EACH { Name "each" }
+    | ENABLE_P { Name "enable" }
+    | ENCODING { Name "encoding" }
+    | ENCRYPTED { Name "encrypted" }
+    | ENUM_P { Name "enum" }
+    | ESCAPE { Name "escape" }
+    | EVENT { Name "event" }
+    | EXCLUDE { Name "exclude" }
+    | EXCLUDING { Name "excluding" }
+    | EXCLUSIVE { Name "exclusive" }
+    | EXECUTE { Name "execute" }
+    | EXPLAIN { Name "explain" }
+    | EXTENSION { Name "extension" }
+    | EXTERNAL { Name "external" }
+    | FAMILY { Name "family" }
+    | FILTER { Name "filter" }
+    | FIRST_P { Name "first" }
+    | FOLLOWING { Name "following" }
+    | FORCE { Name "force" }
+    | FORWARD { Name "forward" }
+    | FUNCTION { Name "function" }
+    | FUNCTIONS { Name "functions" }
+    | GENERATED { Name "generated" }
+    | GLOBAL { Name "global" }
+    | GRANTED { Name "granted" }
+    | GROUPS { Name "groups" }
+    | HANDLER { Name "handler" }
+    | HEADER_P { Name "header" }
+    | HOLD { Name "hold" }
+    | HOUR_P { Name "hour" }
+    | IDENTITY_P { Name "identity" }
+    | IF_P { Name "if" }
+    | IMMEDIATE { Name "immediate" }
+    | IMMUTABLE { Name "immutable" }
+    | IMPLICIT_P { Name "implicit" }
+    | IMPORT_P { Name "import" }
+    | INCLUDE { Name "include" }
+    | INCLUDING { Name "including" }
+    | INCREMENT { Name "increment" }
+    | INDEX { Name "index" }
+    | INDEXES { Name "indexes" }
+    | INHERIT { Name "inherit" }
+    | INHERITS { Name "inherits" }
+    | INLINE_P { Name "inline" }
+    | INPUT_P { Name "input" }
+    | INSENSITIVE { Name "insensitive" }
+    | INSERT { Name "insert" }
+    | INSTEAD { Name "instead" }
+    | INVOKER { Name "invoker" }
+    | ISOLATION { Name "isolation" }
+    | KEY { Name "key" }
+    | LABEL { Name "label" }
+    | LANGUAGE { Name "language" }
+    | LARGE_P { Name "large" }
+    | LAST_P { Name "last" }
+    | LEAKPROOF { Name "leakproof" }
+    | LEVEL { Name "level" }
+    | LISTEN { Name "listen" }
+    | LOAD { Name "load" }
+    | LOCAL { Name "local" }
+    | LOCATION { Name "location" }
+    | LOCK_P { Name "lock" }
+    | LOCKED { Name "locked" }
+    | LOGGED { Name "logged" }
+    | MAPPING { Name "mapping" }
+    | MATCH { Name "match" }
+    | MATERIALIZED { Name "materialized" }
+    | MAXVALUE { Name "maxvalue" }
+    | METHOD { Name "method" }
+    | MINUTE_P { Name "minute" }
+    | MINVALUE { Name "minvalue" }
+    | MODE { Name "mode" }
+    | MONTH_P { Name "month" }
+    | MOVE { Name "move" }
+    | NAME_P { Name "name" }
+    | NAMES { Name "names" }
+    | NEW { Name "new" }
+    | NEXT { Name "next" }
+    | NO { Name "no" }
+    | NOTHING { Name "nothing" }
+    | NOTIFY { Name "notify" }
+    | NOWAIT { Name "nowait" }
+    | NULLS_P { Name "nulls" }
+    | OBJECT_P { Name "object" }
+    | OF { Name "of" }
+    | OFF { Name "off" }
+    | OIDS { Name "oids" }
+    | OLD { Name "old" }
+    | OPERATOR { Name "operator" }
+    | OPTION { Name "option" }
+    | OPTIONS { Name "options" }
+    | ORDINALITY { Name "ordinality" }
+    | OTHERS { Name "others" }
+    | OVER { Name "over" }
+    | OVERRIDING { Name "overriding" }
+    | OWNED { Name "owned" }
+    | OWNER { Name "owner" }
+    | PARALLEL { Name "parallel" }
+    | PARSER { Name "parser" }
+    | PARTIAL { Name "partial" }
+    | PARTITION { Name "partition" }
+    | PASSING { Name "passing" }
+    | PASSWORD { Name "password" }
+    | PLANS { Name "plans" }
+    | POLICY { Name "policy" }
+    | PRECEDING { Name "preceding" }
+    | PREPARE { Name "prepare" }
+    | PREPARED { Name "prepared" }
+    | PRESERVE { Name "preserve" }
+    | PRIOR { Name "prior" }
+    | PRIVILEGES { Name "privileges" }
+    | PROCEDURAL { Name "procedural" }
+    | PROCEDURE { Name "procedure" }
+    | PROCEDURES { Name "procedures" }
+    | PROGRAM { Name "program" }
+    | PUBLICATION { Name "publication" }
+    | QUOTE { Name "quote" }
+    | RANGE { Name "range" }
+    | READ { Name "read" }
+    | REASSIGN { Name "reassign" }
+    | RECHECK { Name "recheck" }
+    | RECURSIVE { Name "recursive" }
+    | REF { Name "ref" }
+    | REFERENCING { Name "referencing" }
+    | REFRESH { Name "refresh" }
+    | REINDEX { Name "reindex" }
+    | RELATIVE_P { Name "relative" }
+    | RELEASE { Name "release" }
+    | RENAME { Name "rename" }
+    | REPEATABLE { Name "repeatable" }
+    | REPLACE { Name "replace" }
+    | REPLICA { Name "replica" }
+    | RESET { Name "reset" }
+    | RESTART { Name "restart" }
+    | RESTRICT { Name "restrict" }
+    | RETURNS { Name "returns" }
+    | REVOKE { Name "revoke" }
+    | ROLE { Name "role" }
+    | ROLLBACK { Name "rollback" }
+    | ROLLUP { Name "rollup" }
+    | ROUTINE { Name "routine" }
+    | ROUTINES { Name "routines" }
+    | ROWS { Name "rows" }
+    | RULE { Name "rule" }
+    | SAVEPOINT { Name "savepoint" }
+    | SCHEMA { Name "schema" }
+    | SCHEMAS { Name "schemas" }
+    | SCROLL { Name "scroll" }
+    | SEARCH { Name "search" }
+    | SECOND_P { Name "second" }
+    | SECURITY { Name "security" }
+    | SEQUENCE { Name "sequence" }
+    | SEQUENCES { Name "sequences" }
+    | SERIALIZABLE { Name "serializable" }
+    | SERVER { Name "server" }
+    | SESSION { Name "session" }
+    | SET { Name "set" }
+    | SETS { Name "sets" }
+    | SHARE { Name "share" }
+    | SHOW { Name "show" }
+    | SIMPLE { Name "simple" }
+    | SKIP { Name "skip" }
+    | SNAPSHOT { Name "snapshot" }
+    | SQL_P { Name "sql" }
+    | STABLE { Name "stable" }
+    | STANDALONE_P { Name "standalone" }
+    | START { Name "start" }
+    | STATEMENT { Name "statement" }
+    | STATISTICS { Name "statistics" }
+    | STDIN { Name "stdin" }
+    | STDOUT { Name "stdout" }
+    | STORAGE { Name "storage" }
+    | STORED { Name "stored" }
+    | STRICT_P { Name "strict" }
+    | STRIP_P { Name "strip" }
+    | SUBSCRIPTION { Name "subscription" }
+    | SUPPORT { Name "support" }
+    | SYSID { Name "sysid" }
+    | SYSTEM_P { Name "system" }
+    | TABLES { Name "tables" }
+    | TABLESPACE { Name "tablespace" }
+    | TEMP { Name "temp" }
+    | TEMPLATE { Name "template" }
+    | TEMPORARY { Name "temporary" }
+    | TEXT_P { Name "text" }
+    | TIES { Name "ties" }
+    | TRANSACTION { Name "transaction" }
+    | TRANSFORM { Name "transform" }
+    | TRIGGER { Name "trigger" }
+    | TRUNCATE { Name "truncate" }
+    | TRUSTED { Name "trusted" }
+    | TYPE_P { Name "type" }
+    | TYPES_P { Name "types" }
+    | UNBOUNDED { Name "unbounded" }
+    | UNCOMMITTED { Name "uncommitted" }
+    | UNENCRYPTED { Name "unencrypted" }
+    | UNKNOWN { Name "unknown" }
+    | UNLISTEN { Name "unlisten" }
+    | UNLOGGED { Name "unlogged" }
+    | UNTIL { Name "until" }
+    | UPDATE { Name "update" }
+    | VACUUM { Name "vacuum" }
+    | VALID { Name "valid" }
+    | VALIDATE { Name "validate" }
+    | VALIDATOR { Name "validator" }
+    | VALUE_P { Name "value" }
+    | VARYING { Name "varying" }
+    | VERSION_P { Name "version" }
+    | VIEW { Name "view" }
+    | VIEWS { Name "views" }
+    | VOLATILE { Name "volatile" }
+    | WHITESPACE_P { Name "whitespace" }
+    | WITHIN { Name "within" }
+    | WITHOUT { Name "without" }
+    | WORK { Name "work" }
+    | WRAPPER { Name "wrapper" }
+    | WRITE { Name "write" }
+    | XML_P { Name "xml" }
+    | YEAR_P { Name "year" }
+    | YES_P { Name "yes" }
+    | ZONE { Name "zone" }
 
 -- Column identifier --- keywords that can be column, table, etc names.
 --
@@ -839,57 +1254,57 @@ unreserved_keyword
 -- The type names appearing here are not usable as function names
 -- because they can be followed by '(' in typename productions, which
 -- looks too much like a function call for an LR(1) parser.
-col_name_keyword:
-			  BETWEEN
-			| BIGINT
-			| BIT
-			| BOOLEAN_P
-			| CHAR_P
-			| CHARACTER
-			| COALESCE
-			| DEC
-			| DECIMAL_P
-			| EXISTS
-			| EXTRACT
-			| FLOAT_P
-			| GREATEST
-			| GROUPING
-			| INOUT
-			| INT_P
-			| INTEGER
-			| INTERVAL
-			| LEAST
-			| NATIONAL
-			| NCHAR
-			| NONE
-			| NULLIF
-			| NUMERIC
-			| OUT_P
-			| OVERLAY
-			| POSITION
-			| PRECISION
-			| REAL
-			| ROW
-			| SETOF
-			| SMALLINT
-			| SUBSTRING
-			| TIME
-			| TIMESTAMP
-			| TREAT
-			| TRIM
-			| VALUES
-			| VARCHAR
-			| XMLATTRIBUTES
-			| XMLCONCAT
-			| XMLELEMENT
-			| XMLEXISTS
-			| XMLFOREST
-			| XMLNAMESPACES
-			| XMLPARSE
-			| XMLPI
-			| XMLROOT
-			| XMLSERIALIZE
-			| XMLTABLE
+col_name_keyword :: { Name }
+    : BETWEEN { Name "between" }
+    | BIGINT { Name "bigint" }
+    | BIT { Name "bit" }
+    | BOOLEAN_P { Name "boolean" }
+    | CHAR_P { Name "char" }
+    | CHARACTER { Name "character" }
+    | COALESCE { Name "coalesce" }
+    | DEC { Name "dec" }
+    | DECIMAL_P { Name "decimal" }
+    | EXISTS { Name "exists" }
+    | EXTRACT { Name "extract" }
+    | FLOAT_P { Name "float" }
+    | GREATEST { Name "greatest" }
+    | GROUPING { Name "grouping" }
+    | INOUT { Name "inout" }
+    | INT_P { Name "int" }
+    | INTEGER { Name "integer" }
+    | INTERVAL { Name "interval" }
+    | LEAST { Name "least" }
+    | NATIONAL { Name "national" }
+    | NCHAR { Name "nchar" }
+    | NONE { Name "none" }
+    | NULLIF { Name "nullif" }
+    | NUMERIC { Name "numeric" }
+    | OUT_P { Name "out" }
+    | OVERLAY { Name "overlay" }
+    | POSITION { Name "position" }
+    | PRECISION { Name "precision" }
+    | REAL { Name "real" }
+    | ROW { Name "row" }
+    | SETOF { Name "setof" }
+    | SMALLINT { Name "smallint" }
+    | SUBSTRING { Name "substring" }
+    | TIME { Name "time" }
+    | TIMESTAMP { Name "timestamp" }
+    | TREAT { Name "treat" }
+    | TRIM { Name "trim" }
+    | VALUES { Name "values" }
+    | VARCHAR { Name "varchar" }
+    | XMLATTRIBUTES { Name "xmlattributes" }
+    | XMLCONCAT { Name "xmlconcat" }
+    | XMLELEMENT { Name "xmlelement" }
+    | XMLEXISTS { Name "xmlexists" }
+    | XMLFOREST { Name "xmlforest" }
+    | XMLNAMESPACES { Name "xmlnamespaces" }
+    | XMLPARSE { Name "xmlparse" }
+    | XMLPI { Name "xmlpi" }
+    | XMLROOT { Name "xmlroot" }
+    | XMLSERIALIZE { Name "xmlserialize" }
+    | XMLTABLE { Name "xmltable" }
 
 -- Type/function identifier --- keywords that can be type or function names.
 --
@@ -900,114 +1315,114 @@ col_name_keyword:
 -- Do not include POSITION, SUBSTRING, etc here since they have explicit
 -- productions in a_expr to support the goofy SQL9x argument syntax.
 -- - thomas 2000-11-28
-type_func_name_keyword:
-			  AUTHORIZATION
-			| BINARY
-			| COLLATION
-			| CONCURRENTLY
-			| CROSS
-			| CURRENT_SCHEMA
-			| FREEZE
-			| FULL
-			| ILIKE
-			| INNER_P
-			| IS
-			| ISNULL
-			| JOIN
-			| LEFT
-			| LIKE
-			| NATURAL
-			| NOTNULL
-			| OUTER_P
-			| OVERLAPS
-			| RIGHT
-			| SIMILAR
-			| TABLESAMPLE
-			| VERBOSE
+type_func_name_keyword :: { Name }
+			: AUTHORIZATION { Name "authorization" }
+			| BINARY { Name "binary" }
+			| COLLATION { Name "collation" }
+			| CONCURRENTLY { Name "concurrently" }
+			| CROSS { Name "cross" }
+			| CURRENT_SCHEMA { Name "current_schema" }
+			| FREEZE { Name "freeze" }
+			| FULL { Name "full" }
+			| ILIKE { Name "ilike" }
+			| INNER_P { Name "inner" }
+			| IS { Name "is" }
+			| ISNULL { Name "isnull" }
+			| JOIN { Name "join" }
+			| LEFT { Name "left" }
+			| LIKE { Name "like" }
+			| NATURAL { Name "natural" }
+			| NOTNULL { Name "notnull" }
+			| OUTER_P { Name "outer" }
+			| OVERLAPS { Name "overlaps" }
+			| RIGHT { Name "right" }
+			| SIMILAR { Name "similar" }
+			| TABLESAMPLE { Name "tablesample" }
+			| VERBOSE { Name "verbose" }
 
 -- Reserved keyword --- these keywords are usable only as a ColLabel.
 --
 -- Keywords appear here if they could not be distinguished from variable,
 -- type, or function names in some contexts.  Don't put things here unless
 -- forced to.
-reserved_keyword:
-			  ALL
-			| ANALYSE
-			| ANALYZE
-			| AND
-			| ANY
-			| ARRAY
-			| AS
-			| ASC
-			| ASYMMETRIC
-			| BOTH
-			| CASE
-			| CAST
-			| CHECK
-			| COLLATE
-			| COLUMN
-			| CONSTRAINT
-			| CREATE
-			| CURRENT_CATALOG
-			| CURRENT_DATE
-			| CURRENT_ROLE
-			| CURRENT_TIME
-			| CURRENT_TIMESTAMP
-			| CURRENT_USER
-			| DEFAULT
-			| DEFERRABLE
-			| DESC
-			| DISTINCT
-			| DO
-			| ELSE
-			| END_P
-			| EXCEPT
-			| FALSE_P
-			| FETCH
-			| FOR
-			| FOREIGN
-			| FROM
-			| GRANT
-			| GROUP_P
-			| HAVING
-			| IN_P
-			| INITIALLY
-			| INTERSECT
-			| INTO
-			| LATERAL_P
-			| LEADING
-			| LIMIT
-			| LOCALTIME
-			| LOCALTIMESTAMP
-			| NOT
-			| NULL_P
-			| OFFSET
-			| ON
-			| ONLY
-			| OR
-			| ORDER
-			| PLACING
-			| PRIMARY
-			| REFERENCES
-			| RETURNING
-			| SELECT
-			| SESSION_USER
-			| SOME
-			| SYMMETRIC
-			| TABLE
-			| THEN
-			| TO
-			| TRAILING
-			| TRUE_P
-			| UNION
-			| UNIQUE
-			| USER
-			| USING
-			| VARIADIC
-			| WHEN
-			| WHERE
-			| WINDOW
-			| WITH
+reserved_keyword :: { Name }
+			: ALL { Name "all" }
+			| ANALYSE { Name "analyse" }
+			| ANALYZE { Name "analyze" }
+			| AND { Name "and" }
+			| ANY { Name "any" }
+			| ARRAY { Name "array" }
+			| AS { Name "as" }
+			| ASC { Name "asc" }
+			| ASYMMETRIC { Name "asymmetric" }
+			| BOTH { Name "both" }
+			| CASE { Name "case" }
+			| CAST { Name "cast" }
+			| CHECK { Name "check" }
+			| COLLATE { Name "collate" }
+			| COLUMN { Name "column" }
+			| CONSTRAINT { Name "constraint" }
+			| CREATE { Name "create" }
+			| CURRENT_CATALOG { Name "current_catalog" }
+			| CURRENT_DATE { Name "current_date" }
+			| CURRENT_ROLE { Name "current_role" }
+			| CURRENT_TIME { Name "current_time" }
+			| CURRENT_TIMESTAMP { Name "current_timestamp" }
+			| CURRENT_USER { Name "current_user" }
+			| DEFAULT { Name "default" }
+			| DEFERRABLE { Name "deferrable" }
+			| DESC { Name "desc" }
+			| DISTINCT { Name "distinct" }
+			| DO { Name "do" }
+			| ELSE { Name "else" }
+			| END_P { Name "end" }
+			| EXCEPT { Name "except" }
+			| FALSE_P { Name "false" }
+			| FETCH { Name "fetch" }
+			| FOR { Name "for" }
+			| FOREIGN { Name "foreign" }
+			| FROM { Name "from" }
+			| GRANT { Name "grant" }
+			| GROUP_P { Name "group" }
+			| HAVING { Name "having" }
+			| IN_P { Name "in" }
+			| INITIALLY { Name "initially" }
+			| INTERSECT { Name "intersect" }
+			| INTO { Name "into" }
+			| LATERAL_P { Name "lateral" }
+			| LEADING { Name "leading" }
+			| LIMIT { Name "limit" }
+			| LOCALTIME { Name "localtime" }
+			| LOCALTIMESTAMP { Name "localtimestamp" }
+			| NOT { Name "not" }
+			| NULL_P { Name "null" }
+			| OFFSET { Name "offset" }
+			| ON { Name "on" }
+			| ONLY { Name "only" }
+			| OR { Name "or" }
+			| ORDER { Name "order" }
+			| PLACING { Name "placing" }
+			| PRIMARY { Name "primary" }
+			| REFERENCES { Name "references" }
+			| RETURNING { Name "returning" }
+			| SELECT { Name "select" }
+			| SESSION_USER { Name "current_user" }
+			| SOME { Name "some" }
+			| SYMMETRIC { Name "symmetric" }
+			| TABLE { Name "table" }
+			| THEN { Name "then" }
+			| TO { Name "to" }
+			| TRAILING { Name "trailing" }
+			| TRUE_P { Name "true" }
+			| UNION { Name "union" }
+			| UNIQUE { Name "unique" }
+			| USER { Name "user" }
+			| USING { Name "using" }
+			| VARIADIC { Name "variadic" }
+			| WHEN { Name "when" }
+			| WHERE { Name "where" }
+			| WINDOW { Name "window" }
+			| WITH { Name "with" }
 
 {
 

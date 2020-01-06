@@ -45,30 +45,30 @@ $z = [zZ]
 tokens :-
 
     $white+            ;
-    $a $s $c { lex Asc }
-    $d $e $s $c { lex Desc }
-    $o $r $d $e $r { lex Order }
-    $b $y { lex By }
-    $u $s $i $n $g { lex Using }
-    $o $p $e $r $a $t $o $r { lex Operator }
-    $u $n $i $o $n { lex Union }
-    $e $x $c $e $p $t { lex Except }
+    $a $s $c { lex ASC }
+    $d $e $s $c { lex DESC }
+    $o $r $d $e $r { lex ORDER }
+    $b $y { lex BY }
+    $u $s $i $n $g { lex USING }
+    $o $p $e $r $a $t $o $r { lex OPERATOR }
+    $u $n $i $o $n { lex UNION }
+    $e $x $c $e $p $t { lex EXCEPT }
     $n $u $l $l $s { lex Nulls }
     $f $i $r $s $t { lex First }
     $l $a $s $t { lex Last }
-    $a $l $l  {lex All }
-    $d $i $s $t $i $n $c $t { lex Distinct }
-    $o $n { lex On }
-    AS { LocToken _ L.As }
-    $d $e $l $e $t $e { lex Delete }
-    $s $e $l $e $c $t { lex Select }
-    $i $n $s $e $r $t { lex Insert }
-    $u $p $d $a $t $e { lex Update }
-    $f $r $o $m { lex From }
-    $w $h $e $r $e { lex Where }
-    $i $n $t $o { lex Into }
-    $v $a $l $u $e $s { lex Values }
-    $s $e $t { lex Set }
+    $a $l $l  {lex ALL }
+    $d $i $s $t $i $n $c $t { lex DISTINCT }
+    $o $n { lex ON }
+    AS { LocToken _ L.AS }
+    $d $e $l $e $t $e { lex DELETE }
+    $s $e $l $e $c $t { lex SELECT }
+    $i $n $s $e $r $t { lex INSERT }
+    $u $p $d $a $t $e { lex UPDATE }
+    $f $r $o $m { lex FROM }
+    $w $h $e $r $e { lex WHERE }
+    $i $n $t $o { lex INTO }
+    $v $a $l $u $e $s { lex VALUES }
+    $s $e $t { lex SET }
     "(" { lex LParen }
     "," { lex Comma }
     ")" { lex RParen }
@@ -77,11 +77,11 @@ tokens :-
     "+" { lex Add }
     "-" { lex Sub }
     "^" { lex Exponent }
-    $i $s { lex Is }
-    $n $o $t { lex Not }
-    $n $u $l $l { lex Null }
+    $i $s { lex IS }
+    $n $o $t { lex NOT }
+    $n $u $l $l { lex NULL }
     $i $s $n $u $l $l { lex IsNull }
-    $n $o $t $n $u $l $l { lex NotNull }
+    $n $o $t $n $u $l $l { lex NOTNULL }
     "<>" { lex NotEquals }
     "!=" { lex NotEquals }
     "<" { lex LT }
@@ -89,10 +89,10 @@ tokens :-
     ">" { lex GT }
     ">=" { lex GTE }
     "=" { lex Equals }
-    $l $i $k $e { lex Like }
-    $i $l $i $k $e { lex ILike }
-    $a $n $d { lex And }
-    $o $r { lex Or }
+    $l $i $k $e { lex LIKE }
+    $i $l $i $k $e { lex ILIKE }
+    $a $n $d { lex AND }
+    $o $r { lex OR }
     [\'] ("''" | $quoted)* [\'] { lex' (String . T.pack . unquoteString) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
     "-"? $digit+ ("." $digit+)? ($e "-"? $digit+)? { lex' (Number . read) }
@@ -107,20 +107,23 @@ data LocToken = LocToken
      , unLoc :: Token
      } deriving Show
 
-data Token = Delete | Select | Insert | Update
-    | Asc | Desc | Order | By | Using | Operator | Nulls | First | Last
-    | All | Distinct | On | As
-    | Union | Except
-    | From | Where | Into | Values | Set
+-- commented out PascallCase, where I've added CAPS
+data Token = -- Delete | Select | Insert | Update
+    -- | Asc | Desc | Order | By | Using | Operator
+    | Nulls | First | Last
+    -- | All | Distinct | On | As
+    -- | Union | Except
+    -- | From | Where | Into | Values | Set
     -- TODO rename Name -> Ident to match bison
     | Name Text | String Text | Number Double
     | NumberedParam Word | HaskellParam Text
     | LParen | RParen | Comma
     | Mul | Div | Add | Sub | Mod | Exponent
-    | Is | Null | IsNull | NotNull
+    | IsNull 
+    -- | Is | Null | NotNull
     | Equals | NotEquals | LT | LTE | GT | GTE
-    | Like | ILike
-    | And | Or | Not
+    -- | Like | ILike
+    -- | And | Or | Not
     | Semicolon | EOF
     -- all the keywords, from bison
     | ABORT_P | AUTHORIZATION | BETWEEN | ABSOLUTE_P | ACCESS | ACTION | ADD_P
@@ -180,7 +183,7 @@ data Token = Delete | Select | Insert | Update
     | VOLATILE | WHEN | WHERE | WHITESPACE_P | WINDOW | WITH | WITHIN
     | WITHOUT | WORK | WRAPPER | WRITE | XMLATTRIBUTES | XMLCONCAT
     | XMLELEMENT | XMLEXISTS | XMLFOREST | XMLNAMESPACES | XMLPARSE
-    | XMLPI | XMLROOT | XMLSERIALIZE | XMLTABLE | XML_P | YEAR_P |
+    | XMLPI | XMLROOT | XMLSERIALIZE | XMLTABLE | XML_P | YEAR_P
     | YES_P | ZONE
 
      deriving (Show, Eq, Ord)

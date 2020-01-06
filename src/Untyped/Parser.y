@@ -886,8 +886,16 @@ table_ref :: { TableRef }
 -- TODO }
 
 -- TODO joined_table:
--- TODO alias_clause:
--- TODO opt_alias_clause: 
+
+alias_clause :: { Alias }
+			: AS ColId '(' name_list ')' { Alias $2 (reverse $4) }
+			| AS ColId { Alias $2 [] }
+			| ColId '(' name_list ')' { Alias $1 (reverse $3) }
+			| ColId { Alias $1 }
+
+opt_alias_clause :: { Maybe Alias }
+    : alias_clause { Just $1 }
+    | { Nothing }
 -- TODO func_alias_clause:
 -- TODO join_type:	
 -- TODO join_outer:
@@ -936,8 +944,6 @@ Update :: { Update }
 list(el)
     : el { [$1] }
     | list(el) COMMA el { $3 : $1 }
-
-name_list : list(Name) { $1 }
 
 expr_list : list(Expr) { $1 }
 
@@ -1082,6 +1088,57 @@ target_el :: { ResTarget }
     | a_expr { ColumnTarget (ColumnRef $1 Nothing) }
     | '*' { Star }
 
+ -- *	Names and constants
+qualified_name_list : list(qualified_name) { $1 }
+
+--  * The production for a qualified relation name has to exactly match the
+--  * production for a qualified func_name, because in a FROM clause we cannot
+--  * tell which we are parsing until we see what comes after it ('(' for a
+--  * func_name, something else for a relation). Therefore we allow 'indirection'
+--  * which may contain subscripts, and reject that case in the C code.
+
+qualified_name :: { Name }
+    : ColId { $1 }
+-- -- TODO 			| ColId indirection
+-- TODO 				{
+-- TODO 					check_qualified_name($2, yyscanner);
+-- TODO 					$$ = makeRangeVar(NULL, NULL, @1);
+-- TODO 					switch (list_length($2))
+-- TODO 					{
+-- TODO 						case 1:
+-- TODO 							$$->catalogname = NULL;
+-- TODO 							$$->schemaname = $1;
+-- TODO 							$$->relname = strVal(linitial($2));
+-- TODO 							break;
+-- TODO 						case 2:
+-- TODO 							$$->catalogname = $1;
+-- TODO 							$$->schemaname = strVal(linitial($2));
+-- TODO 							$$->relname = strVal(lsecond($2));
+-- TODO 							break;
+-- TODO 						default:
+-- TODO 							ereport(ERROR,
+-- TODO 									(errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO 									 errmsg("improper qualified name (too many dotted names): %s",
+-- TODO 											NameListToString(lcons(makeString($1), $2))),
+-- TODO 									 parser_errposition(@1)));
+-- TODO 							break;
+-- TODO 					}
+-- TODO 				}
+
+name_list : list(name) { $1 }
+
+name : ColId { $1 }
+
+database_name : ColId { $1 }
+
+access_method : ColId { $1 }
+
+attr_name : ColLabel { $1 }
+
+index_name : ColId { $1 }
+
+-- TODO file_name:	Sconst									{ $$ = $1; };
+
 -- * Name classification hierarchy.
 -- *
 -- * IDENT is the lexeme returned by the lexer for identifiers that match
@@ -1091,7 +1148,7 @@ target_el :: { ResTarget }
 -- * So, we divide names into several possible classes.  The classification
 -- * is chosen in part to make keywords acceptable as names wherever possible.
 
--- Column identifier -- *- names that can be column, table, etc names.
+-- Column identifier --- names that can be column, table, etc names.
 ColId
     :		IDENT									{ $1 }
     | unreserved_keyword					{ $1 }

@@ -81,7 +81,11 @@ data Unordered = Unordered
 
 data TableRef =
     { relation :: Name -- TODO
-    , alias :: Maybe Name
+    , alias :: Maybe Alias
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+data Alias = Alias
+    { aliasName :: Name
+    , columnNames :: [ Name ]
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SortBy = SortBy

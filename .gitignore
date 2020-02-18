@@ -6,3 +6,6 @@
 *_flymake.hs
 /src/Syntax/Parser.hs
 /src/Syntax/Parser.info
+/.stack-work/
+/preql.cabal
+TAGS

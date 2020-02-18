@@ -1,8 +1,8 @@
 spec-version: 0.30.0
-name: crispy-broccoli
+name: preql
 version: 0.1
 synopsis: experiments with SQL
-github: bergey/crispy-broccoli
+github: bergey/preql
 author: Daniel Bergey
 maintainer: bergey@teallabs.org
 
@@ -19,7 +19,7 @@ tests:
       - tasty
       - tasty-hunit
       - tasty-quickcheck
-      - crispy-broccoli
+      - preql
 
 build-tools:
   - alex

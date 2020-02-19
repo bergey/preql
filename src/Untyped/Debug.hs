@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings     #-}
 module Untyped.Debug where
 
 import           Untyped.Lex        (LocToken (..), alexMonadScan, runAlex)

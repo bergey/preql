@@ -1,7 +1,6 @@
 {-# HLINT ignore "Use camelCase" #-}
 
 {-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE OverloadedStrings #-}
 -- | Decoding values from Postgres wire format to Haskell.
 
 module Wire.FromSql where

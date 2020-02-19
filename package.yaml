@@ -26,12 +26,13 @@ build-tools:
   - happy
       
 dependencies:
-    - attoparsec
     - array
     - base
+    - binary-parser
     - bytestring
     - contravariant
     - free
+    - postgresql-binary
     - postgresql-libpq
     - postgresql-simple
     - syb
@@ -41,3 +42,5 @@ dependencies:
     - transformers
     - vector
 
+default-extensions:
+  - OverloadedStrings

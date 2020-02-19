@@ -10,43 +10,51 @@ import           Control.Applicative
 import           Control.Applicative.Free
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
-import           Data.Attoparsec.ByteString                 (Parser)
-import           Data.ByteString                            (ByteString)
+import           Data.ByteString (ByteString)
 import           Data.Functor
-import           Data.Int
 import           Data.IORef
+import           Data.Int
+import           Data.Text (Text)
 
-import qualified Data.Attoparsec.ByteString                 as P
-import qualified Data.Attoparsec.ByteString.Char8           as P8
-import qualified Data.ByteString                            as BS
-import qualified Database.PostgreSQL.LibPQ                  as PQ
+import qualified BinaryParser as BP
+import qualified Data.ByteString as BS
+import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID
+import qualified PostgreSQL.Binary.Decoding as PGB
 
-data SqlDecoder a = SqlDecoder [PQ.Oid] (Ap Parser a)
+data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)
     deriving Functor
 
-instance Applicative SqlDecoder where
-    pure a = SqlDecoder [] (pure a)
-    SqlDecoder t1 p1 <*> SqlDecoder t2 p2 = SqlDecoder (t1 <> t2) (p1 <*> p2)
+-- TODO RowDecoder should also have access to column name lookups.
+data RowDecoder a = RowDecoder [PQ.Oid] (BP.BinaryParser a)
+    deriving Functor
 
-runDecoder :: SqlDecoder a -> PQ.Result -> PQ.Row -> ExceptT String IO a
-runDecoder (SqlDecoder _ parsers) result row = do
-    columnRef <- lift $ newIORef (PQ.Col 0)
-    runAp (parseFields result row columnRef) parsers
+-- TODO better name
+singleFieldDecoder :: FieldDecoder a -> RowDecoder a
+singleFieldDecoder (FieldDecoder oid parser) = RowDecoder [oid] parser
 
-parseFields :: PQ.Result -> PQ.Row -> IORef PQ.Column -> Parser a -> ExceptT String IO a
-parseFields result currentRow columnRef parser = ExceptT $ do
+instance Applicative RowDecoder where
+    pure a = RowDecoder [] (pure a)
+    RowDecoder t1 p1 <*> RowDecoder t2 p2 = RowDecoder (t1 <> t2) (p1 <*> p2)
+
+runDecoder :: RowDecoder a -> PQ.Result -> PQ.Row -> IO (Either Text a)
+runDecoder (RowDecoder _ parsers) result row = do
+    columnRef <- newIORef (PQ.Col 0)
+    parseFields result row columnRef parsers
+
+parseFields :: PQ.Result -> PQ.Row -> IORef PQ.Column -> BP.BinaryParser a -> IO (Either Text a)
+parseFields result currentRow columnRef parser = do
     currentColumn <- atomicModifyIORef' columnRef (\col -> (succ col, col))
     bytes <- PQ.getvalue result currentRow currentColumn
-    let a = P.parseOnly parser =<< emptyValue bytes
+    let a = BP.run parser =<< emptyValue bytes
     return a
 
-emptyValue :: Maybe a -> Either String a
+emptyValue :: Maybe a -> Either Text a
 emptyValue = maybe (Left "Got empty value string from Postgres") Right
 
 -- TODO more informative return type – collect errors, or OK
-checkTypes :: SqlDecoder a -> PQ.Result -> IO Bool
-checkTypes (SqlDecoder oids _) result = do
+checkTypes :: RowDecoder a -> PQ.Result -> IO Bool
+checkTypes (RowDecoder oids _) result = do
     ntuples <- PQ.ntuples result
     go (PQ.Col 0) oids where
         go _ [] = return True
@@ -56,37 +64,34 @@ checkTypes (SqlDecoder oids _) result = do
                 then go (succ col) rest
                 else return False
 
+class FromSqlField a where
+    fromSqlField :: FieldDecoder a
+
+instance FromSqlField Int32 where
+    fromSqlField = FieldDecoder OID.int4Oid PGB.int
+
+instance FromSqlField Int64  where
+    fromSqlField = FieldDecoder OID.int8Oid PGB.int
+
+instance FromSqlField Float where
+    fromSqlField = FieldDecoder OID.float4Oid PGB.float4
+
+instance FromSqlField Double where
+    fromSqlField = FieldDecoder OID.float8Oid PGB.float8
+
+instance FromSqlField Text where
+    fromSqlField = FieldDecoder OID.textOid PGB.text_strict
+
 class FromSql a where
-    fromSql :: SqlDecoder a
+    fromSql :: RowDecoder a
 
-field :: PQ.Oid -> Parser a -> SqlDecoder a
-field oid parser = SqlDecoder [oid] (liftAp parser)
+-- TODO support tuples of Rows, also
 
-instance FromSql Int32 where
-    fromSql = field OID.int4Oid P8.decimal
+instance (FromSqlField a, FromSqlField b) => FromSql (a, b) where
+    fromSql = (,) <$> singleFieldDecoder fromSqlField <*> singleFieldDecoder fromSqlField
 
-instance FromSql Int64  where
-    fromSql = field OID.int8Oid P8.decimal
+instance (FromSqlField a, FromSqlField b, FromSqlField c) => FromSql (a, b, c) where
+    fromSql = (,,) <$> singleFieldDecoder fromSqlField <*> singleFieldDecoder fromSqlField <*> singleFieldDecoder fromSqlField
 
-instance FromSql Float where
-    fromSql = field OID.float4Oid (realToFrac <$> pg_double)
-
-instance FromSql Double where
-    fromSql = field OID.float8Oid pg_double
-
-instance (FromSql a, FromSql b) => FromSql (a, b) where
-    fromSql = (,) <$> fromSql <*> fromSql
-
-instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
-    fromSql = (,,) <$> fromSql <*> fromSql <*> fromSql
-
--- TODO more tuple instances
--- TODO TH to make this less tedious
-
--- from Database.PostgreSQL.Simple.FromField
-pg_double :: Parser Double
-pg_double
-    =   (P.string "NaN"       $> ( 0 / 0))
-    <|> (P.string "Infinity"  $> ( 1 / 0))
-    <|> (P.string "-Infinity" $> (-1 / 0))
-    <|> P8.double
+-- -- TODO more tuple instances
+-- -- TODO TH to make this less tedious

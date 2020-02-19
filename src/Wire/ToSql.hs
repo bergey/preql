@@ -21,26 +21,26 @@ instance Contravariant FieldEncoder where
     contramap f (FieldEncoder oid enc) = FieldEncoder oid (enc . f)
 
 -- TODO benchmark, consider not-list
-newtype SqlEncoder a = SqlEncoder [FieldEncoder a]
+newtype RowEncoder a = RowEncoder [FieldEncoder a]
 
-instance Contravariant SqlEncoder where
-    contramap f (SqlEncoder fields) = SqlEncoder (map (contramap f) fields)
+instance Contravariant RowEncoder where
+    contramap f (RowEncoder fields) = RowEncoder (map (contramap f) fields)
 
-instance Divisible SqlEncoder where
-    divide pair fb fc = SqlEncoder (bs <> cs) where
-      SqlEncoder bs = contramap (fst . pair) fb
-      SqlEncoder cs = contramap (snd . pair) fc
-    conquer = SqlEncoder [] -- identity, does not actually encode any fields
+instance Divisible RowEncoder where
+    divide pair fb fc = RowEncoder (bs <> cs) where
+      RowEncoder bs = contramap (fst . pair) fb
+      RowEncoder cs = contramap (snd . pair) fc
+    conquer = RowEncoder [] -- identity, does not actually encode any fields
 
 runFieldEncoder :: p -> FieldEncoder p -> (PQ.Oid, ByteString, PQ.Format)
 runFieldEncoder p (FieldEncoder oid enc) = (oid, enc p, PQ.Text)
 
 -- TODO think harder about Maybe
-runEncoder :: SqlEncoder p -> p -> [Maybe (PQ.Oid, ByteString, PQ.Format)]
-runEncoder (SqlEncoder fields) p = map (Just . runFieldEncoder p) fields
+runEncoder :: RowEncoder p -> p -> [Maybe (PQ.Oid, ByteString, PQ.Format)]
+runEncoder (RowEncoder fields) p = map (Just . runFieldEncoder p) fields
 
 class ToSql a where
-    toSql :: SqlEncoder a
+    toSql :: RowEncoder a
 
 instance ToSql () where
     toSql = conquer
@@ -66,10 +66,10 @@ instance (ToSql a, ToSql b, ToSql c, ToSql d, ToSql e, ToSql f, ToSql g, ToSql h
 instance (ToSql a, ToSql b, ToSql c, ToSql d, ToSql e, ToSql f, ToSql g, ToSql h, ToSql i, ToSql j, ToSql k) => ToSql (a, b, c, d, e, f, g, h, i, j, k) where
     toSql = divide (\(a, b, c, d, e, f, g, h, i, j, k) -> (a, (b, c, d, e, f, g, h, i, j, k))) toSql toSql
 
-field :: PQ.Oid -> (a -> ByteString) -> SqlEncoder a
-field oid enc = SqlEncoder [FieldEncoder oid enc]
+field :: PQ.Oid -> (a -> ByteString) -> RowEncoder a
+field oid enc = RowEncoder [FieldEncoder oid enc]
 
-builder :: PQ.Oid -> (a -> Builder) -> SqlEncoder a
+builder :: PQ.Oid -> (a -> Builder) -> RowEncoder a
 builder oid enc = field oid (BSL.toStrict . B.toLazyByteString . enc)
 
 instance ToSql Int32 where

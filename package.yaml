@@ -32,6 +32,7 @@ dependencies:
     - bytestring
     - contravariant
     - free
+    - mtl
     - postgresql-binary
     - postgresql-libpq
     - postgresql-simple

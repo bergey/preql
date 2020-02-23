@@ -1,3 +1,6 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# HLINT ignore "Use camelCase" #-}
 
 {-# LANGUAGE DeriveFunctor     #-}
@@ -7,16 +10,28 @@ module Wire.FromSql where
 
 import           Control.Applicative
 import           Control.Applicative.Free
+import           Control.Exception
+import           Control.Monad.Except
+import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.State
+import           Data.Bifunctor
 import           Data.ByteString (ByteString)
 import           Data.Functor
 import           Data.IORef
 import           Data.Int
+import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
+import           Data.Text.Encoding (decodeUtf8With)
+import           Data.Text.Encoding.Error (lenientDecode)
+import           Data.Traversable
+import           Data.Typeable
+import           Data.Vector (Vector)
 
 import qualified BinaryParser as BP
 import qualified Data.ByteString as BS
+import qualified Data.Vector as V
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID
 import qualified PostgreSQL.Binary.Decoding as PGB
@@ -24,32 +39,94 @@ import qualified PostgreSQL.Binary.Decoding as PGB
 data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)
     deriving Functor
 
--- TODO RowDecoder should also have access to column name lookups.
-data RowDecoder a = RowDecoder [PQ.Oid] (BP.BinaryParser a)
+-- TODO Internal module
+-- TODO PgType for non-builtin types
+data RowDecoder a = RowDecoder [PQ.Oid] (InternalDecoder a)
     deriving Functor
-
--- TODO better name
-singleFieldDecoder :: FieldDecoder a -> RowDecoder a
-singleFieldDecoder (FieldDecoder oid parser) = RowDecoder [oid] parser
 
 instance Applicative RowDecoder where
     pure a = RowDecoder [] (pure a)
     RowDecoder t1 p1 <*> RowDecoder t2 p2 = RowDecoder (t1 <> t2) (p1 <*> p2)
 
-runDecoder :: RowDecoder a -> PQ.Result -> PQ.Row -> IO (Either Text a)
-runDecoder (RowDecoder _ parsers) result row = do
-    columnRef <- newIORef (PQ.Col 0)
-    parseFields result row columnRef parsers
+-- TODO Internal module
+-- TODO can I use ValidationT instead of ExceptT, since I ensure Column is incremented before errors?
+type InternalDecoder =  StateT DecoderState (ExceptT (LocatedError FieldError) IO)
 
-parseFields :: PQ.Result -> PQ.Row -> IORef PQ.Column -> BP.BinaryParser a -> IO (Either Text a)
-parseFields result currentRow columnRef parser = do
-    currentColumn <- atomicModifyIORef' columnRef (\col -> (succ col, col))
-    bytes <- PQ.getvalue result currentRow currentColumn
-    let a = BP.run parser =<< emptyValue bytes
-    return a
+data DecoderState = DecoderState
+    { result :: PQ.Result
+    , row :: PQ.Row
+    , column :: PQ.Column
+    } deriving (Show, Eq)
 
-emptyValue :: Maybe a -> Either Text a
-emptyValue = maybe (Left "Got empty value string from Postgres") Right
+data DecoderError = FieldError (LocatedError FieldError) | PgTypeMismatch [TypeMismatch]
+
+data LocatedError a = LocatedError
+    { errorRow :: PQ.Row
+    , errorColumn :: PQ.Column
+    , failure :: a
+    } deriving (Eq, Show, Typeable)
+instance (Show a, Typeable a) => Exception (LocatedError a)
+
+data FieldError
+    = UnexpectedNull
+    | ParseFailure Text
+    deriving (Eq, Show, Typeable)
+
+data TypeMismatch = TypeMismatch
+    { expected :: PQ.Oid
+    , actual :: PQ.Oid
+    , column :: PQ.Column
+    , columnName :: Maybe Text
+    } deriving (Eq, Show, Typeable)
+
+throwLocated :: FieldError -> InternalDecoder a
+throwLocated failure = do
+    DecoderState{..} <- get
+    throwError (LocatedError row column failure)
+
+decodeVector :: RowDecoder a -> PQ.Result -> IO (Either DecoderError (Vector a))
+decodeVector rd@(RowDecoder oids parsers) result = do
+    mismatches <- fmap catMaybes $ for (zip [PQ.Col 1 ..] oids) $ \(column, expected) -> do
+        actual <- liftIO $ PQ.ftype result column
+        if actual == expected
+            then return Nothing
+            else do
+                m_name <- liftIO $ PQ.fname result column
+                let columnName = decodeUtf8With lenientDecode <$> m_name
+                return $ Just (TypeMismatch{..})
+    case mismatches of
+        [] -> do
+            (PQ.Row ntuples) <- PQ.ntuples result
+            let toRow = PQ.toRow . fromIntegral
+            first FieldError <$>
+                runExceptT (V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow))
+        _ -> return (Left (PgTypeMismatch mismatches))
+
+-- TODO Internal (doesn't check Oids)
+decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> ExceptT (LocatedError FieldError) IO a
+decodeRow (RowDecoder _ parsers) result row =
+    evalStateT parsers (DecoderState result row 0)
+
+notNull :: FieldDecoder a -> RowDecoder a
+notNull (FieldDecoder oid parser) = RowDecoder [oid] $ do
+    m_bs <- getNextValue
+    case m_bs of
+        Nothing -> throwLocated UnexpectedNull
+        Just bs -> either (throwLocated . ParseFailure) pure (BP.run parser bs)
+
+nullable :: FieldDecoder a -> RowDecoder (Maybe a)
+nullable (FieldDecoder oid parser) = RowDecoder [oid] $ do
+    m_bs <- getNextValue
+    case m_bs of
+        Nothing -> return Nothing
+        Just bs -> either (throwLocated . ParseFailure) (pure . Just) (BP.run parser bs)
+
+-- TODO Internal module
+getNextValue :: InternalDecoder (Maybe ByteString)
+getNextValue = do
+    s@DecoderState{..} <- get
+    put (s { column = column + 1 } :: DecoderState)
+    liftIO $ PQ.getvalue result row column
 
 -- TODO more informative return type – collect errors, or OK
 checkTypes :: RowDecoder a -> PQ.Result -> IO Bool
@@ -66,31 +143,34 @@ checkTypes (RowDecoder oids _) result = do
 class FromSqlField a where
     fromSqlField :: FieldDecoder a
 
-instance FromSqlField Int32 where
-    fromSqlField = FieldDecoder OID.int4Oid PGB.int
-
-instance FromSqlField Int64  where
-    fromSqlField = FieldDecoder OID.int8Oid PGB.int
-
-instance FromSqlField Float where
-    fromSqlField = FieldDecoder OID.float4Oid PGB.float4
-
-instance FromSqlField Double where
-    fromSqlField = FieldDecoder OID.float8Oid PGB.float8
-
-instance FromSqlField Text where
-    fromSqlField = FieldDecoder OID.textOid PGB.text_strict
-
 class FromSql a where
     fromSql :: RowDecoder a
 
--- TODO support tuples of Rows, also
+instance FromSqlField Int32 where
+    fromSqlField = FieldDecoder OID.int4Oid PGB.int
+instance FromSql Int32 where fromSql = notNull fromSqlField
 
-instance (FromSqlField a, FromSqlField b) => FromSql (a, b) where
-    fromSql = (,) <$> singleFieldDecoder fromSqlField <*> singleFieldDecoder fromSqlField
+instance FromSqlField Int64  where
+    fromSqlField = FieldDecoder OID.int8Oid PGB.int
+instance FromSql Int64 where fromSql = notNull fromSqlField
 
-instance (FromSqlField a, FromSqlField b, FromSqlField c) => FromSql (a, b, c) where
-    fromSql = (,,) <$> singleFieldDecoder fromSqlField <*> singleFieldDecoder fromSqlField <*> singleFieldDecoder fromSqlField
+instance FromSqlField Float where
+    fromSqlField = FieldDecoder OID.float4Oid PGB.float4
+instance FromSql Float where fromSql = notNull fromSqlField
+
+instance FromSqlField Double where
+    fromSqlField = FieldDecoder OID.float8Oid PGB.float8
+instance FromSql Double where fromSql = notNull fromSqlField
+
+instance FromSqlField Text where
+    fromSqlField = FieldDecoder OID.textOid PGB.text_strict
+instance FromSql Text where fromSql = notNull fromSqlField
+
+instance (FromSql a, FromSql b) => FromSql (a, b) where
+    fromSql = (,) <$> fromSql <*> fromSql
+
+instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
+    fromSql = (,,) <$> fromSql <*> fromSql <*> fromSql
 
 -- -- TODO more tuple instances
 -- -- TODO TH to make this less tedious

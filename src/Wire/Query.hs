@@ -6,7 +6,7 @@ module Wire.Query where
 import Imports
 -- import           Wire.Connection
 import           Wire.FromSql
--- import           Wire.ToSql
+import           Wire.ToSql
 
 import           Control.Concurrent.MVar
 import           Control.Monad
@@ -29,32 +29,27 @@ newtype Query params result = Query ByteString
 
 data QueryAndParams params result = Q (Query params result) params
 
--- TODO restore params, safer Connection type
--- runQueryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query p r -> p -> IO (Either Text [r])
--- runQueryWith enc dec conn (Query query) params =
+runQueryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query p r -> p -> IO (Either QueryError (Vector r))
+runQueryWith enc dec conn (Query query) params = runExceptT $ do
+    -- TODO safer Connection type
     -- withMVar (connectionHandle conn) $ \connRaw -> do
-runQueryWith :: RowDecoder r -> PQ.Connection -> Query () r -> IO (Either QueryError (Vector r))
-runQueryWith dec connRaw (Query query) = runExceptT $ do
-        result <- queryError connRaw =<< liftIO (PQ.execParams connRaw query [] PQ.Binary)
+        result <- queryError conn =<< liftIO (PQ.execParams conn query (runEncoder enc params) PQ.Binary)
         withExceptT DecoderError (decodeVector dec result)
 
 -- If there is no result, we don't need a Decoder
--- TODO params
-runQueryWith_ :: PQ.Connection -> Query () () -> IO (Either QueryError ())
-runQueryWith_ conn (Query query) = runExceptT $ do
-    result <- queryError conn =<< liftIO (PQ.execParams conn query [] PQ.Binary)
+runQueryWith_ :: RowEncoder p -> PQ.Connection -> Query p () -> p -> IO (Either QueryError ())
+runQueryWith_ enc conn (Query query) params = runExceptT $ do
+    result <- queryError conn =<< liftIO (PQ.execParams conn query (runEncoder enc params) PQ.Binary)
     status <- liftIO (PQ.resultStatus result)
     unless (status == PQ.CommandOk || status == PQ.TuplesOk) $ do
         msg <- liftIO (PQ.resStatus status)
         throwE (QueryError (decodeUtf8With lenientDecode msg))
 
--- runQuery :: (ToSql p, FromSql r) => Connection -> Query p r -> p -> IO (Either Text [r])
--- runQuery = runQueryWith toSql fromSql
-runQuery :: (FromSql r) => PQ.Connection -> Query () r -> IO (Either QueryError (Vector r))
-runQuery = runQueryWith fromSql
+runQuery :: (ToSql p, FromSql r) => PQ.Connection -> Query p r -> p -> IO (Either QueryError (Vector r))
+runQuery = runQueryWith toSql fromSql
 
--- TODO with params this won't be the same as runQueryWith_
--- runQuery_ :: ToSql p => PQ.Connection -> Query p () -> IO (Either QueryError ())
+runQuery_ :: ToSql p => PQ.Connection -> Query p () -> p -> IO (Either QueryError ())
+runQuery_ = runQueryWith_ toSql
 
 data QueryError = QueryError Text | DecoderError DecoderError
     deriving (Eq, Show, Typeable)

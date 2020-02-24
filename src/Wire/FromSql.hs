@@ -8,7 +8,7 @@
 
 module Wire.FromSql where
 
-import Imports
+import           Wire.Internal
 
 import           Control.Applicative.Free
 import           Control.Monad.Except
@@ -16,6 +16,7 @@ import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
 import           Data.Int
+import           Imports
 
 import qualified BinaryParser as BP
 import qualified Data.ByteString as BS
@@ -27,40 +28,9 @@ import qualified PostgreSQL.Binary.Decoding as PGB
 data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)
     deriving Functor
 
--- TODO Internal module
--- TODO PgType for non-builtin types
-data RowDecoder a = RowDecoder [PQ.Oid] (InternalDecoder a)
-    deriving Functor
-
-instance Applicative RowDecoder where
-    pure a = RowDecoder [] (pure a)
-    RowDecoder t1 p1 <*> RowDecoder t2 p2 = RowDecoder (t1 <> t2) (p1 <*> p2)
-
--- TODO Internal module
--- TODO can I use ValidationT instead of ExceptT, since I ensure Column is incremented before errors?
-type InternalDecoder =  StateT DecoderState (ExceptT (LocatedError FieldError) IO)
-
-data DecoderState = DecoderState
-    { result :: PQ.Result
-    , row :: PQ.Row
-    , column :: PQ.Column
-    } deriving (Show, Eq)
-
 data DecoderError = FieldError (LocatedError FieldError) | PgTypeMismatch [TypeMismatch]
     deriving (Show, Eq, Typeable)
 instance Exception DecoderError
-
-data LocatedError a = LocatedError
-    { errorRow :: PQ.Row
-    , errorColumn :: PQ.Column
-    , failure :: a
-    } deriving (Eq, Show, Typeable)
-instance (Show a, Typeable a) => Exception (LocatedError a)
-
-data FieldError
-    = UnexpectedNull
-    | ParseFailure Text
-    deriving (Eq, Show, Typeable)
 
 data TypeMismatch = TypeMismatch
     { expected :: PQ.Oid
@@ -90,11 +60,6 @@ decodeVector rd@(RowDecoder oids parsers) result = do
     withExceptT FieldError $
         V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow)
 
--- TODO Internal (doesn't check Oids)
-decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> ExceptT (LocatedError FieldError) IO a
-decodeRow (RowDecoder _ parsers) result row =
-    evalStateT parsers (DecoderState result row 0)
-
 notNull :: FieldDecoder a -> RowDecoder a
 notNull (FieldDecoder oid parser) = RowDecoder [oid] $ do
     m_bs <- getNextValue
@@ -108,25 +73,6 @@ nullable (FieldDecoder oid parser) = RowDecoder [oid] $ do
     case m_bs of
         Nothing -> return Nothing
         Just bs -> either (throwLocated . ParseFailure) (pure . Just) (BP.run parser bs)
-
--- TODO Internal module
-getNextValue :: InternalDecoder (Maybe ByteString)
-getNextValue = do
-    s@DecoderState{..} <- get
-    put (s { column = column + 1 } :: DecoderState)
-    liftIO $ PQ.getvalue result row column
-
--- TODO more informative return type – collect errors, or OK
-checkTypes :: RowDecoder a -> PQ.Result -> IO Bool
-checkTypes (RowDecoder oids _) result = do
-    ntuples <- PQ.ntuples result
-    go (PQ.Col 0) oids where
-        go _ [] = return True
-        go col (expected : rest) = do
-            actual <- PQ.ftype result col
-            if expected == actual
-                then go (succ col) rest
-                else return False
 
 class FromSqlField a where
     fromSqlField :: FieldDecoder a

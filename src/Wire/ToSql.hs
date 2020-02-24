@@ -9,8 +9,6 @@ import           Data.Functor.Contravariant.Divisible
 import           Data.Int
 
 import qualified Data.ByteString as BS
--- import qualified Data.ByteString.Builder as B
--- import qualified Data.ByteString.Lazy as BSL
 import qualified ByteString.StrictBuilder as B
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID

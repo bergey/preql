@@ -154,6 +154,10 @@ instance FromSqlField Text where
     fromSqlField = FieldDecoder OID.textOid PGB.text_strict
 instance FromSql Text where fromSql = notNull fromSqlField
 
+instance FromSqlField ByteString where
+    fromSqlField = FieldDecoder OID.byteaOid (BS.copy <$> BP.remainders)
+instance FromSql ByteString where fromSql = notNull fromSqlField
+
 instance FromSqlField a => FromSql (Maybe a) where
     fromSql = nullable fromSqlField
 

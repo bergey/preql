@@ -58,6 +58,10 @@ instance ToSqlField Text where
     toSqlField = FieldEncoder OID.textOid PGB.text_strict
 instance ToSql Text where toSql = oneField toSqlField
 
+instance ToSqlField ByteString where
+    toSqlField = FieldEncoder OID.byteaOid PGB.bytea_strict
+instance ToSql ByteString where toSql = oneField toSqlField
+
 instance ToSql () where
     toSql () = []
 

@@ -154,11 +154,17 @@ instance FromSqlField Text where
     fromSqlField = FieldDecoder OID.textOid PGB.text_strict
 instance FromSql Text where fromSql = notNull fromSqlField
 
+instance FromSqlField a => FromSql (Maybe a) where
+    fromSql = nullable fromSqlField
+
 instance (FromSql a, FromSql b) => FromSql (a, b) where
     fromSql = (,) <$> fromSql <*> fromSql
 
 instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
     fromSql = (,,) <$> fromSql <*> fromSql <*> fromSql
+
+instance (FromSql a, FromSql b, FromSql c, FromSql d) => FromSql (a, b, c, d) where
+    fromSql = (,,,) <$> fromSql <*> fromSql <*> fromSql <*> fromSql
 
 -- -- TODO more tuple instances
 -- -- TODO TH to make this less tedious

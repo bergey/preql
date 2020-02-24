@@ -1,6 +1,6 @@
 -- | For now, re-export Connection code from postgresql-simple
 
-module Wire.Connection
+module Preql.Wire.Connection
     ( Connection(..), ConnectInfo(..), defaultConnectInfo
     , connect, connectPostgreSQL
     ) where

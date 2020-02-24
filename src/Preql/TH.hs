@@ -2,12 +2,13 @@
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE TemplateHaskell          #-}
-module TH where
 
-import TypedQuery
-import Untyped.Params
-import Untyped.Parser (parseQuery)
-import Untyped.Syntax as Syntax
+module Preql.TH where
+
+import Preql.TypedQuery
+import Preql.Untyped.Params
+import Preql.Untyped.Parser (parseQuery)
+import Preql.Untyped.Syntax as Syntax
 
 import Data.String (IsString (..))
 import Database.PostgreSQL.Simple (Only (..))

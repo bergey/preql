@@ -1,15 +1,15 @@
 {
 {-# LANGUAGE DuplicateRecordFields #-}
-module Untyped.Parser where
+module Preql.Untyped.Parser where
 
-import Untyped.Syntax
-import Untyped.Name (mkName)
-import Untyped.Lex (Alex, LocToken(..), Token)
+import Preql.Untyped.Syntax
+import Preql.Untyped.Name (mkName)
+import Preql.Untyped.Lex (Alex, LocToken(..), Token)
 
 import           Prelude hiding (LT, GT, lex)
 import           Data.List.NonEmpty        (NonEmpty (..))
 
-import qualified Untyped.Lex as L
+import qualified Preql.Untyped.Lex as L
 import qualified Data.List.NonEmpty as NE
 }
 

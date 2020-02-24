@@ -6,9 +6,9 @@
 {-# LANGUAGE DeriveFunctor     #-}
 -- | Decoding values from Postgres wire format to Haskell.
 
-module Wire.FromSql where
+module Preql.Wire.FromSql where
 
-import           Wire.Internal
+import            Preql.Wire.Internal
 
 import           Control.Applicative.Free
 import           Control.Monad.Except
@@ -16,7 +16,7 @@ import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
 import           Data.Int
-import           Imports
+import           Preql.Imports
 
 import qualified BinaryParser as BP
 import qualified Data.ByteString as BS

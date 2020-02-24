@@ -4,7 +4,7 @@
 
 -- | taken verbatim from Database.PostgreSQL.Simple.Internal.PQResultUtils
 
-module PQResultUtils where
+module Preql.PQResultUtils where
 
 import           Control.Exception                    as E
 import           Control.Monad.Trans.Reader

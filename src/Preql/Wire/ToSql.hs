@@ -1,8 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Wire.ToSql where
+module Preql.Wire.ToSql where
 
-import           Imports
+import            Preql.Imports
 
 import           Data.Functor.Contravariant
 import           Data.Functor.Contravariant.Divisible

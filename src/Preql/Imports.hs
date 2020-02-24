@@ -1,6 +1,6 @@
 -- |  Common imports, so I don't need to repeat them everywhere
 
-module Imports
+module Preql.Imports
     ( module X
     , decodeUtf8With, lenientDecode
     , Vector, Text, ByteString

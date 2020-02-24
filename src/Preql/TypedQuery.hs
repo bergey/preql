@@ -1,11 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module TypedQuery where
+module Preql.TypedQuery where
 
-import           PQResultUtils
-import           Untyped.Params
-import           Untyped.Printer
-import           Untyped.Syntax                      (Query)
+import            Preql.PQResultUtils
+import            Preql.Untyped.Params
+import            Preql.Untyped.Printer
+import            Preql.Untyped.Syntax                      (Query)
 
 import           Data.Int                            (Int64)
 import           Data.String

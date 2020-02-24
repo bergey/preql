@@ -4,10 +4,10 @@
 -- | Print the types in Syntax as valid SQL.  The emphasis is on
 -- queries to send to the database, not on legibilty; no extra whitespace is introduced.
 
-module Untyped.Printer where
+module Preql.Untyped.Printer where
 
-import           Untyped.Name
-import           Untyped.Syntax
+import            Preql.Untyped.Name
+import            Preql.Untyped.Syntax
 
 import           Data.ByteString                  (ByteString)
 import           Data.Foldable                    (toList)

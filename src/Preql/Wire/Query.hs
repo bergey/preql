@@ -1,17 +1,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- |
 
-module Wire.Query where
+module Preql.Wire.Query where
 
--- import           Wire.Connection
-import           Wire.FromSql
-import           Wire.Internal
-import           Wire.ToSql
+-- import            Preql.Wire.Connection
+import            Preql.Wire.FromSql
+import            Preql.Wire.Internal
+import            Preql.Wire.ToSql
 
 import           Control.Concurrent.MVar
 import           Control.Monad
 import           Control.Monad.Trans.Except
-import           Imports
+import            Preql.Imports
 
 import qualified Database.PostgreSQL.LibPQ as PQ
 

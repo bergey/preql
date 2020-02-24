@@ -3,12 +3,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- |
 
-module Wire.Internal where
+module Preql.Wire.Internal where
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
 import           Data.String (IsString)
-import           Imports
+import            Preql.Imports
 
 import qualified Database.PostgreSQL.LibPQ as PQ
 

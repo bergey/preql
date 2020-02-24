@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveLift         #-}
 -- | Definitions which need to be private in order to maintain their invariants.
 
-module Untyped.Name (
+module Preql.Untyped.Name (
     Name, mkName, getName
     ) where
 

@@ -3,11 +3,11 @@
 {-# LANGUAGE DefaultSignatures #-}
 -- | SQL Effect class, basically capturing some way of accessing a database.
 
-module SqlEffect
+module Preql.SqlEffect
     ( TypedQuery, SQL(..)
     ) where
 
-import           TypedQuery (TypedQuery(..))
+import            Preql.TypedQuery (TypedQuery(..))
 
 import           Data.Int (Int64)
 
@@ -20,7 +20,7 @@ import           Control.Monad.Trans.State (StateT)
 import           Control.Monad.Trans.Writer (WriterT)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 
-import qualified TypedQuery as TQ
+import qualified Preql.TypedQuery as TQ
 
 -- | An Effect class for running SQL queries.  You can think of this
 -- as a context specifying a particular Postgres connection (or connection

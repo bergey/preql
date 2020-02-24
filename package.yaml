@@ -30,6 +30,7 @@ dependencies:
     - base
     - binary-parser
     - bytestring
+    - bytestring-strict-builder
     - contravariant
     - free
     - mtl

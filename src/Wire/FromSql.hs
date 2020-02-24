@@ -8,26 +8,14 @@
 
 module Wire.FromSql where
 
-import           Control.Applicative
+import Imports
+
 import           Control.Applicative.Free
-import           Control.Exception
 import           Control.Monad.Except
-import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
-import           Data.Bifunctor
-import           Data.ByteString (ByteString)
-import           Data.Functor
-import           Data.IORef
 import           Data.Int
-import           Data.Maybe (catMaybes)
-import           Data.Text (Text)
-import           Data.Text.Encoding (decodeUtf8With)
-import           Data.Text.Encoding.Error (lenientDecode)
-import           Data.Traversable
-import           Data.Typeable
-import           Data.Vector (Vector)
 
 import qualified BinaryParser as BP
 import qualified Data.ByteString as BS
@@ -59,6 +47,8 @@ data DecoderState = DecoderState
     } deriving (Show, Eq)
 
 data DecoderError = FieldError (LocatedError FieldError) | PgTypeMismatch [TypeMismatch]
+    deriving (Show, Eq, Typeable)
+instance Exception DecoderError
 
 data LocatedError a = LocatedError
     { errorRow :: PQ.Row
@@ -84,9 +74,9 @@ throwLocated failure = do
     DecoderState{..} <- get
     throwError (LocatedError row column failure)
 
-decodeVector :: RowDecoder a -> PQ.Result -> IO (Either DecoderError (Vector a))
+decodeVector :: RowDecoder a -> PQ.Result -> ExceptT DecoderError IO (Vector a)
 decodeVector rd@(RowDecoder oids parsers) result = do
-    mismatches <- fmap catMaybes $ for (zip [PQ.Col 1 ..] oids) $ \(column, expected) -> do
+    mismatches <- fmap catMaybes $ for (zip [PQ.Col 0 ..] oids) $ \(column, expected) -> do
         actual <- liftIO $ PQ.ftype result column
         if actual == expected
             then return Nothing
@@ -94,13 +84,11 @@ decodeVector rd@(RowDecoder oids parsers) result = do
                 m_name <- liftIO $ PQ.fname result column
                 let columnName = decodeUtf8With lenientDecode <$> m_name
                 return $ Just (TypeMismatch{..})
-    case mismatches of
-        [] -> do
-            (PQ.Row ntuples) <- PQ.ntuples result
-            let toRow = PQ.toRow . fromIntegral
-            first FieldError <$>
-                runExceptT (V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow))
-        _ -> return (Left (PgTypeMismatch mismatches))
+    unless (null mismatches) (throwError (PgTypeMismatch mismatches))
+    (PQ.Row ntuples) <- liftIO $ PQ.ntuples result
+    let toRow = PQ.toRow . fromIntegral
+    withExceptT FieldError $
+        V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow)
 
 -- TODO Internal (doesn't check Oids)
 decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> ExceptT (LocatedError FieldError) IO a

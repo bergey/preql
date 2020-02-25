@@ -12,16 +12,10 @@ import            Preql.Imports
 
 import qualified Database.PostgreSQL.LibPQ as PQ
 
--- | A @Query@ is a string ready to be passed to Postgres, with
--- phantom type parameters describing its parameters and result.
--- Depending how the @Query@ was constructed, these parameters may be
--- inferred from context (offering no added type safety), or be
--- partly synthesized from the underlying string.
---
--- The IsString instance does no validation; the limited instances
+-- | The IsString instance does no validation; the limited instances
 -- discourage directly manipulating strings, with the high risk of SQL
 -- injection.
-newtype Query params result = Query ByteString
+newtype Query = Query ByteString
     deriving (Show, IsString)
 
 -- TODO PgType for non-builtin types

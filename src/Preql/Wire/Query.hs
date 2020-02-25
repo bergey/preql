@@ -1,9 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
--- |
-
 module Preql.Wire.Query where
 
--- import            Preql.Wire.Connection
 import            Preql.Wire.FromSql
 import            Preql.Wire.Internal
 import            Preql.Wire.ToSql
@@ -15,9 +11,7 @@ import            Preql.Imports
 
 import qualified Database.PostgreSQL.LibPQ as PQ
 
-data QueryAndParams params result = Q (Query params result) params
-
-runQueryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query p r -> p -> IO (Either QueryError (Vector r))
+runQueryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
 runQueryWith enc dec conn (Query query) params = runExceptT $ do
     -- TODO safer Connection type
     -- withMVar (connectionHandle conn) $ \connRaw -> do
@@ -25,7 +19,7 @@ runQueryWith enc dec conn (Query query) params = runExceptT $ do
         withExceptT DecoderError (decodeVector dec result)
 
 -- If there is no result, we don't need a Decoder
-runQueryWith_ :: RowEncoder p -> PQ.Connection -> Query p () -> p -> IO (Either QueryError ())
+runQueryWith_ :: RowEncoder p -> PQ.Connection -> Query -> p -> IO (Either QueryError ())
 runQueryWith_ enc conn (Query query) params = runExceptT $ do
     result <- queryError conn =<< liftIO (PQ.execParams conn query (runEncoder enc params) PQ.Binary)
     status <- liftIO (PQ.resultStatus result)
@@ -33,10 +27,10 @@ runQueryWith_ enc conn (Query query) params = runExceptT $ do
         msg <- liftIO (PQ.resStatus status)
         throwE (QueryError (decodeUtf8With lenientDecode msg))
 
-runQuery :: (ToSql p, FromSql r) => PQ.Connection -> Query p r -> p -> IO (Either QueryError (Vector r))
+runQuery :: (ToSql p, FromSql r) => PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
 runQuery = runQueryWith toSql fromSql
 
-runQuery_ :: ToSql p => PQ.Connection -> Query p () -> p -> IO (Either QueryError ())
+runQuery_ :: ToSql p => PQ.Connection -> Query -> p -> IO (Either QueryError ())
 runQuery_ = runQueryWith_ toSql
 
 data QueryError = QueryError Text | DecoderError DecoderError

@@ -26,29 +26,22 @@ import qualified Preql.Wire.Query as W
 -- pool).
 class Monad m => SQL (m :: * -> *) where
     query :: (ToSql p, FromSql r) => (Query, p) -> m (Vector r)
-    query_ :: FromSql r => Query -> m (Vector r)
-    execute :: ToSql p => (Query, p) -> m ()
+    query_ :: ToSql p => (Query, p) -> m ()
 
     default query :: (MonadTrans t, SQL m', m ~ t m', ToSql p, FromSql r) => (Query, p) -> m (Vector r)
     query qp = lift (query qp)
 
-    default query_ :: (MonadTrans t, SQL m', m ~ t m', FromSql r) => Query -> m (Vector r)
-    query_ = lift . query_
-
-    default execute :: (MonadTrans t, SQL m', m ~ t m', ToSql p) => (Query, p) -> m ()
-    execute qp = lift (execute qp)
+    default query_ :: (MonadTrans t, SQL m', m ~ t m', ToSql p) => (Query, p) -> m ()
+    query_ qp = lift (query_ qp)
 
 -- | Most larger applications will define an instance; this one is suitable to test out the library.
 instance SQL (ReaderT Connection IO) where
     query (q, p) = do
         conn <- ask
-        lift (either throwIO pure =<< W.runQuery conn q p)
-    query_ q = do
+        lift (either throwIO pure =<< W.query conn q p)
+    query_ (q, p) = do
         conn <- ask
-        lift (either throwIO pure =<< W.runQuery conn q ())
-    execute (q, p) = do
-        conn <- ask
-        lift (either throwIO pure =<< W.runQuery_ conn q p)
+        lift (either throwIO pure =<< W.query_ conn q p)
 
 instance SQL m => SQL (ExceptT e m)
 instance SQL m => SQL (MaybeT m)

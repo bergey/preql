@@ -11,27 +11,32 @@ import            Preql.Imports
 
 import qualified Database.PostgreSQL.LibPQ as PQ
 
-runQueryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
-runQueryWith enc dec conn (Query query) params = runExceptT $ do
+queryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
+queryWith enc dec conn (Query query) params = runExceptT $ do
     -- TODO safer Connection type
     -- withMVar (connectionHandle conn) $ \connRaw -> do
-        result <- queryError conn =<< liftIO (PQ.execParams conn query (runEncoder enc params) PQ.Binary)
+        result <- execParams enc conn query params
         withExceptT DecoderError (decodeVector dec result)
 
 -- If there is no result, we don't need a Decoder
-runQueryWith_ :: RowEncoder p -> PQ.Connection -> Query -> p -> IO (Either QueryError ())
-runQueryWith_ enc conn (Query query) params = runExceptT $ do
+queryWith_ :: RowEncoder p -> PQ.Connection -> Query -> p -> IO (Either QueryError ())
+queryWith_ enc conn (Query query) params =
+    runExceptT (void (execParams enc conn query params))
+
+execParams :: RowEncoder p -> PQ.Connection -> ByteString -> p -> ExceptT QueryError IO PQ.Result
+execParams enc conn query params = do
     result <- queryError conn =<< liftIO (PQ.execParams conn query (runEncoder enc params) PQ.Binary)
     status <- liftIO (PQ.resultStatus result)
     unless (status == PQ.CommandOk || status == PQ.TuplesOk) $ do
         msg <- liftIO (PQ.resStatus status)
         throwE (QueryError (decodeUtf8With lenientDecode msg))
+    return result
 
-runQuery :: (ToSql p, FromSql r) => PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
-runQuery = runQueryWith toSql fromSql
+query :: (ToSql p, FromSql r) => PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
+query = queryWith toSql fromSql
 
-runQuery_ :: ToSql p => PQ.Connection -> Query -> p -> IO (Either QueryError ())
-runQuery_ = runQueryWith_ toSql
+query_ :: ToSql p => PQ.Connection -> Query -> p -> IO (Either QueryError ())
+query_ = queryWith_ toSql
 
 data QueryError = QueryError Text | DecoderError DecoderError
     deriving (Eq, Show, Typeable)

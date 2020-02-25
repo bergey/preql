@@ -18,9 +18,11 @@ import Language.Haskell.TH.Syntax (Lift (..))
 
 import qualified Data.Text as T
 
+-- | A list of n Names beginning with the given character
 cNames :: Char -> Int -> Q [Name]
 cNames c n = traverse newName (replicate n (c : ""))
 
+-- | A Type representing a tuple with the given Names as type variables.
 tupleType :: [Name] -> Type
 tupleType [v] = AppT (ConT ''Only) (VarT v)
 tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
@@ -57,7 +59,7 @@ aritySql  = expressionOnly "aritySql " $ \raw -> do
                     patternName <- newName "c"
                     return $ LamE [VarP patternName]
                         (TupE [typedQuery, tupleOrOnly (patternName : antiNames)])
-                _ -> do -- at least one positional parameter
+                _ -> do -- at least two positional parameters
                     patternNames <- cNames 'q' (fromIntegral positionalCount)
                     return $ LamE
                         [TupP (map VarP patternNames)]

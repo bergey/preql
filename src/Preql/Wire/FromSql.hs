@@ -104,7 +104,8 @@ instance FromSqlField ByteString where
     fromSqlField = FieldDecoder OID.byteaOid (BS.copy <$> BP.remainders)
 instance FromSql ByteString where fromSql = notNull fromSqlField
 
-instance FromSqlField a => FromSql (Maybe a) where
+-- Overlappable so applications can write Maybe for multi-field domain types
+instance {-# OVERLAPPABLE #-} FromSqlField a => FromSql (Maybe a) where
     fromSql = nullable fromSqlField
 
 instance (FromSql a, FromSql b) => FromSql (a, b) where

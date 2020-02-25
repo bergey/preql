@@ -1,11 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Preql.TypedQuery where
+module Preql.Untyped.Query where
 
 import            Preql.PQResultUtils
 import            Preql.Untyped.Params
 import            Preql.Untyped.Printer
-import            Preql.Untyped.Syntax                      (Query)
+
+import qualified Preql.Untyped.Syntax as Syntax
 
 import           Data.Int                            (Int64)
 import           Data.String
@@ -26,8 +27,9 @@ import qualified Database.PostgreSQL.Simple.Internal as PS
 import qualified Database.PostgreSQL.Simple.ToField  as PS
 import qualified Database.PostgreSQL.Simple.ToRow    as PS
 
+-- TODO less ambiguous name (or rename others)
 -- | An SQL query, annotated with the types of its parameters and results.
-data TypedQuery p r = TypedQuery String Query
+data Query p r = Query String Syntax.Query
     deriving Show
 
 buildActions :: PS.Connection -> PS.Query -> [PS.Action] -> IO (Vector Text)
@@ -38,8 +40,8 @@ buildActions conn q row =
       toText = decodeUtf8 . BSL.toStrict . BS.toLazyByteString
 
 -- | compare @query conn q p@
-query :: (PS.ToRow p, PS.FromRow r) => PS.Connection -> (TypedQuery p r, p) -> IO [r]
-query conn (TypedQuery raw parsed, p) = do
+query :: (PS.ToRow p, PS.FromRow r) => PS.Connection -> (Query p r, p) -> IO [r]
+query conn (Query raw parsed, p) = do
     let q = fromString raw :: PS.Query
     substitutions <- buildActions conn q (PS.toRow p)
     let formatted = formatAsByteString (inlineParams substitutions parsed)
@@ -47,14 +49,14 @@ query conn (TypedQuery raw parsed, p) = do
     finishQueryWith PS.fromRow conn q result
 
 -- | compare @query conn q p@
-query_ :: PS.FromRow r => PS.Connection -> TypedQuery p r -> IO [r]
-query_ conn (TypedQuery raw parsed) = do
+query_ :: PS.FromRow r => PS.Connection -> Query p r -> IO [r]
+query_ conn (Query raw parsed) = do
     let q = fromString raw :: PS.Query
     result <- PS.exec conn (formatAsByteString parsed)
     finishQueryWith PS.fromRow conn q result
 
-execute :: PS.ToRow p => PS.Connection -> (TypedQuery p (), p) -> IO Int64
-execute conn (TypedQuery raw parsed, p) = do
+execute :: PS.ToRow p => PS.Connection -> (Query p (), p) -> IO Int64
+execute conn (Query raw parsed, p) = do
     let
         row = PS.toRow p
         q = fromString raw :: PS.Query

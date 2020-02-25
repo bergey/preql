@@ -21,6 +21,7 @@ import qualified Data.Text                  as T
 data Literal = I !Int | F !Double | T !Text | B !Bool
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
+-- TODO less ambiguous name (or rename others)
 data Query = QI !Insert | QD !Delete | QU !Update | QS !Select
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 

@@ -5,10 +5,10 @@
 
 module Preql.TH where
 
-import Preql.TypedQuery
+import Preql.Untyped.Query
 import Preql.Untyped.Params
 import Preql.Untyped.Parser (parseQuery)
-import Preql.Untyped.Syntax as Syntax
+import qualified Preql.Untyped.Syntax as Syntax
 
 import Data.String (IsString (..))
 import Database.PostgreSQL.Simple (Only (..))
@@ -26,16 +26,16 @@ tupleType [v] = AppT (ConT ''Only) (VarT v)
 tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
     where n = length names
 
--- | Synthesize a TypedQuery tagged with tuples of the given size
-makeArityQuery :: String -> Query -> Word -> Int -> Q Exp
+-- | Synthesize a Query tagged with tuples of the given size
+makeArityQuery :: String -> Syntax.Query -> Word -> Int -> Q Exp
 makeArityQuery raw parsed p r =
-    [e|TypedQuery raw parsed :: TypedQuery params result |]
+    [e|Query raw parsed :: Query params result |]
     where
         params = tupleType <$> cNames 'p' (fromIntegral p)
         result = tupleType <$> cNames 'r' r
 
--- | Given a SQL query with ${} antiquotes, splice a pair @(TypedQuery
--- p r, p)@ or a function @\p' -> (TypedQuery p r, p)@ if the SQL
+-- | Given a SQL query with ${} antiquotes, splice a pair @(Query
+-- p r, p)@ or a function @\p' -> (Query p r, p)@ if the SQL
 -- string includes both antiquote and positional parameters.
 aritySql  :: QuasiQuoter
 aritySql  = expressionOnly "aritySql " $ \raw -> do
@@ -78,5 +78,5 @@ expressionOnly name qq = QuasiQuoter
     }
 
 countColumnsReturned :: Syntax.Query -> Int
-countColumnsReturned (QS (Select {columns})) = length columns
+countColumnsReturned (Syntax.QS (Syntax.Select {columns})) = length columns
 countColumnsReturned _                       = 0

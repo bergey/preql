@@ -5,16 +5,14 @@
 
 module Preql.QuasiQuoter.Raw.TH where
 
-import Preql.Untyped.Query
-import Preql.Untyped.Params
-import Preql.Untyped.Parser (parseQuery)
-import qualified Preql.Untyped.Syntax as Syntax
+import           Preql.QuasiQuoter.Raw.Lex (Token(..), unLex, parseQuery)
+import           Preql.Wire (Query(..))
 
-import Data.String (IsString (..))
-import Database.PostgreSQL.Simple (Only (..))
-import Language.Haskell.TH
-import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax (Lift (..))
+import           Data.String (IsString (..))
+import           Data.Word (Word)
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Quote
+import           Language.Haskell.TH.Syntax (Lift (..))
 
 import qualified Data.Text as T
 
@@ -22,53 +20,42 @@ import qualified Data.Text as T
 cNames :: Char -> Int -> Q [Name]
 cNames c n = traverse newName (replicate n (c : ""))
 
--- | A Type representing a tuple with the given Names as type variables.
-tupleType :: [Name] -> Type
-tupleType [v] = AppT (ConT ''Only) (VarT v)
-tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
-    where n = length names
-
--- | Synthesize a Query tagged with tuples of the given size
-makeArityQuery :: String -> Syntax.Query -> Word -> Int -> Q Exp
-makeArityQuery raw parsed p r =
-    [e|Query raw parsed :: Query params result |]
-    where
-        params = tupleType <$> cNames 'p' (fromIntegral p)
-        result = tupleType <$> cNames 'r' r
+-- | Convert a rewritten SQL string to a ByteString
+makeQuery :: String -> Q Exp
+makeQuery string = [e|(fromString string :: Query) |]
 
 -- | Given a SQL query with ${} antiquotes, splice a pair @(Query
 -- p r, p)@ or a function @\p' -> (Query p r, p)@ if the SQL
 -- string includes both antiquote and positional parameters.
-aritySql  :: QuasiQuoter
-aritySql  = expressionOnly "aritySql " $ \raw -> do
+sql  :: QuasiQuoter
+sql  = expressionOnly "aritySql " $ \raw -> do
     loc <- location
     let e_ast = parseQuery (show loc) raw
     case e_ast of
         Right parsed -> do
             let
                 positionalCount = maxParam parsed
-                (rewritten, aqs) = numberAntiquotes positionalCount parsed
-                antiNames = map (mkName . T.unpack) (haskellExpressions aqs)
-            typedQuery <- makeArityQuery raw rewritten
-                (paramCount aqs)
-                (countColumnsReturned rewritten)
+                (rewritten, haskellExpressions) = numberAntiquotes positionalCount parsed
+                -- mkName, because we intend to capture what's in scope
+                antiNames = map mkName haskellExpressions
+            query <- makeQuery rewritten
             case positionalCount of
                 0 -> -- only antiquotes (or no params)
-                    return $ TupE [typedQuery, tupleOrOnly antiNames]
+                    return $ TupE [query, tupleOrSingle antiNames]
                 1 -> do -- one positional param, doesn't take a tuple
                     patternName <- newName "c"
                     return $ LamE [VarP patternName]
-                        (TupE [typedQuery, tupleOrOnly (patternName : antiNames)])
+                        (TupE [query, tupleOrSingle (patternName : antiNames)])
                 _ -> do -- at least two positional parameters
                     patternNames <- cNames 'q' (fromIntegral positionalCount)
                     return $ LamE
                         [TupP (map VarP patternNames)]
-                        (TupE [typedQuery, tupleOrOnly (patternNames ++ antiNames)])
+                        (TupE [query, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
 
-tupleOrOnly :: [Name] -> Exp
-tupleOrOnly names = case names of
-    [name] -> AppE (ConE (mkName "Only")) (VarE name)
+tupleOrSingle :: [Name] -> Exp
+tupleOrSingle names = case names of
+    [name] -> VarE name
     vs -> TupE $ map VarE vs
 
 expressionOnly :: String -> (String -> Q Exp) -> QuasiQuoter
@@ -79,6 +66,22 @@ expressionOnly name qq = QuasiQuoter
     , quoteDec = \_ -> error $ "qq " ++ name ++ " cannot be used in declaration context"
     }
 
-countColumnsReturned :: Syntax.Query -> Int
-countColumnsReturned (Syntax.QS (Syntax.Select {columns})) = length columns
-countColumnsReturned _                       = 0
+maxParam :: [Token] -> Word
+maxParam = foldr nextParam 0 where
+  nextParam token maxParam =
+      case token of
+          NumberedParam i -> max i maxParam
+          _ -> maxParam
+
+numberAntiquotes :: Word -> [Token] -> (String, [String])
+numberAntiquotes mp ts = (concat sqlStrings, variableNames) where
+  (sqlStrings, variableNames) = go mp ts
+  go _maxParam [] = ([], [])
+  go maxParam (token : ts) =
+      case token of
+          HaskellParam name -> let
+              newParam = maxParam + 1
+              (ss, ns) = go newParam ts
+              in (unLex (NumberedParam newParam) : ss, name : ns)
+          EOF -> go maxParam ts
+          _ -> let (ss, ns) = go maxParam ts in (unLex token : ss, ns)

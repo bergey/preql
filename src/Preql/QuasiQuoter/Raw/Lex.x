@@ -1,10 +1,7 @@
 {
 module Preql.QuasiQuoter.Raw.Lex where
 
-import           Data.Text (Text)
 import           Prelude hiding (LT, GT, lex)
-
-import qualified Data.Text as T
 
 }
 
@@ -17,8 +14,8 @@ $sql = $printable # [\$]
 tokens :-
 
     "$" $digit+ { lex' (NumberedParam . read . tail) }
-    "${" $haskell+ "}" { lex' (HaskellParam . T.pack . init . drop 2) }
-    $sql+ { lex' (Sql . T.pack) }
+    "${" $haskell+ "}" { lex' (HaskellParam . init . drop 2) }
+    $sql+ { lex' Sql }
 
 
 {
@@ -28,8 +25,8 @@ data LocToken = LocToken
      , unLoc :: Token
      } deriving Show
 
-data Token = Sql Text
-     | NumberedParam Word | HaskellParam Text
+data Token = Sql String
+     | NumberedParam Word | HaskellParam String
      | EOF
      deriving (Show, Eq, Ord)
 
@@ -51,9 +48,9 @@ setFilePath = alexSetUserState . AlexUserState
 -- For nice parser error messages.
 unLex :: Token -> String
 unLex t = case t of
-    Sql s -> T.unpack s
+    Sql s -> s
     NumberedParam i -> '$' : show i
-    HaskellParam s -> "${" ++ T.unpack s ++ "}"
+    HaskellParam s -> "${" ++ s ++ "}"
     EOF -> "<EOF>"
 
 -- Unfortunately, we have to extract the matching bit of string ourselves...
@@ -99,10 +96,10 @@ lexAll = do
         EOF -> return [token]
         _ -> fmap (token :) lexAll
 
-testLex' :: String -> Either String [LocToken]
-testLex' s = runAlex s lexAll
+parseQuery' :: FilePath -> String -> Either String [LocToken]
+parseQuery' fp s = runAlex' lexAll fp s
 
-testLex :: String -> Either String [Token]
-testLex s = map unLoc <$> testLex' s
+parseQuery :: FilePath -> String -> Either String [Token]
+parseQuery fp s = map unLoc <$> parseQuery' fp s
 
 }

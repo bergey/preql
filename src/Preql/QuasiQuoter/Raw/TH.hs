@@ -3,7 +3,7 @@
 {-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE TemplateHaskell          #-}
 
-module Preql.TH where
+module Preql.QuasiQuoter.Raw.TH where
 
 import Preql.Untyped.Query
 import Preql.Untyped.Params

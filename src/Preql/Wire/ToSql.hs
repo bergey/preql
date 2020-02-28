@@ -65,10 +65,18 @@ instance ToSql () where
 
 instance (ToSqlField a, ToSqlField b) => ToSql (a, b) where
     toSql (a, b) = [runFieldEncoder toSqlField a, runFieldEncoder toSqlField b]
+
 instance (ToSqlField a, ToSqlField b, ToSqlField c) => ToSql (a, b, c) where
     toSql (a, b, c) =
         [runFieldEncoder toSqlField a, runFieldEncoder toSqlField b, runFieldEncoder toSqlField c]
+
 instance (ToSqlField a, ToSqlField b, ToSqlField c, ToSqlField d) => ToSql (a, b, c, d) where
     toSql (a, b, c, d) =
         [runFieldEncoder toSqlField a, runFieldEncoder toSqlField b, runFieldEncoder toSqlField c
         , runFieldEncoder toSqlField d]
+
+instance (ToSqlField a, ToSqlField b, ToSqlField c, ToSqlField d, ToSqlField e) =>
+    ToSql (a, b, c, d, e) where
+    toSql (a, b, c, d, e) =
+        [runFieldEncoder toSqlField a, runFieldEncoder toSqlField b, runFieldEncoder toSqlField c
+        , runFieldEncoder toSqlField d, runFieldEncoder toSqlField e]

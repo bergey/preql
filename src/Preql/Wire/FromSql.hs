@@ -117,5 +117,8 @@ instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
 instance (FromSql a, FromSql b, FromSql c, FromSql d) => FromSql (a, b, c, d) where
     fromSql = (,,,) <$> fromSql <*> fromSql <*> fromSql <*> fromSql
 
+instance (FromSql a, FromSql b, FromSql c, FromSql d, FromSql e) => FromSql (a, b, c, d, e) where
+    fromSql = (,,,,) <$> fromSql <*> fromSql <*> fromSql <*> fromSql <*> fromSql
+
 -- -- TODO more tuple instances
 -- -- TODO TH to make this less tedious

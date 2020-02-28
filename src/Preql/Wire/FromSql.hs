@@ -11,6 +11,7 @@
 module Preql.Wire.FromSql where
 
 import           Preql.Wire.Internal
+import           Preql.Wire.Types
 
 import           Control.Applicative.Free
 import           Control.Monad.Except
@@ -18,7 +19,7 @@ import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
 import           Data.Int
-import           Data.Time (Day, TimeOfDay, UTCTime, TimeZone)
+import           Data.Time (Day, TimeOfDay, UTCTime)
 import           Preql.Imports
 
 import qualified BinaryParser as BP
@@ -127,6 +128,10 @@ instance FromSqlField TL.Text where
     fromSqlField = FieldDecoder OID.textOid PGB.text_lazy
 instance FromSql TL.Text where fromSql = notNull fromSqlField
 
+-- | If you want to encode some more specific Haskell type via JSON,
+-- it is more efficient to use 'Data.Aeson.encode' and
+-- 'PostgreSQL.Binary.Encoding.jsonb_bytes' directly, rather than this
+-- instance.
 instance FromSqlField ByteString where
     fromSqlField = FieldDecoder OID.byteaOid (BS.copy <$> BP.remainders)
 instance FromSql ByteString where fromSql = notNull fromSqlField
@@ -148,12 +153,14 @@ instance FromSqlField TimeOfDay where
     fromSqlField = FieldDecoder OID.timeOid PGB.time_int
 instance FromSql TimeOfDay where fromSql = notNull fromSqlField
 
-data TimeTZ = TimeTZ !TimeOfDay !TimeZone
-
 instance FromSqlField TimeTZ where
     fromSqlField = FieldDecoder OID.timetzOid (uncurry TimeTZ <$> PGB.timetz_int)
 instance FromSql TimeTZ where fromSql = notNull fromSqlField
 
+-- | If you want to encode some more specific Haskell type via JSON,
+-- it is more efficient to use 'Data.Aeson.encode' and
+-- 'PostgreSQL.Binary.Encoding.jsonb_bytes' directly, rather than this
+-- instance.
 instance FromSqlField JSON.Value where
     fromSqlField = FieldDecoder OID.jsonbOid PGB.jsonb_ast
 instance FromSql JSON.Value where fromSql = notNull fromSqlField

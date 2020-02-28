@@ -20,6 +20,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
 import           Data.Int
 import           Data.Time (Day, TimeOfDay, UTCTime)
+import           Data.UUID (UUID)
 import           Preql.Imports
 
 import qualified BinaryParser as BP
@@ -156,6 +157,10 @@ instance FromSql TimeOfDay where fromSql = notNull fromSqlField
 instance FromSqlField TimeTZ where
     fromSqlField = FieldDecoder OID.timetzOid (uncurry TimeTZ <$> PGB.timetz_int)
 instance FromSql TimeTZ where fromSql = notNull fromSqlField
+
+instance FromSqlField UUID where
+    fromSqlField = FieldDecoder OID.uuidOid PGB.uuid
+instance FromSql UUID where fromSql = notNull fromSqlField
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'Data.Aeson.encode' and

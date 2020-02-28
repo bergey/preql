@@ -44,6 +44,7 @@ dependencies:
     - th-lift-instances
     - time
     - transformers
+    - uuid
     - vector
 
 default-extensions:

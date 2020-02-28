@@ -10,6 +10,7 @@ import           Data.Functor.Contravariant
 import           Data.Functor.Contravariant.Divisible
 import           Data.Int
 import           Data.Time (Day, TimeOfDay, UTCTime, TimeZone)
+import           Data.UUID (UUID)
 
 import qualified ByteString.StrictBuilder as B
 import qualified Data.Aeson as JSON
@@ -107,6 +108,10 @@ instance ToSql TimeOfDay where toSql = oneField toSqlField
 instance ToSqlField TimeTZ where
     toSqlField = FieldEncoder OID.timetzOid (\(TimeTZ tod tz) -> PGB.timetz_int (tod, tz))
 instance ToSql TimeTZ where toSql = oneField toSqlField
+
+instance ToSqlField UUID where
+    toSqlField = FieldEncoder OID.uuidOid PGB.uuid
+instance ToSql UUID where toSql = oneField toSqlField
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'Data.Aeson.encode' and

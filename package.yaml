@@ -9,17 +9,18 @@ maintainer: bergey@teallabs.org
 library:
   source-dirs: [src]
 
-tests:
-  tests:
-    source-dirs: test
-    main: Test.hs
-    dependencies:
-      - generic-random
-      - QuickCheck
-      - tasty
-      - tasty-hunit
-      - tasty-quickcheck
-      - preql
+# Broken, used to test code pre 2019-11
+# tests:
+#   tests:
+#     source-dirs: test
+#     main: Test.hs
+#     dependencies:
+#       - generic-random
+#       - QuickCheck
+#       - tasty
+#       - tasty-hunit
+#       - tasty-quickcheck
+#       - preql
 
 build-tools:
   - alex

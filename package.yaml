@@ -1,7 +1,9 @@
 spec-version: 0.30.0
 name: preql
 version: 0.1
-synopsis: experiments with SQL
+synopsis: PostgreSQL library focused on Quasiquoters
+description: exploring type-safe SQL queries using standard Postgres syntax
+category: Database, PostgreSQL
 github: bergey/preql
 author: Daniel Bergey
 maintainer: bergey@teallabs.org

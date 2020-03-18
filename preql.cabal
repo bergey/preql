@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ffd049320f7743e4c9efb36a63be976f051bbcf9b88072cdbde72d569ee3f485
+-- hash: eb2c70e64c3c9f511daaab1904706ef200b3aef632ff80d2aa69f95e044174f5
 
 name:           preql
 version:        0.1
@@ -27,6 +27,7 @@ library
   exposed-modules:
       Preql
       Preql.Effect
+      Preql.Effect.Internal
       Preql.Imports
       Preql.QuasiQuoter.Raw.Lex
       Preql.QuasiQuoter.Raw.TH

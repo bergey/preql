@@ -1,0 +1,69 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: ffd049320f7743e4c9efb36a63be976f051bbcf9b88072cdbde72d569ee3f485
+
+name:           preql
+version:        0.1
+synopsis:       PostgreSQL library focused on Quasiquoters
+description:    exploring type-safe SQL queries using standard Postgres syntax
+category:       Database, PostgreSQL
+homepage:       https://github.com/bergey/preql#readme
+bug-reports:    https://github.com/bergey/preql/issues
+author:         Daniel Bergey
+maintainer:     bergey@teallabs.org
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/bergey/preql
+
+library
+  exposed-modules:
+      Preql
+      Preql.Effect
+      Preql.Imports
+      Preql.QuasiQuoter.Raw.Lex
+      Preql.QuasiQuoter.Raw.TH
+      Preql.Wire
+      Preql.Wire.Connection
+      Preql.Wire.FromSql
+      Preql.Wire.Internal
+      Preql.Wire.Query
+      Preql.Wire.ToSql
+      Preql.Wire.Types
+  other-modules:
+      Paths_preql
+  hs-source-dirs:
+      src
+  default-extensions: OverloadedStrings
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      aeson
+    , array
+    , base
+    , binary-parser
+    , bytestring
+    , bytestring-strict-builder
+    , contravariant
+    , free
+    , mtl
+    , postgresql-binary
+    , postgresql-libpq
+    , postgresql-simple
+    , syb
+    , template-haskell
+    , text
+    , th-lift-instances
+    , time
+    , transformers
+    , uuid
+    , vector
+  default-language: Haskell2010

@@ -7,3 +7,4 @@
 /src/Syntax/Parser.info
 /.stack-work/
 TAGS
+/cabal.project.local

@@ -11,18 +11,18 @@ maintainer: bergey@teallabs.org
 library:
   source-dirs: [src]
 
-# Broken, used to test code pre 2019-11
-# tests:
-#   tests:
-#     source-dirs: test
-#     main: Test.hs
-#     dependencies:
-#       - generic-random
-#       - QuickCheck
-#       - tasty
-#       - tasty-hunit
-#       - tasty-quickcheck
-#       - preql
+tests:
+  tests:
+    source-dirs: test
+    main: Test.hs
+    dependencies:
+      - preql
+      - bytestring
+      - postgresql-libpq
+      - tasty
+      - tasty-hunit
+      - text
+      - vector
 
 build-tools:
   - alex

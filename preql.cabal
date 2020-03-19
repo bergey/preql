@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: eb2c70e64c3c9f511daaab1904706ef200b3aef632ff80d2aa69f95e044174f5
+-- hash: e807af526315a07533b644cd02b9de43882b40342351abe8a398b7204ca89fbc
 
 name:           preql
 version:        0.1
@@ -60,6 +60,44 @@ library
     , postgresql-libpq
     , postgresql-simple
     , syb
+    , template-haskell
+    , text
+    , th-lift-instances
+    , time
+    , transformers
+    , uuid
+    , vector
+  default-language: Haskell2010
+
+test-suite tests
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  other-modules:
+      Test.Wire
+      Paths_preql
+  hs-source-dirs:
+      test
+  default-extensions: OverloadedStrings
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      aeson
+    , array
+    , base
+    , binary-parser
+    , bytestring
+    , bytestring-strict-builder
+    , contravariant
+    , free
+    , mtl
+    , postgresql-binary
+    , postgresql-libpq
+    , postgresql-simple
+    , preql
+    , syb
+    , tasty
+    , tasty-hunit
     , template-haskell
     , text
     , th-lift-instances

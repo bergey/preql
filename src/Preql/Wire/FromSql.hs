@@ -113,9 +113,10 @@ instance FromSqlField Double where
     fromSqlField = FieldDecoder OID.float8Oid PGB.float8
 instance FromSql Double where fromSql = notNull fromSqlField
 
-instance FromSqlField Char where
-    fromSqlField = FieldDecoder OID.charOid PGB.char
-instance FromSql Char where fromSql = notNull fromSqlField
+-- TODO does Postgres have a single-char type?  Does it always return bpchar?
+-- instance FromSqlField Char where
+--     fromSqlField = FieldDecoder OID.charOid PGB.char
+-- instance FromSql Char where fromSql = notNull fromSqlField
 
 instance FromSqlField String where
     fromSqlField = FieldDecoder OID.textOid (T.unpack <$> PGB.text_strict)

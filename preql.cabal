@@ -43,7 +43,7 @@ library
       Paths_preql
   hs-source-dirs:
       src
-  default-extensions: OverloadedStrings
+  default-extensions: OverloadedStrings BlockArguments
   build-tools:
       alex
     , happy
@@ -77,7 +77,7 @@ test-suite tests
       Paths_preql
   hs-source-dirs:
       test
-  default-extensions: OverloadedStrings
+  default-extensions: OverloadedStrings BlockArguments
   build-tools:
       alex
     , happy

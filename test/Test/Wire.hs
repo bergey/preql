@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -8,10 +9,12 @@ import Preql.Effect
 import Preql.QuasiQuoter.Raw.TH (sql)
 import Preql.Wire
 
-import Control.Exception (throwIO)
+import Control.Exception (Exception, throwIO)
+import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Either
 import Data.Int
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Time (Day, TimeOfDay, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
@@ -27,16 +30,8 @@ import qualified Data.UUID as UUID
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Preql.Wire.Query as W
 
-connectionString :: IO ByteString
-connectionString = do
-    m_dbname <- lookupEnv "PREQL_TESTS_DB"
-    let dbname = case m_dbname of
-            Just s -> encodeUtf8 (T.pack s)
-            Nothing -> "preql_tests"
-    return $ "host=localhost user=postgres dbname=" <> dbname
-
 wire :: TestTree
-wire = withResource (PQ.connectdb =<< connectionString) PQ.finish $ \db -> testGroup "wire" $
+wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
     let
         query :: (ToSql p, FromSql r) => Query -> p -> IO (Either W.QueryError (Vector r))
         query q p = db >>= \conn -> W.query conn q p
@@ -87,8 +82,6 @@ wire = withResource (PQ.connectdb =<< connectionString) PQ.finish $ \db -> testG
           ]
         , testGroup "encoders"
             [ testCase "encode True" $ do
-                query_ "CREATE TABLE IF NOT EXISTS encoder_tests (b boolean, i16 int2, i32 int4, i64 int8, f float4, d float8, t text)" ()
-                query_ "truncate encoder_tests" ()
                 query_ "INSERT INTO encoder_tests (b) VALUES (true)" ()
                 assertQuery [True] "SELECT b FROM encoder_tests WHERE b is not null"
             , testCase "encode Int64" $ do
@@ -126,3 +119,38 @@ wire = withResource (PQ.connectdb =<< connectionString) PQ.finish $ \db -> testG
                 assertEqual "" (Right [6]) =<< query @(Int32, Int32, Int32) @Int32 "SELECT $1 + $2 + $3" (1, 2, 3)
             ]
         ]
+
+initDB :: HasCallStack => IO PQ.Connection
+initDB = do
+    conn <- PQ.connectdb =<< connectionString
+    status <- PQ.status conn
+    unless (status == PQ.ConnectionOk) (throwIO =<< badConnection conn)
+    void $ W.query_ conn "CREATE TABLE IF NOT EXISTS encoder_tests (b boolean, i16 int2, i32 int4, i64 int8, f float4, d float8, t text)" ()
+    void $ W.query_ conn "truncate encoder_tests" ()
+    return conn
+
+connectionString :: IO ByteString
+connectionString = do
+    m_dbname <- lookupEnv "PREQL_TESTS_DB"
+    let dbname = case m_dbname of
+            Just s -> encodeUtf8 (T.pack s)
+            Nothing -> "preql_tests"
+    return $ "host=localhost user=postgres dbname=" <> dbname
+
+data BadConnection = BadConnection
+    { status :: PQ.ConnStatus
+    , errorMessage :: ByteString
+    , host :: ByteString
+    , port :: ByteString
+    , user :: ByteString
+    } deriving (Show)
+instance Exception BadConnection
+
+badConnection :: PQ.Connection -> IO BadConnection
+badConnection c = do
+    status <- PQ.status c
+    errorMessage <- fromMaybe "" <$> PQ.errorMessage c
+    host <- fromMaybe "" <$> PQ.host c
+    port <- fromMaybe "" <$> PQ.port c
+    user <- fromMaybe "" <$> PQ.user c
+    return BadConnection {..}

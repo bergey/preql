@@ -24,7 +24,6 @@ jobs:
       postgres:
         image: postgres:12.2
         ports: [ "5432/tcp" ]
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 3m
 
     steps:
     - uses: actions/checkout@v2

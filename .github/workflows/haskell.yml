@@ -20,6 +20,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    services:
+      postgres:
+        image: postgres:12.2
+        ports: [ "5432:5432" ]
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
     steps:
     - uses: actions/checkout@v2
     # - uses: actions/setup-haskell@v1
@@ -36,6 +42,7 @@ jobs:
         stack --no-terminal $ARGS test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
       env:
         ARGS: ${{ matrix.plan.resolver }}
-    # disabled until I sort out postgres
-    # - name: Run tests
-    #   run: cabal test
+    - name: Run tests
+        run: stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
+      env:
+        PREQL_TEST_DB: postgres

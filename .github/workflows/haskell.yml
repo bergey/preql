@@ -23,7 +23,7 @@ jobs:
     services:
       postgres:
         image: postgres:12.2
-        ports: [ "5432:5432" ]
+        ports: [ "5432/tcp" ]
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 3m
 
     steps:
@@ -46,3 +46,4 @@ jobs:
         run: stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       env:
         PREQL_TEST_DB: postgres
+        PGPORT: ${{ job.services.postgres.ports[5432] }}

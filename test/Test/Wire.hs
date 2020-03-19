@@ -15,20 +15,28 @@ import Data.Int
 import Data.Text (Text)
 import Data.Time (Day, TimeOfDay, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
+import Data.Text.Encoding (encodeUtf8)
 import Data.Vector (Vector)
+import System.Environment (lookupEnv)
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.UUID as UUID
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Preql.Wire.Query as W
 
-connectionString :: ByteString
-connectionString = "host=localhost user=postgres dbname=preql_tests"
+connectionString :: IO ByteString
+connectionString = do
+    m_dbname <- lookupEnv "PREQL_TESTS_DB"
+    let dbname = case m_dbname of
+            Just s -> encodeUtf8 (T.pack s)
+            Nothing -> "preql_tests"
+    return $ "host=localhost user=postgres dbname=" <> dbname
 
 wire :: TestTree
-wire = withResource (PQ.connectdb connectionString) PQ.finish $ \db -> testGroup "wire" $
+wire = withResource (PQ.connectdb =<< connectionString) PQ.finish $ \db -> testGroup "wire" $
     let
         query :: (ToSql p, FromSql r) => Query -> p -> IO (Either W.QueryError (Vector r))
         query q p = db >>= \conn -> W.query conn q p

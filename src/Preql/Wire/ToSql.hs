@@ -114,12 +114,14 @@ instance ToSqlField UUID where
 instance ToSql UUID where toSql = oneField toSqlField
 
 -- | If you want to encode some more specific Haskell type via JSON,
--- it is more efficient to use 'Data.Aeson.encode' and
--- 'PostgreSQL.Binary.Encoding.jsonb_bytes' directly, rather than this
+-- it is more efficient to use 'toSqlJsonField' rather than this
 -- instance.
 instance ToSqlField JSON.Value where
     toSqlField = FieldEncoder OID.jsonbOid PGB.jsonb_ast
 instance ToSql JSON.Value where toSql = oneField toSqlField
+
+toSqlJsonField :: JSON.ToJSON a => FieldEncoder a
+toSqlJsonField = FieldEncoder OID.jsonbOid (PGB.jsonb_bytes . BSL.toStrict . JSON.encode)
 
 instance ToSql () where
     toSql () = []

@@ -164,12 +164,15 @@ instance FromSqlField UUID where
 instance FromSql UUID where fromSql = notNull fromSqlField
 
 -- | If you want to encode some more specific Haskell type via JSON,
--- it is more efficient to use 'Data.Aeson.encode' and
--- 'PostgreSQL.Binary.Encoding.jsonb_bytes' directly, rather than this
+-- it is more efficient to use 'fromSqlJsonField' rather than this
 -- instance.
 instance FromSqlField JSON.Value where
     fromSqlField = FieldDecoder OID.jsonbOid PGB.jsonb_ast
 instance FromSql JSON.Value where fromSql = notNull fromSqlField
+
+fromSqlJsonField :: JSON.FromJSON a => FieldDecoder a
+fromSqlJsonField = FieldDecoder OID.jsonbOid
+    (PGB.jsonb_bytes (first T.pack . JSON.eitherDecode . BSL.fromStrict))
 
 -- Overlappable so applications can write Maybe for multi-field domain types
 instance {-# OVERLAPPABLE #-} FromSqlField a => FromSql (Maybe a) where

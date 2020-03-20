@@ -41,7 +41,6 @@ dependencies:
     - mtl
     - postgresql-binary
     - postgresql-libpq
-    - postgresql-simple
     - syb
     - template-haskell
     - text

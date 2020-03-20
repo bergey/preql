@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d53ee1239da684fb0dba47ac443669d9a31c339ea8b63d6d927c69a133ff492e
+-- hash: 1aea2c803f494b57ba26d1fa70cc98cd515470030c48aee169e8957477fea79e
 
 name:           preql
 version:        0.1
@@ -32,7 +32,6 @@ library
       Preql.QuasiQuoter.Raw.Lex
       Preql.QuasiQuoter.Raw.TH
       Preql.Wire
-      Preql.Wire.Connection
       Preql.Wire.FromSql
       Preql.Wire.Internal
       Preql.Wire.Query
@@ -60,7 +59,6 @@ library
     , mtl
     , postgresql-binary
     , postgresql-libpq
-    , postgresql-simple
     , syb
     , template-haskell
     , text
@@ -95,7 +93,6 @@ test-suite tests
     , mtl
     , postgresql-binary
     , postgresql-libpq
-    , postgresql-simple
     , preql
     , syb
     , tasty

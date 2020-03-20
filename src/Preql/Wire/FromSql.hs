@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -10,18 +9,15 @@
 
 module Preql.Wire.FromSql where
 
-import           Preql.Wire.Internal
-import           Preql.Wire.Types
+import Preql.Wire.Internal
+import Preql.Wire.Types
 
-import           Control.Applicative.Free
-import           Control.Monad.Except
-import           Control.Monad.Trans.Class
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.State
-import           Data.Int
-import           Data.Time (Day, TimeOfDay, UTCTime)
-import           Data.UUID (UUID)
-import           Preql.Imports
+import Control.Monad.Except
+import Control.Monad.Trans.State
+import Data.Int
+import Data.Time (Day, TimeOfDay, UTCTime)
+import Data.UUID (UUID)
+import Preql.Imports
 
 import qualified BinaryParser as BP
 import qualified Data.Aeson as JSON
@@ -31,8 +27,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Vector as V
 import qualified Database.PostgreSQL.LibPQ as PQ
-import qualified Preql.Wire.TypeInfo.Static as OID
 import qualified PostgreSQL.Binary.Decoding as PGB
+import qualified Preql.Wire.TypeInfo.Static as OID
 
 data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)
     deriving Functor

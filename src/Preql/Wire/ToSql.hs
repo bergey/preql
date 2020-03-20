@@ -3,24 +3,22 @@
 
 module Preql.Wire.ToSql where
 
-import           Preql.Imports
-import           Preql.Wire.Types
+import Preql.Imports
+import Preql.Wire.Types
 
-import           Data.Functor.Contravariant
-import           Data.Functor.Contravariant.Divisible
-import           Data.Int
-import           Data.Time (Day, TimeOfDay, UTCTime, TimeZone)
-import           Data.UUID (UUID)
+import Data.Functor.Contravariant
+import Data.Int
+import Data.Time (Day, TimeOfDay, UTCTime)
+import Data.UUID (UUID)
 
 import qualified ByteString.StrictBuilder as B
 import qualified Data.Aeson as JSON
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Database.PostgreSQL.LibPQ as PQ
-import qualified Preql.Wire.TypeInfo.Static as OID
 import qualified PostgreSQL.Binary.Encoding as PGB
+import qualified Preql.Wire.TypeInfo.Static as OID
 
 data FieldEncoder a = FieldEncoder PQ.Oid (a -> B.Builder)
 

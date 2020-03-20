@@ -1,14 +1,15 @@
 module Preql.Wire.Query where
 
-import            Preql.Wire.FromSql
-import            Preql.Wire.Internal
-import            Preql.Wire.ToSql
+import Preql.Wire.FromSql
+import Preql.Wire.Internal
+import Preql.Wire.ToSql
 
-import           Control.Concurrent.MVar
-import           Control.Monad
-import           Control.Monad.Trans.Except
-import            Preql.Imports
+import Control.Concurrent.MVar
+import Control.Monad
+import Control.Monad.Trans.Except
+import Preql.Imports
 
+import qualified Data.Text as T
 import qualified Database.PostgreSQL.LibPQ as PQ
 
 queryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
@@ -28,8 +29,9 @@ execParams enc conn query params = do
     result <- queryError conn =<< liftIO (PQ.execParams conn query (runEncoder enc params) PQ.Binary)
     status <- liftIO (PQ.resultStatus result)
     unless (status == PQ.CommandOk || status == PQ.TuplesOk) $ do
-        msg <- liftIO (PQ.resStatus status)
-        throwE (QueryError (decodeUtf8With lenientDecode msg))
+        msg <- liftIO (PQ.resultErrorMessage result)
+            <&> maybe (T.pack (show status)) (decodeUtf8With lenientDecode)
+        throwE (QueryError msg)
     return result
 
 query :: (ToSql p, FromSql r) => PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))

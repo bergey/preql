@@ -14,7 +14,7 @@ import Control.Monad.IO.Class as X (liftIO, MonadIO)
 import Data.Bifunctor as X
 import Data.ByteString (ByteString)
 import Data.Functor as X
-import Data.Maybe as X (catMaybes)
+import Data.Maybe as X (catMaybes, fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)

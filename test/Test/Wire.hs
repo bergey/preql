@@ -13,11 +13,14 @@ import Data.ByteString (ByteString)
 import Data.Either
 import Data.Int
 import Data.Text (Text)
+import Data.Time (Day, TimeOfDay, UTCTime)
+import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.Vector (Vector)
 import Test.Tasty
 import Test.Tasty.HUnit
 
 import qualified Data.Text.Lazy as TL
+import qualified Data.UUID as UUID
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Preql.Wire.Query as W
 
@@ -54,7 +57,23 @@ wire = withResource (PQ.connectdb connectionString) PQ.finish $ \db -> testGroup
               assertEqual "" (Right ["foo" :: Text]) =<< query "SELECT 'foo'::text" ()
           , testCase "decode lazy Text literal" $
               assertEqual "" (Right ["foo" :: TL.Text]) =<< query "SELECT 'foo'::text" ()
-          -- TODO more field decoder tests
+          , testCase "decode byte array literal" $
+              assertEqual "" (Right ["foo" :: ByteString]) =<< query "SELECT 'foo'::bytea" ()
+          , testCase "decode UTCTime literal" $ do
+                  time <- iso8601ParseM "2020-03-19T21:43:00Z"
+                  assertEqual "" (Right [time :: UTCTime]) =<< query "SELECT '2020-03-19T21:43:00Z'::timestamptz" ()
+          , testCase "decode Day literal" $ do
+                  time <- iso8601ParseM "2020-03-19"
+                  assertEqual "" (Right [time :: Day]) =<< query "SELECT '2020-03-19'::date" ()
+          , testCase "decode time literal" $ do
+                  time <- iso8601ParseM "21:43:00"
+                  assertEqual "" (Right [time :: TimeOfDay]) =<< query "SELECT '21:43:00Z'::time" ()
+          , testCase "decode TimeTZ literal" $ do
+                  time <- iso8601ParseM "21:43:00"
+                  zone <- iso8601ParseM "+05:00"
+                  assertEqual "" (Right [TimeTZ time zone]) =<< query "SELECT '21:43:00+05:00'::timetz" ()
+          , testCase "decode UUID literal" $
+              assertEqual "" (Right [UUID.fromWords 0x01234567 0x89abcdef 0x01234567 0x89abcdef]) =<< query "SELECT '01234567-89ab-cdef-0123-456789abcdef'::uuid" ()
           ]
         , testGroup "encoders"
             [ testCase "encode True" $ do
@@ -97,16 +116,3 @@ wire = withResource (PQ.connectdb connectionString) PQ.finish $ \db -> testGroup
                 assertEqual "" (Right [6]) =<< query @(Int32, Int32, Int32) @Int32 "SELECT $1 + $2 + $3" (1, 2, 3)
             ]
         ]
-
---     [ testCase "SELECT integer literal, raw PQ" $ do
---         conn <- connect database
---         connRaw <- takeMVar (connectionHandle conn)
---         Just result <- PQ.exec connRaw "SELECT 2;"
---         assertEqual "ntuples" (PQ.Row 1) =<< PQ.ntuples result
---         assertEqual "nfields" (PQ.Col 1) =<< PQ.nfields result
---         assertEqual "oid" (PQ.Oid 23) =<< PQ.ftype result (PQ.Col 0) -- int4
---         assertEqual "value" (Just "2") =<< PQ.getvalue result (PQ.Row 0) (PQ.Col 0)
---     , testCase "query" $ do
---         conn <- connect database
---         assertEqual "" (Right [2]) =<< query @() @Int32 conn  "SELECT 2" ()
---     ]

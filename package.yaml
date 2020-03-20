@@ -22,6 +22,7 @@ tests:
       - tasty
       - tasty-hunit
       - text
+      - uuid
       - vector
 
 build-tools:

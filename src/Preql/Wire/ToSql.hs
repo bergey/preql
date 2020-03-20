@@ -19,7 +19,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Database.PostgreSQL.LibPQ as PQ
-import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID
+import qualified Preql.Wire.TypeInfo.Static as OID
 import qualified PostgreSQL.Binary.Encoding as PGB
 
 data FieldEncoder a = FieldEncoder PQ.Oid (a -> B.Builder)

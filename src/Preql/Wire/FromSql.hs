@@ -31,7 +31,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Vector as V
 import qualified Database.PostgreSQL.LibPQ as PQ
-import qualified Database.PostgreSQL.Simple.TypeInfo.Static as OID
+import qualified Preql.Wire.TypeInfo.Static as OID
 import qualified PostgreSQL.Binary.Decoding as PGB
 
 data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)

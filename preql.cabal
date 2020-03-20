@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e807af526315a07533b644cd02b9de43882b40342351abe8a398b7204ca89fbc
+-- hash: d53ee1239da684fb0dba47ac443669d9a31c339ea8b63d6d927c69a133ff492e
 
 name:           preql
 version:        0.1
@@ -37,6 +37,8 @@ library
       Preql.Wire.Internal
       Preql.Wire.Query
       Preql.Wire.ToSql
+      Preql.Wire.TypeInfo.Static
+      Preql.Wire.TypeInfo.Types
       Preql.Wire.Types
   other-modules:
       Paths_preql

@@ -10,23 +10,32 @@ on:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        plan:
+          - { build: stack, resolver: "" }
+          - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6
+          - { build: stack, resolver: "--resolver lts-12" } # GHC 8.4
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-haskell@v1
-      with:
-        ghc-version: '8.8.3'
-        cabal-version: '3.0'
+    # - uses: actions/setup-haskell@v1
+      # with:
+      #   ghc-version: '8.8.3'
+      #   cabal-version: '3.0'
     - name: Install dependencies
       run: |
-        cabal update
-        cabal build --only-dependencies --enable-tests
+        stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
+      env:
+        ARGS: ${{ matrix.plan.resolver }}
     - name: Build
       run: |
-        cabal configure --enable-tests
-        cabal build
+        stack --no-terminal $ARGS test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
+      env:
+        ARGS: ${{ matrix.plan.resolver }}
     # disabled until I sort out postgres
     # - name: Run tests
     #   run: cabal test

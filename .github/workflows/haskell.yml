@@ -30,12 +30,12 @@ jobs:
       run: |
         stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
       env:
-        ARGS: ${{ matrix.plan.resolver }}    - name: Build
+        ARGS: ${{ matrix.plan.resolver }}
     - name: Build
       run: |
         stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       env:
-        ARGS: ${{ matrix.plan.resolver }}    - name: Build
+        ARGS: ${{ matrix.plan.resolver }}
     # disabled until I sort out postgres
     # - name: Run tests
     #   run: cabal test

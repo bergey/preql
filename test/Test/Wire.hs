@@ -191,7 +191,7 @@ connectionString = do
     let dbname = case m_dbname of
             Just s -> encodeUtf8 (T.pack s)
             Nothing -> "preql_tests"
-    return $ "host=localhost user=postgres dbname=" <> dbname
+    return $ "dbname=" <> dbname
 
 data BadConnection = BadConnection
     { status :: PQ.ConnStatus

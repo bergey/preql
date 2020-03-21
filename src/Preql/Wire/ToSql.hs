@@ -42,6 +42,10 @@ class ToSqlField a where
 class ToSql a where
     toSql :: RowEncoder a
 
+instance ToSqlField Bool where
+    toSqlField = FieldEncoder OID.boolOid PGB.bool
+instance ToSql Bool where toSql = oneField toSqlField
+
 instance ToSqlField Int16 where
     toSqlField = FieldEncoder OID.int2Oid PGB.int2_int16
 instance ToSql Int16 where toSql = oneField toSqlField

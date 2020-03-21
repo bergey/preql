@@ -104,6 +104,18 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
                 let v = 12345.678 :: Double
                 query_ "INSERT INTO encoder_tests (d) VALUES ($1)" v
                 assertQuery [v] "SELECT d FROM encoder_tests WHERE d is not null"
+            , testCase "encode strict Text" $ do
+                let v = "foo" :: Text
+                query_ "INSERT INTO encoder_tests (t) VALUES ($1)" v
+                assertQuery [v] "SELECT t FROM encoder_tests WHERE t is not null"
+            , testCase "encode lazy Text" $ do
+                let v = "foo" :: TL.Text
+                query_ "INSERT INTO encoder_tests (t) VALUES ($1)" v
+                assertQuery [v] "SELECT t FROM encoder_tests WHERE t is not null"
+            , testCase "encode String" $ do
+                let v = "foo" :: String
+                query_ "INSERT INTO encoder_tests (t) VALUES ($1)" v
+                assertQuery [v] "SELECT t FROM encoder_tests WHERE t is not null"
             ]
         , testGroup "parameters & expressions"
             [ testCase "schema type mismatch causes runtime error" $

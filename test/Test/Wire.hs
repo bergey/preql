@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -118,6 +119,26 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
                 let v = "foo" :: String
                 query_ "INSERT INTO encoder_tests (t) VALUES ($1)" v
                 assertQuery [v] "SELECT t FROM encoder_tests WHERE t is not null"
+            , inTransaction "encode UTCTime" $ do
+                v :: UTCTime <- iso8601ParseM "2020-03-19T21:43:00Z"
+                query_ "INSERT INTO encoder_tests (ts) VALUES ($1)" v
+                assertQuery [v] "SELECT ts FROM encoder_tests WHERE ts is not null"
+            , inTransaction "encode Day" $ do
+                v :: Day <- iso8601ParseM "2020-03-19"
+                query_ "INSERT INTO encoder_tests (day) VALUES ($1)" v
+                assertQuery [v] "SELECT day FROM encoder_tests WHERE day is not null"
+            , inTransaction "encode TimeOfDay" $ do
+                v :: TimeOfDay <- iso8601ParseM "21:43:00"
+                query_ "INSERT INTO encoder_tests (time) VALUES ($1)" v
+                assertQuery [v] "SELECT time FROM encoder_tests WHERE time is not null"
+            , inTransaction "encode TimeTZ" $ do
+                v <- TimeTZ <$> iso8601ParseM "21:43:00" <*> iso8601ParseM "+05:00"
+                query_ "INSERT INTO encoder_tests (ttz) VALUES ($1)" v
+                assertQuery [v] "SELECT ttz FROM encoder_tests WHERE ttz is not null"
+          , inTransaction "encode UUID" $ do
+                let v = UUID.fromWords 0x01234567 0x89abcdef 0x01234567 0x89abcdef
+                query_ "INSERT INTO encoder_tests (u) VALUES ($1)" v
+                assertQuery [v] "SELECT u FROM encoder_tests WHERE u is not null"
             ]
         , testGroup "parameters & expressions"
             [ inTransaction "schema type mismatch causes runtime error" $

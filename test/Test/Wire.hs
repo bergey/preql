@@ -82,23 +82,28 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
           ]
         , testGroup "encoders"
             [ testCase "encode True" $ do
-                query_ "INSERT INTO encoder_tests (b) VALUES (true)" ()
+                query_ "INSERT INTO encoder_tests (b) VALUES ($1)" True
                 assertQuery [True] "SELECT b FROM encoder_tests WHERE b is not null"
             , testCase "encode Int64" $ do
-                query_ "INSERT INTO encoder_tests (i64) VALUES (12345)" ()
-                assertQuery [12345 :: Int64] "SELECT i64 FROM encoder_tests WHERE i64 is not null"
+                let v = 12345 :: Int64
+                query_ "INSERT INTO encoder_tests (i64) VALUES ($1)" v
+                assertQuery [v] "SELECT i64 FROM encoder_tests WHERE i64 is not null"
             , testCase "encode Int32" $ do
-                query_ "INSERT INTO encoder_tests (i32) VALUES (12345)" ()
-                assertQuery [12345 :: Int32] "SELECT i32 FROM encoder_tests WHERE i32 is not null"
+                let v = 12345 :: Int32
+                query_ "INSERT INTO encoder_tests (i32) VALUES ($1)" v
+                assertQuery [v] "SELECT i32 FROM encoder_tests WHERE i32 is not null"
             , testCase "encode Int16" $ do
-                query_ "INSERT INTO encoder_tests (i16) VALUES (12345)" ()
-                assertQuery [12345 :: Int16] "SELECT i16 FROM encoder_tests WHERE i16 is not null"
+                let v = 12345 :: Int16
+                query_ "INSERT INTO encoder_tests (i16) VALUES ($1)" v
+                assertQuery [v] "SELECT i16 FROM encoder_tests WHERE i16 is not null"
             , testCase "encode Float" $ do
-                query_ "INSERT INTO encoder_tests (f) VALUES (12345.678)" ()
-                assertQuery [12345.678 :: Float] "SELECT f FROM encoder_tests WHERE f is not null"
+                let v = 12345.678 :: Float
+                query_ "INSERT INTO encoder_tests (f) VALUES ($1)" v
+                assertQuery [v] "SELECT f FROM encoder_tests WHERE f is not null"
             , testCase "encode Double" $ do
-                query_ "INSERT INTO encoder_tests (d) VALUES (12345.678)" ()
-                assertQuery [12345.678 :: Double] "SELECT d FROM encoder_tests WHERE d is not null"
+                let v = 12345.678 :: Double
+                query_ "INSERT INTO encoder_tests (d) VALUES ($1)" v
+                assertQuery [v] "SELECT d FROM encoder_tests WHERE d is not null"
             ]
         , testGroup "parameters & expressions"
             [ testCase "schema type mismatch causes runtime error" $

@@ -16,7 +16,7 @@ jobs:
         plan:
           - { build: stack, resolver: "" }
           - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6
-          - { build: stack, resolver: "--resolver lts-2" } # GHC 8.4
+          - { build: stack, resolver: "--resolver lts-12" } # GHC 8.4
 
     runs-on: ${{ matrix.os }}
 

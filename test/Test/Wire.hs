@@ -158,6 +158,10 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
             , inTransaction "add 3 Int32 parameters" $
                 assertEqual "" (Right [6]) =<< query @(Int32, Int32, Int32) @Int32 "SELECT $1 + $2 + $3" (1, 2, 3)
             ]
+        , testGroup "TH-derived instances"
+            [ inTransaction "FromSql 4-tuple" $
+                assertQuery [(1 :: Int64, 2 :: Int64, 3 :: Int64, 4 :: Int64)] "SELECT 1::int8, 2::int8, 3::int8, 4::int8 "
+            ]
         ]
 
 initDB :: HasCallStack => IO PQ.Connection

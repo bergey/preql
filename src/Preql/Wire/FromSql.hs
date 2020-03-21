@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -10,6 +11,7 @@
 module Preql.Wire.FromSql where
 
 import Preql.Wire.Internal
+import Preql.Wire.Tuples
 import Preql.Wire.Types
 
 import Control.Monad.Except
@@ -180,11 +182,25 @@ instance (FromSql a, FromSql b) => FromSql (a, b) where
 instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
     fromSql = (,,) <$> fromSql <*> fromSql <*> fromSql
 
-instance (FromSql a, FromSql b, FromSql c, FromSql d) => FromSql (a, b, c, d) where
-    fromSql = (,,,) <$> fromSql <*> fromSql <*> fromSql <*> fromSql
-
-instance (FromSql a, FromSql b, FromSql c, FromSql d, FromSql e) => FromSql (a, b, c, d, e) where
-    fromSql = (,,,,) <$> fromSql <*> fromSql <*> fromSql <*> fromSql <*> fromSql
-
--- -- TODO more tuple instances
--- -- TODO TH to make this less tedious
+$(deriveFromSqlTuple 4)
+$(deriveFromSqlTuple 5)
+$(deriveFromSqlTuple 6)
+$(deriveFromSqlTuple 7)
+$(deriveFromSqlTuple 8)
+$(deriveFromSqlTuple 9)
+$(deriveFromSqlTuple 10)
+$(deriveFromSqlTuple 11)
+$(deriveFromSqlTuple 12)
+$(deriveFromSqlTuple 13)
+$(deriveFromSqlTuple 14)
+$(deriveFromSqlTuple 15)
+$(deriveFromSqlTuple 16)
+$(deriveFromSqlTuple 17)
+$(deriveFromSqlTuple 18)
+$(deriveFromSqlTuple 19)
+$(deriveFromSqlTuple 20)
+$(deriveFromSqlTuple 21)
+$(deriveFromSqlTuple 22)
+$(deriveFromSqlTuple 23)
+$(deriveFromSqlTuple 24)
+$(deriveFromSqlTuple 25)

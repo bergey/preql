@@ -33,7 +33,7 @@ jobs:
         ARGS: ${{ matrix.plan.resolver }}
     - name: Build
       run: |
-        stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
+        stack --no-terminal $ARGS test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
       env:
         ARGS: ${{ matrix.plan.resolver }}
     # disabled until I sort out postgres

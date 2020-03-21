@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -17,8 +18,12 @@ import Data.Either
 import Data.Int
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import Data.Time (Day, TimeOfDay, UTCTime)
+import Data.Time (Day, TimeOfDay, UTCTime, TimeZone)
+#if MIN_VERSION_time(1,9,0)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
+#else
+import Data.Time.Format (parseTimeM, defaultTimeLocale, iso8601DateFormat, ParseTime)
+#endif
 import Data.Text.Encoding (encodeUtf8)
 import Data.Vector (Vector)
 import System.Environment (lookupEnv)
@@ -194,3 +199,17 @@ badConnection c = do
     port <- fromMaybe "" <$> PQ.port c
     user <- fromMaybe "" <$> PQ.user c
     return BadConnection {..}
+
+#if !MIN_VERSION_time(1,9,0)
+class ParseTime8601 t where
+    iso8601ParseM :: Monad m => String -> m t
+
+instance ParseTime8601 UTCTime where
+    iso8601ParseM = parseTimeM False defaultTimeLocale (iso8601DateFormat (Just "%H:%M:%SZ"))
+instance ParseTime8601 Day where
+    iso8601ParseM = parseTimeM False defaultTimeLocale (iso8601DateFormat Nothing)
+instance ParseTime8601 TimeOfDay where
+    iso8601ParseM = parseTimeM False defaultTimeLocale "%H:%M:%S"
+instance ParseTime8601 TimeZone where
+    iso8601ParseM = parseTimeM False defaultTimeLocale "%z"
+#endif

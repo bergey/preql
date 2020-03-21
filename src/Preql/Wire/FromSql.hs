@@ -11,7 +11,7 @@
 module Preql.Wire.FromSql where
 
 import Preql.Wire.Internal
-import Preql.Wire.Tuples
+import Preql.Wire.Tuples (deriveFromSqlTuple)
 import Preql.Wire.Types
 
 import Control.Monad.Except
@@ -181,6 +181,10 @@ instance (FromSql a, FromSql b) => FromSql (a, b) where
 
 instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
     fromSql = (,,) <$> fromSql <*> fromSql <*> fromSql
+
+-- The instances below all follow the pattern laid out by the tuple
+-- instances above.  The ones above are written out without the macro
+-- for clarity.
 
 $(deriveFromSqlTuple 4)
 $(deriveFromSqlTuple 5)

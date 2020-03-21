@@ -83,6 +83,7 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
           , inTransaction "decode UUID literal" $
               assertQuery [UUID.fromWords 0x01234567 0x89abcdef 0x01234567 0x89abcdef] "SELECT '01234567-89ab-cdef-0123-456789abcdef'::uuid"
           ]
+
         , testGroup "encoders"
             [ inTransaction "encode True" $ do
                 query_ "INSERT INTO encoder_tests (b) VALUES ($1)" True
@@ -140,6 +141,7 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
                 query_ "INSERT INTO encoder_tests (u) VALUES ($1)" v
                 assertQuery [v] "SELECT u FROM encoder_tests WHERE u is not null"
             ]
+
         , testGroup "parameters & expressions"
             [ inTransaction "schema type mismatch causes runtime error" $
                 assertBool "" . isLeft =<< query @() @Int32 "SELECT 2.5" ()
@@ -158,9 +160,14 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
             , inTransaction "add 3 Int32 parameters" $
                 assertEqual "" (Right [6]) =<< query @(Int32, Int32, Int32) @Int32 "SELECT $1 + $2 + $3" (1, 2, 3)
             ]
+
         , testGroup "TH-derived instances"
             [ inTransaction "FromSql 4-tuple" $
                 assertQuery [(1 :: Int64, 2 :: Int64, 3 :: Int64, 4 :: Int64)] "SELECT 1::int8, 2::int8, 3::int8, 4::int8 "
+            , inTransaction "ToSql 4-tuple" $ do
+                let v = (True, 2 :: Int16, 3 :: Int32, 4 :: Int64)
+                query_ "INSERT INTO encoder_tests (b, i16, i32, i64) VALUES ($1, $2, $3, $4)" v
+                assertQuery [v] "SELECT b, i16, i32, i64 FROM encoder_tests"
             ]
         ]
 

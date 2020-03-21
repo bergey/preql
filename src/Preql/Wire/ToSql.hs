@@ -1,9 +1,11 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Preql.Wire.ToSql where
 
 import Preql.Imports
+import Preql.Wire.Tuples (deriveToSqlTuple)
 import Preql.Wire.Types
 
 import Data.Functor.Contravariant
@@ -135,13 +137,29 @@ instance (ToSqlField a, ToSqlField b, ToSqlField c) => ToSql (a, b, c) where
     toSql (a, b, c) =
         [runFieldEncoder toSqlField a, runFieldEncoder toSqlField b, runFieldEncoder toSqlField c]
 
-instance (ToSqlField a, ToSqlField b, ToSqlField c, ToSqlField d) => ToSql (a, b, c, d) where
-    toSql (a, b, c, d) =
-        [runFieldEncoder toSqlField a, runFieldEncoder toSqlField b, runFieldEncoder toSqlField c
-        , runFieldEncoder toSqlField d]
+-- The instances below all follow the pattern laid out by the tuple
+-- instances above.  The ones above are written out without the macro
+-- for clarity.
 
-instance (ToSqlField a, ToSqlField b, ToSqlField c, ToSqlField d, ToSqlField e) =>
-    ToSql (a, b, c, d, e) where
-    toSql (a, b, c, d, e) =
-        [runFieldEncoder toSqlField a, runFieldEncoder toSqlField b, runFieldEncoder toSqlField c
-        , runFieldEncoder toSqlField d, runFieldEncoder toSqlField e]
+$(deriveToSqlTuple 4)
+$(deriveToSqlTuple 5)
+$(deriveToSqlTuple 6)
+$(deriveToSqlTuple 7)
+$(deriveToSqlTuple 8)
+$(deriveToSqlTuple 9)
+$(deriveToSqlTuple 10)
+$(deriveToSqlTuple 11)
+$(deriveToSqlTuple 12)
+$(deriveToSqlTuple 13)
+$(deriveToSqlTuple 14)
+$(deriveToSqlTuple 15)
+$(deriveToSqlTuple 16)
+$(deriveToSqlTuple 17)
+$(deriveToSqlTuple 18)
+$(deriveToSqlTuple 19)
+$(deriveToSqlTuple 20)
+$(deriveToSqlTuple 21)
+$(deriveToSqlTuple 22)
+$(deriveToSqlTuple 23)
+$(deriveToSqlTuple 24)
+$(deriveToSqlTuple 25)

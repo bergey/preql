@@ -143,7 +143,7 @@ initDB = do
     status <- PQ.status conn
     unless (status == PQ.ConnectionOk) (throwIO =<< badConnection conn)
     void $ W.query_ conn "DROP TABLE IF EXISTS encoder_tests" ()
-    void $ W.query_ conn "CREATE TABLE encoder_tests (b boolean, i16 int2, i32 int4, i64 int8, f float4, d float8, t text)" ()
+    void $ W.query_ conn "CREATE TABLE encoder_tests (b boolean, i16 int2, i32 int4, i64 int8, f float4, d float8, t text, by bytea, ts timestamptz, day date, time time, ttz timetz, u uuid)" ()
     return conn
 
 connectionString :: IO ByteString

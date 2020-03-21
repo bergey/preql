@@ -52,4 +52,3 @@ dependencies:
 
 default-extensions:
   - OverloadedStrings
-  - BlockArguments

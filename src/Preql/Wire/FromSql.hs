@@ -10,6 +10,7 @@
 
 module Preql.Wire.FromSql where
 
+import Preql.Wire.Errors
 import Preql.Wire.Internal
 import Preql.Wire.Tuples (deriveFromSqlTuple)
 import Preql.Wire.Types

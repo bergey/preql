@@ -1,14 +1,19 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
--- |
+
+-- | The types in this module have invariants which cannot be checked
+-- if their constructors are in scope.  Preql.Wire exports the type
+-- names only.
 
 module Preql.Wire.Internal where
 
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.State
-import           Data.String (IsString)
-import            Preql.Imports
+import Preql.Wire.Errors
+
+import Control.Monad.Trans.Except
+import Control.Monad.Trans.State
+import Data.String (IsString)
+import Preql.Imports
 
 import qualified Database.PostgreSQL.LibPQ as PQ
 
@@ -20,6 +25,9 @@ newtype Query = Query ByteString
     deriving (Show, IsString)
 
 -- TODO PgType for non-builtin types
+-- | @RowDecoder@ is 'Applicative' but not 'Monad' so that we can
+-- assemble all of the OIDs before we read any of the field data sent
+-- by Postgres.
 data RowDecoder a = RowDecoder [PQ.Oid] (InternalDecoder a)
     deriving Functor
 
@@ -35,18 +43,6 @@ data DecoderState = DecoderState
     , row :: PQ.Row
     , column :: PQ.Column
     } deriving (Show, Eq)
-
-data LocatedError a = LocatedError
-    { errorRow :: PQ.Row
-    , errorColumn :: PQ.Column
-    , failure :: a
-    } deriving (Eq, Show, Typeable)
-instance (Show a, Typeable a) => Exception (LocatedError a)
-
-data FieldError
-    = UnexpectedNull
-    | ParseFailure Text
-    deriving (Eq, Show, Typeable)
 
 decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> ExceptT (LocatedError FieldError) IO a
 decodeRow (RowDecoder _ parsers) result row =

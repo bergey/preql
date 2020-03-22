@@ -18,7 +18,7 @@ jobs:
           - { build: stack, resolver: "--resolver lts-12" } # GHC 8.4
 
     runs-on: ubuntu-latest
-    container: stack-build:lts
+    container: fpco/stack-build:lts
 
     services:
       postgres:

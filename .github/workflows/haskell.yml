@@ -9,7 +9,14 @@ on:
     - cron: "30 4 * * 2"
 
 jobs:
-  container--job:
+  build:
+    strategy:
+      matrix:
+        plan:
+          - { build: stack, resolver: "" }
+          - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6
+          - { build: stack, resolver: "--resolver lts-12" } # GHC 8.4
+
     runs-on: ubuntu-latest
     container: ubuntu-latest
 
@@ -18,14 +25,6 @@ jobs:
         image: postgres:12.2
         env:
           POSTGRES_PASSWORD: postgres
-
-  build:
-    strategy:
-      matrix:
-        plan:
-          - { build: stack, resolver: "" }
-          - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6
-          - { build: stack, resolver: "--resolver lts-12" } # GHC 8.4
 
 
     steps:

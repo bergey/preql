@@ -18,7 +18,7 @@ jobs:
           - { build: stack, resolver: "--resolver lts-12" } # GHC 8.4
 
     runs-on: ubuntu-latest
-    container: ubuntu-latest
+    container: ubuntu:20.04
 
     services:
       postgres:

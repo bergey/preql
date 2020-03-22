@@ -6,11 +6,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
 
--- | We use IO in the representation of Transaction, but we don't want
--- to allow arbitrary IO, only SQL queries.  So keep it private.
+-- | We use IO in the representation of Transaction, but we don't want to allow arbitrary IO, only
+-- SQL queries.  So keep it private.
 --
--- The SQL class refers to Transaction, and the Transaction instance
--- refers to the class, so it all needs to be here.
+-- The SQL class refers to Transaction, and the Transaction instance refers to the class, so it all
+-- needs to be here.
 
 module Preql.Effect.Internal where
 
@@ -26,16 +26,19 @@ import Database.PostgreSQL.LibPQ (Connection)
 
 import qualified Preql.Wire.Query as W
 
--- | An Effect class for running SQL queries.  You can think of this
--- as a context specifying a particular Postgres connection (or connection
--- pool).
+-- | An Effect class for running SQL queries.  You can think of this as a context specifying a
+-- particular Postgres connection (or connection pool).
 class Monad m => SQL (m :: * -> *) where
+    -- | Run a parameterized query that returns data.  The tuple argument is typically provided by
+    -- the 'sql' Quasiquoter.
     query :: (ToSql p, FromSql r) => (Query, p) -> m (Vector r)
     query = runTransaction . query
 
+    -- | Run a parameterized query that does not return data.
     query_ :: ToSql p => (Query, p) -> m ()
     query_ = runTransaction . query_
 
+    -- | Run multiple queries in a transaction.
     runTransaction :: Transaction a -> m a
     -- TODO add variant with isolation level
 
@@ -45,6 +48,7 @@ instance SQL (ReaderT Connection IO) where
         conn <- ask
         lift (either throwIO pure =<< runTransactionIO t conn)
 
+-- | Lift through any monad transformer without a more specific instance.
 instance {-# OVERLAPPABLE #-} (MonadTrans t, Monad (t m), SQL m) => SQL (t m) where
     query = lift . query
     query_ = lift . query_
@@ -56,6 +60,7 @@ instance {-# OVERLAPPABLE #-} (MonadTrans t, Monad (t m), SQL m) => SQL (t m) wh
 newtype Transaction a = Transaction (ExceptT W.QueryError (ReaderT Connection IO) a)
     deriving newtype (Functor, Applicative, Monad)
 
+-- | Run the provided 'Transaction'.  If it fails with a 'QueryError', roll back.
 runTransactionIO :: Transaction a -> Connection -> IO (Either W.QueryError a)
 runTransactionIO (Transaction m) conn = do
     void $ W.query_ conn (Query "BEGIN TRANSACTION") ()
@@ -65,6 +70,8 @@ runTransactionIO (Transaction m) conn = do
         Right _ -> W.query_ conn (Query "COMMIT") ()
     return e_a
 
+-- | The same @query@ methods can be used within a @Transaction@.
+-- Nested @Transactions@ are implemented using savepoints.
 instance SQL Transaction where
     query (q, p) = Transaction (ExceptT (ReaderT (\conn -> W.query conn q p)))
     query_ (q, p) = Transaction (ExceptT (ReaderT (\conn -> W.query_ conn q p)))

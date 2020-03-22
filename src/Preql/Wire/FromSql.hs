@@ -33,19 +33,11 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified PostgreSQL.Binary.Decoding as PGB
 import qualified Preql.Wire.TypeInfo.Static as OID
 
+-- | A @FieldDecoder@ for a type @a@ consists of an OID indicating the
+-- Postgres type which can be decoded, and a parser from the binary
+-- representation of that type to the Haskell representation.
 data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)
     deriving Functor
-
-data DecoderError = FieldError (LocatedError FieldError) | PgTypeMismatch [TypeMismatch]
-    deriving (Show, Eq, Typeable)
-instance Exception DecoderError
-
-data TypeMismatch = TypeMismatch
-    { expected :: PQ.Oid
-    , actual :: PQ.Oid
-    , column :: PQ.Column
-    , columnName :: Maybe Text
-    } deriving (Eq, Show, Typeable)
 
 throwLocated :: FieldError -> InternalDecoder a
 throwLocated failure = do
@@ -185,7 +177,7 @@ instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
 
 -- The instances below all follow the pattern laid out by the tuple
 -- instances above.  The ones above are written out without the macro
--- for clarity.
+-- to illustrate the pattern.
 
 $(deriveFromSqlTuple 4)
 $(deriveFromSqlTuple 5)

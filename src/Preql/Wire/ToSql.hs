@@ -22,6 +22,9 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified PostgreSQL.Binary.Encoding as PGB
 import qualified Preql.Wire.TypeInfo.Static as OID
 
+-- | A @FieldEncoder@ for a type @a@ consists of a function from @a@ to
+-- it's binary representation, and an Postgres OID which tells
+-- Postgres it's type & how to decode it.
 data FieldEncoder a = FieldEncoder PQ.Oid (a -> B.Builder)
 
 instance Contravariant FieldEncoder where
@@ -38,9 +41,11 @@ runEncoder fields p = fields p <&> \(oid, bs) -> Just (oid, bs, PQ.Binary)
 oneField :: FieldEncoder a -> RowEncoder a
 oneField enc = \p -> [runFieldEncoder enc p]
 
+-- | Types which can be encoded to a single Postgres field.
 class ToSqlField a where
     toSqlField :: FieldEncoder a
 
+-- | @ToSql a@ is sufficient to pass @a@ as parameters to a paramaterized query.
 class ToSql a where
     toSql :: RowEncoder a
 
@@ -139,7 +144,7 @@ instance (ToSqlField a, ToSqlField b, ToSqlField c) => ToSql (a, b, c) where
 
 -- The instances below all follow the pattern laid out by the tuple
 -- instances above.  The ones above are written out without the macro
--- for clarity.
+-- to illustrate the pattern.
 
 $(deriveToSqlTuple 4)
 $(deriveToSqlTuple 5)

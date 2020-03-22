@@ -1,5 +1,6 @@
 module Preql.Wire.Query where
 
+import Preql.Wire.Errors
 import Preql.Wire.FromSql
 import Preql.Wire.Internal
 import Preql.Wire.ToSql

@@ -1,5 +1,12 @@
-module Preql (module X) where
+module Preql (
+    SQL(..), sql
+    , Transaction, Query
+    -- * functions for writing SQL instances
+    , runTransactionIO
+    -- | encoding & decoding to wire format
+    , module Preql.Wire
+    ) where
 
-import Preql.Wire as X
-import Preql.QuasiQuoter.Raw.TH as X (sql)
-import Preql.Effect as X
+import Preql.Wire
+import Preql.QuasiQuoter.Raw.TH (sql)
+import Preql.Effect

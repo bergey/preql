@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -27,7 +28,7 @@ newtype Query = Query ByteString
 -- TODO PgType for non-builtin types
 -- | @RowDecoder@ is 'Applicative' but not 'Monad' so that we can
 -- assemble all of the OIDs before we read any of the field data sent
--- by Postgres.
+-- by Postgresj.
 data RowDecoder a = RowDecoder [PQ.Oid] (InternalDecoder a)
     deriving Functor
 

@@ -27,6 +27,25 @@ makeQuery string = [e|(fromString string :: Query) |]
 -- | Given a SQL query with ${} antiquotes, splice a pair @(Query
 -- p r, p)@ or a function @\p' -> (Query p r, p)@ if the SQL
 -- string includes both antiquote and positional parameters.
+
+-- | The @sql@ Quasiquoter allows passing parameters to a query by name, inside a @${}@ antiquote.  For example:
+-- @[sql| SELECT name, age FROM cats WHERE age >= ${minAge} and age < ${maxAge} |]@
+-- The Haskell term within @{}@ must be a variable in scope; more complex expressions are not supported.
+--
+-- Antiquotes are replaced by positional (@$1, $2@) parameters supported by Postgres, and the
+-- encoded values are sent with @PexecParams@
+--
+-- Mixed named & numbered parameters are also supported.  It is hoped that this will be useful when
+-- migrating existing queries.  For example:
+-- @query $ [sql| SELECT name, age FROM cats WHERE age >= ${minAge} and age < $1 |] maxAge@
+-- Named parameters will be assigned numbers higher than the highest numbered paramater placeholder.
+--
+-- A quote with only named parameters is converted to a tuple '(Query, p)'.  For example:
+-- @("SELECT name, age FROM cats WHERE age >= $1 and age < $2", (minAge, maxAge))@
+-- If there are no parameters, the inner tuple is @()@, like @("SELECT * FROM cats", ())@.
+-- If there are both named & numbered params, the splice is a function taking a tuple and returning
+-- @(Query, p)@ where p includes both named & numbered params.  For example:
+-- @\a -> ("SELECT name, age FROM cats WHERE age >= $1 and age < $2", (a, maxAge))@
 sql  :: QuasiQuoter
 sql  = expressionOnly "aritySql " $ \raw -> do
     loc <- location

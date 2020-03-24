@@ -46,7 +46,7 @@ jobs:
       run: |
         stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       env:
-        PREQL_TEST_DB: postgres
+        PREQL_TESTS_DB: postgres
         PGHOST: localhost
         PGPORT: 5432
         PGUSER: postgres

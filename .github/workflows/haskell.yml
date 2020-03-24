@@ -12,13 +12,19 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest]
         plan:
           - { build: stack, resolver: "" }
           - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6
           - { build: stack, resolver: "--resolver lts-12" } # GHC 8.4
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:12.2
+        ports: [ "5432:5432" ]
+        env:
+          POSTGRES_PASSWORD: postgres
 
     steps:
     - uses: actions/checkout@v2
@@ -36,6 +42,12 @@ jobs:
         stack --no-terminal $ARGS test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
       env:
         ARGS: ${{ matrix.plan.resolver }}
-    # disabled until I sort out postgres
-    # - name: Run tests
-    #   run: cabal test
+    - name: Run tests
+      run: |
+        stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
+      env:
+        PREQL_TESTS_DB: postgres
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: postgres
+        PGPASSWORD: postgres

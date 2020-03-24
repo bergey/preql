@@ -18,14 +18,13 @@ jobs:
           - { build: stack, resolver: "--resolver lts-12" } # GHC 8.4
 
     runs-on: ubuntu-latest
-    container: fpco/stack-build:lts
 
     services:
       postgres:
         image: postgres:12.2
+        ports: [ "5432:5432" ]
         env:
           POSTGRES_PASSWORD: postgres
-
 
     steps:
     - uses: actions/checkout@v2
@@ -44,8 +43,10 @@ jobs:
       env:
         ARGS: ${{ matrix.plan.resolver }}
     - name: Run tests
-      run: stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
+      run: |
+        stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       env:
         PREQL_TEST_DB: postgres
-        PGHOST: postgres
+        PGHOST: localhost
+        PGPORT: 5432
         PGPASSWORD: postgres

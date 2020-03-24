@@ -49,4 +49,5 @@ jobs:
         PREQL_TEST_DB: postgres
         PGHOST: localhost
         PGPORT: 5432
+        PGUSER: postgres
         PGPASSWORD: postgres

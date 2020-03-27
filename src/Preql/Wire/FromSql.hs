@@ -40,19 +40,19 @@ data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)
 
 throwLocated :: UnlocatedFieldError -> InternalDecoder a
 throwLocated failure = do
-    DecoderState{..} <- get
-    throwError (FieldError row column failure)
+    DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
+    throwError (FieldError (fromIntegral r) (fromIntegral c) failure)
 
 decodeVector :: RowDecoder a -> PQ.Result -> IO (Either QueryError (Vector a))
 decodeVector rd@(RowDecoder oids _parsers) result = do
-    mismatches <- fmap catMaybes $ for (zip [PQ.Col 0 ..] oids) $ \(column, expected) -> do
+    mismatches <- fmap catMaybes $ for (zip [0 ..] oids) $ \(column@(PQ.Col cint), expected) -> do
         actual <- liftIO $ PQ.ftype result column
         if actual == expected
             then return Nothing
             else do
                 m_name <- liftIO $ PQ.fname result column
                 let columnName = decodeUtf8With lenientDecode <$> m_name
-                return $ Just (TypeMismatch{..})
+                return $ Just (TypeMismatch{column = fromIntegral cint, ..})
     if null mismatches
         then return (Left (PgTypeMismatch mismatches))
         else do

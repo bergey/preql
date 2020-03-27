@@ -30,3 +30,7 @@ data TypeMismatch = TypeMismatch
     , column :: PQ.Column
     , columnName :: Maybe Text
     } deriving (Eq, Show, Typeable)
+
+data QueryError = QueryError Text | DecoderError DecoderError
+    deriving (Eq, Show, Typeable)
+instance Exception QueryError

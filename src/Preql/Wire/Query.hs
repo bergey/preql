@@ -41,10 +41,6 @@ query = queryWith toSql fromSql
 query_ :: ToSql p => PQ.Connection -> Query -> p -> IO (Either QueryError ())
 query_ = queryWith_ toSql
 
-data QueryError = QueryError Text | DecoderError DecoderError
-    deriving (Eq, Show, Typeable)
-instance Exception QueryError
-
 queryError :: PQ.Connection -> Maybe a -> ExceptT QueryError IO a
 queryError _conn (Just a) = return a
 queryError conn Nothing = do

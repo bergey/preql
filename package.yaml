@@ -5,15 +5,19 @@ synopsis: safe PostgreSQL queries using Quasiquoters
 description: |
   Before you Post(gres)QL, preql.
 
-  Eventually preql quasiquoters will provide syntax checking & optional schema checking.  We're not there yet.
-  You may be interested in reading the
-  [quickstart](https://github.com/bergey/preql#quickstart) 
+  @preql@ provides a low-level interface to PostgreSQL and a quasiquoter that converts
+  inline variable names to SQL parameters.  Higher-level interfaces, checking SQL syntax &
+  schema, are planned.
+
+  the [quickstart](https://github.com/bergey/preql#quickstart) 
   or the [vision](https://github.com/bergey/preql#vision-parsing-sql-in-haskell-quasiquotes)
     
 category: Database, PostgreSQL
 github: bergey/preql
 author: Daniel Bergey
 maintainer: bergey@teallabs.org
+extra-doc-files:
+  - CHANGELOG.md
 
 library:
   source-dirs: [src]

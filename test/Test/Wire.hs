@@ -41,7 +41,7 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
     let
         inTransaction desc body = testCase desc $
             bracket_ (query_ "BEGIN TRANSACTION" ()) (query_ "ROLLBACK" ()) body
-        query :: (ToSql p, FromSql r) => Query -> p -> IO (Either W.QueryError (Vector r))
+        query :: (ToSql p, FromSql r) => Query -> p -> IO (Either QueryError (Vector r))
         query q p = db >>= \conn -> W.query conn q p
         query_ :: (ToSql p) => Query -> p -> IO ()
         query_ q p = db >>= \conn -> W.query_ conn q p >>= either throwIO pure

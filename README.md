@@ -2,6 +2,8 @@
 
 Before you Post(gres)QL, **preql**.
 
+A Haskell SQL library.
+
 1. [Quickstart](#quickstart)
 2. [Vision](#vision-parsing-sql-in-haskell-quasiquotes)
 
@@ -76,6 +78,18 @@ libraries, I'd like to check syntax but not schema.
 
 ### Prior Art
 
+Haskell libraries that I've used in production seem to fall into 3 categories:
+
+- SQL as strings, with syntax & types only checked when the query runs
+- simple EDSLs that are convenient for CRUD, but don't cover joins, aggregates, and other SQL features
+- complex EDSLs that cover much of SQL, with a new syntax & lots of fancy type hackery
+
+I'm delighted that so many people are exploring this design space, but I'm not entirely
+satisfied with any of these.  Writing tests that run every query to catch syntax errors is
+surprising when it feels so similar to type checking.  Using Postgres without joins is
+worse.  I never have time to learn a complely new syntax for all the parts of SQL that I
+use, much less rewrite all the queries in my production apps.
+
 The most similar design that I've found in Haskell is
 [hasql-th](http://hackage.haskell.org/package/hasql-th).
 
@@ -86,10 +100,3 @@ very promising approach.
 
 If you know of other libraries with similar ambitions, please let me know.
 
-Haskell libraries that I've used in production seem to fall into 3 categories:
-
-- SQL as strings, with syntax & types only checked when the query runs
-- simple EDSLs that are convenient for CRUD, but don't cover joins, aggregates, and other SQL features
-- complex EDSLs that cover much of SQL, with a new syntax & lots of fancy type hackery
-
-I'm delighted that so many people are exploring this design space, but I'm not entirely satisfied with any of these.

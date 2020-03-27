@@ -1,62 +1,48 @@
-## PreQL
+# PreQL
 
 Before you Post(gres)QL, **preql**.
 
+1. [Quickstart](#quickstart)
+2. [Vision](#vision-parsing-sql-in-haskell-quasiquotes)
+
 ## Current Status
 
-**preql** provides a low-level interface to PostgreSQL and a quasiquoter.  Higher-level
-interfaces are planned.
+**preql** provides a low-level interface to PostgreSQL and a quasiquoter that converts
+inline variable names to SQL parameters.  Higher-level interfaces, checking SQL syntax &
+schema, are planned.
 
-The low-level interface (In `Preql.Wire`) sends query strings to Postgres without any
-validation, and sends parameters using the binary encoder.  Parameters in the query string
-are represented with the standard `$1, $2` syntax, and it is up to the application
-developer to ensure that the provided tuple (or record) of parameters has enough elements.
+## Quickstart
 
-### Effect Type Class
+```haskell
+    import Preql -- The `Preql` module re-exports the interface useful to typical applications.
+    import Control.Monad.Trans.Reader (runReaderT)
 
-The `SQL` type class describes contexts in which SQL queries can be run.  This supports
-running in various monads besides `IO`, and signatures like `SQL m => m ()` which permit
-running SQL queries without permitting arbitrary effects.  A query can be run as:
+    main :: IO ()
+    main = do
+        conn <- connectdb "" -- Get a database connection with default connection string
 
-``` haskell
-    query [sql| SELECT name, age FROM cats|]
+        -- You can write a SQL instance to replace this ReaderT with
+        -- your own application state, logging, error handling
+        flip runReaderT conn $
+            -- A simple query with no parameters
+            cats <- query [sql| SELECT name, age FROM cats |]
+            for_ cats \(cat :: (Text, Int)) -> print cat
+
+            -- A query with parameters
+            let minAge = 10
+            oldCats <- query [sql| SELECT name, age FROM cats where age > ${minAge}|]
+            for_ oldCats \(cat :: (Text, Int)) -> print cat
+
+            -- A query that doesn't return rows
+            query_ [sql| UPDATE cats SET age = 0 where age < 1 |]
+
+            -- Two queries in a transaction
+            moreOldCats <- runTransaction $ do
+                maxAge <- V.head <$> query [sql| SELECT max(age) FROM cats |]
+                query [sql| SELECT name FROM cats WHERE age = ${maxAge} |]
+                -- Just an example; you could make this one DB roundtrip
+            traverse_ putStrLn moreOldCats
 ```
-
-The variant `query_` is more convenient when no result is needed.
-
-### Quasiquoter
-
-The `sql` quasiquoter used above is defined in `Preql.QuasiQuoter.Raw` and exported from
-the top-level module `Preql`.  It is intended to make parameter substitution less
-error-prone.  `sql` supports both numbered parameters (with the standard syntax) and
-antiquotes.  These can be freely mixed within the same query.  A query with an antiquote
-is written `${varName}`.  The `sql` quasiquoter will replace antiquotes with numbered
-parameters, and construct a matching tuple.
-
-For example:
-``` haskell
-    [sql| SELECT name, age FROM cats WHERE age >= ${minAge} and age < ${maxAge} |]
-```
-
-is converted to:
-
-``` haskell
-    ("SELECT name, age FROM cats WHERE age >= $1 and age < $2", (minAge, maxAge))
-```
-
-This will only compile if `minAge` & `maxAge` are in scope, along with `ToSqlField`
-instances that match their types.
-
-When numbered paramaters and antiquotes are mixed, `sql` starts numbering the antiquotes
-after the highest explictly numbered param.  The query above could instead be written:
-
-``` haskell
-    query $ [sql| SELECT name, age FROM cats WHERE age >= ${minAge} and age < $1 |] maxAge
-```
-
-Note the `$` after `query`; the quasiquote here expands to a function that takes `maxAge`
-and produces the `(String, params)` pair as above.  Note also that `ToSql` has the
-necessary instances to use either a tuple of parameters or a single parameter
 
 ## Vision: Parsing SQL in Haskell Quasiquotes
 
@@ -84,6 +70,9 @@ staleUsers = do
 ```
 
 and have GHC infer `staleUsers :: SQL m => m [(UUID, Text)]` or something similar.
+
+As an intermediate stage, also useful to application authors migrating from other
+libraries, I'd like to check syntax but not schema.
 
 ### Prior Art
 

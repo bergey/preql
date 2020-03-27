@@ -26,9 +26,10 @@ import Database.PostgreSQL.LibPQ (Connection)
 
 import qualified Preql.Wire.Query as W
 
--- | An Effect class for running SQL queries.  You can think of this as a context specifying a
--- particular Postgres connection (or connection pool).  A minimal instance defines
--- @runTransaction@.  A typical instance will log & rethrow errors.
+-- | An Effect class for running SQL queries.  You can think of this as a context
+-- specifying a particular Postgres connection (or connection pool).  A minimal instance
+-- defines @runTransaction@.  A typical instance will use 'runTransactionIO' or functions
+-- in 'Preql.Wire.Query' and log & rethrow errors.
 class Monad m => SQL (m :: * -> *) where
     -- | Run a parameterized query that returns data.  The tuple argument is typically provided by
     -- the 'sql' Quasiquoter.

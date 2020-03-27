@@ -4,6 +4,12 @@ module Preql (
     , Transaction, Query
     -- * functions for writing SQL instances
     , runTransactionIO
+    -- * Decoding rows
+    , FromSql, FromSqlField
+    -- * Encoding parameters
+    , ToSql, ToSqlField
+    -- * Errors
+    , QueryError(..), FieldError(..), UnlocatedFieldError(..), TypeMismatch(..)
     -- | encoding & decoding to wire format
     , module Preql.Wire
     ) where

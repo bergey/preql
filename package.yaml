@@ -1,8 +1,15 @@
 spec-version: 0.30.0
 name: preql
 version: 0.1
-synopsis: PostgreSQL library focused on Quasiquoters
-description: exploring type-safe SQL queries using standard Postgres syntax
+synopsis: safe PostgreSQL queries using Quasiquoters
+description: |
+  Before you Post(gres)QL, preql.
+
+  Eventually preql quasiquoters will provide syntax checking & optional schema checking.  We're not there yet.
+  You may be interested in reading the
+  [quickstart](https://github.com/bergey/preql#quickstart) 
+  or the [vision](https://github.com/bergey/preql#vision-parsing-sql-in-haskell-quasiquotes)
+    
 category: Database, PostgreSQL
 github: bergey/preql
 author: Daniel Bergey

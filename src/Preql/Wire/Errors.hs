@@ -7,22 +7,18 @@ import            Preql.Imports
 import qualified Database.PostgreSQL.LibPQ as PQ
 
 -- | An error with information about the row & column of the result where it occured.
-data LocatedError a = LocatedError
+data FieldError = FieldError
     { errorRow :: PQ.Row
     , errorColumn :: PQ.Column
-    , failure :: a
+    , failure :: UnlocatedFieldError
     } deriving (Eq, Show, Typeable)
-instance (Show a, Typeable a) => Exception (LocatedError a)
+instance Exception FieldError
 
 -- | Errors that can occur in decoding a single field.
-data FieldError
+data UnlocatedFieldError
     = UnexpectedNull
     | ParseFailure Text
     deriving (Eq, Show, Typeable)
-
-data DecoderError = FieldError (LocatedError FieldError) | PgTypeMismatch [TypeMismatch]
-    deriving (Show, Eq, Typeable)
-instance Exception DecoderError
 
 data TypeMismatch = TypeMismatch
     { expected :: PQ.Oid
@@ -31,6 +27,9 @@ data TypeMismatch = TypeMismatch
     , columnName :: Maybe Text
     } deriving (Eq, Show, Typeable)
 
-data QueryError = QueryError Text | DecoderError DecoderError
+data QueryError
+    = ConnectionError Text
+    | DecoderError FieldError
+    | PgTypeMismatch [TypeMismatch]
     deriving (Eq, Show, Typeable)
 instance Exception QueryError

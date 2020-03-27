@@ -58,11 +58,11 @@ instance {-# OVERLAPPABLE #-} (MonadTrans t, Monad (t m), SQL m) => SQL (t m) wh
 -- * Transactions
 
 -- | A Transaction can only contain SQL queries (and pure functions).
-newtype Transaction a = Transaction (ExceptT W.QueryError (ReaderT Connection IO) a)
+newtype Transaction a = Transaction (ExceptT QueryError (ReaderT Connection IO) a)
     deriving newtype (Functor, Applicative, Monad)
 
 -- | Run the provided 'Transaction'.  If it fails with a 'QueryError', roll back.
-runTransactionIO :: Transaction a -> Connection -> IO (Either W.QueryError a)
+runTransactionIO :: Transaction a -> Connection -> IO (Either QueryError a)
 runTransactionIO (Transaction m) conn = do
     void $ W.query_ conn (Query "BEGIN TRANSACTION") ()
     e_a <- runReaderT (runExceptT m) conn

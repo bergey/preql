@@ -3,9 +3,8 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# HLINT ignore "Use camelCase" #-}
-
 {-# LANGUAGE DeriveFunctor     #-}
+
 -- | Decoding values from Postgres wire format to Haskell.
 
 module Preql.Wire.FromSql where
@@ -39,13 +38,13 @@ import qualified Preql.Wire.TypeInfo.Static as OID
 data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)
     deriving Functor
 
-throwLocated :: FieldError -> InternalDecoder a
+throwLocated :: UnlocatedFieldError -> InternalDecoder a
 throwLocated failure = do
     DecoderState{..} <- get
-    throwError (LocatedError row column failure)
+    throwError (FieldError row column failure)
 
-decodeVector :: RowDecoder a -> PQ.Result -> ExceptT DecoderError IO (Vector a)
-decodeVector rd@(RowDecoder oids parsers) result = do
+decodeVector :: RowDecoder a -> PQ.Result -> IO (Either QueryError (Vector a))
+decodeVector rd@(RowDecoder oids _parsers) result = do
     mismatches <- fmap catMaybes $ for (zip [PQ.Col 0 ..] oids) $ \(column, expected) -> do
         actual <- liftIO $ PQ.ftype result column
         if actual == expected
@@ -54,11 +53,13 @@ decodeVector rd@(RowDecoder oids parsers) result = do
                 m_name <- liftIO $ PQ.fname result column
                 let columnName = decodeUtf8With lenientDecode <$> m_name
                 return $ Just (TypeMismatch{..})
-    unless (null mismatches) (throwError (PgTypeMismatch mismatches))
-    (PQ.Row ntuples) <- liftIO $ PQ.ntuples result
-    let toRow = PQ.toRow . fromIntegral
-    withExceptT FieldError $
-        V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow)
+    if null mismatches
+        then return (Left (PgTypeMismatch mismatches))
+        else do
+            (PQ.Row ntuples) <- liftIO $ PQ.ntuples result
+            let toRow = PQ.toRow . fromIntegral
+            fmap (first DecoderError) . runExceptT $
+                V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow)
 
 notNull :: FieldDecoder a -> RowDecoder a
 notNull (FieldDecoder oid parser) = RowDecoder [oid] $ do

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-duplicate-exports #-}
 module Preql (
     SQL(..), sql
     , Transaction, Query

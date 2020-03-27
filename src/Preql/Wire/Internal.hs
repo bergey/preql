@@ -37,7 +37,7 @@ instance Applicative RowDecoder where
     RowDecoder t1 p1 <*> RowDecoder t2 p2 = RowDecoder (t1 <> t2) (p1 <*> p2)
 
 -- TODO can I use ValidationT instead of ExceptT, since I ensure Column is incremented before errors?
-type InternalDecoder =  StateT DecoderState (ExceptT (LocatedError FieldError) IO)
+type InternalDecoder =  StateT DecoderState (ExceptT FieldError IO)
 
 data DecoderState = DecoderState
     { result :: PQ.Result
@@ -45,7 +45,7 @@ data DecoderState = DecoderState
     , column :: PQ.Column
     } deriving (Show, Eq)
 
-decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> ExceptT (LocatedError FieldError) IO a
+decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> ExceptT FieldError IO a
 decodeRow (RowDecoder _ parsers) result row =
     evalStateT parsers (DecoderState result row 0)
 

@@ -28,17 +28,17 @@ queryWith_ enc conn (Query query) params = do
 
 execParams :: RowEncoder p -> PQ.Connection -> ByteString -> p -> IO (Either QueryError PQ.Result)
 execParams enc conn query params = do
-    e_result <- connectionError conn =<< liftIO (PQ.execParams conn query (runEncoder enc params) PQ.Binary)
+    e_result <- connectionError conn =<< PQ.execParams conn query (runEncoder enc params) PQ.Binary
     case e_result of
         Left err -> return (Left (ConnectionError err))
         Right result -> do
-            status <- liftIO (PQ.resultStatus result)
+            status <- PQ.resultStatus result
             if status == PQ.CommandOk || status == PQ.TuplesOk
-                then do
-                    msg <- liftIO (PQ.resultErrorMessage result)
+                then return (Right result)
+                else do
+                    msg <- PQ.resultErrorMessage result
                         <&> maybe (T.pack (show status)) (decodeUtf8With lenientDecode)
                     return (Left (ConnectionError msg))
-                else return (Right result)
 
 query :: (ToSql p, FromSql r) => PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
 query = queryWith toSql fromSql

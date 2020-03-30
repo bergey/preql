@@ -53,7 +53,7 @@ decodeVector rd@(RowDecoder oids _parsers) result = do
                 m_name <- liftIO $ PQ.fname result column
                 let columnName = decodeUtf8With lenientDecode <$> m_name
                 return $ Just (TypeMismatch{column = fromIntegral cint, ..})
-    if null mismatches
+    if not (null mismatches)
         then return (Left (PgTypeMismatch mismatches))
         else do
             (PQ.Row ntuples) <- liftIO $ PQ.ntuples result

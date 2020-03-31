@@ -11,6 +11,10 @@ description: |
 
   the [quickstart](https://github.com/bergey/preql#quickstart) 
   or the [vision](https://github.com/bergey/preql#vision-parsing-sql-in-haskell-quasiquotes)
+
+  Most applications will want to import the top-level module @Preql@.  When writing @SQL@
+  instances or your own higher-level abstractions, you may want the lower-level,
+  IO-specific functions in @Preql.Wire@, not all of which are re-exported from @Preql@.
     
 category: Database, PostgreSQL
 github: bergey/preql

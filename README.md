@@ -51,44 +51,35 @@ schema, are planned.
 Can GHC check that a query is sytactically correct at compile time, without having
 Postgres run it?
 
-Can we teach GHC to do type inference for SQL queries?  That is, given the schema of the
-database, and a SQL query written in the usual SQL syntax, can GHC check at compile time
-that the query gets the right number & types of parameters, and returns the right number &
-types of results?  This should be augmented by validating the actual schema when first
-connecting to the database.
+I want to
+- write standard (Postgres) SQL
+- support all of the Postgres features that I depend on in a single library
+- catch SQL syntax errors during Haskell type checking
+- catch SQL - Haskell type mismatches during Haskell type checking
 
-Given a table like
+To hedge my bets between the goal of supporting Postgres's extensive feature set &
+providing meaningful type errors, I plan to implement 3 quasiquoters:
 
-``` sql
-CREATE TABLE users (id uuid, email text, last_login timestamptz);
-```
+- parameter (and result column?) antiquotes, no attempt at interpreting the SQL
+- SQL syntax checking, without requiring a schema
+- with a schema provided, check that queries, parameters, and results are type-correct
 
-I'd like to write Haskell like
-
-``` haskell
-staleUsers = do
-    now <- getCurrentTime
-    query [sql|SELECT uuid, email FROM users WHERE last_login > ${now}|]
-```
-
-and have GHC infer `staleUsers :: SQL m => m [(UUID, Text)]` or something similar.
-
-As an intermediate stage, also useful to application authors migrating from other
-libraries, I'd like to check syntax but not schema.
+I see several reasons to support literal SQL syntax:
+- many people already know it; learning it will be useful for a long time
+- non-Haskell developers on the project are also likely to know it
+- efficient interactive development of the SQL query, before parameterizing & inserting in Haskell code
+- easy adoption from existing code bases using postgresql-simple or hasql (or other SQL-string libraries)
 
 ### Prior Art
 
 Haskell libraries that I've used in production seem to fall into 3 categories:
 
 - SQL as strings, with syntax & types only checked when the query runs
-- simple EDSLs that are convenient for CRUD, but don't cover joins, aggregates, and other SQL features
+- simple non-SQL interfaces that are convenient for CRUD, but don't cover joins, aggregates, and other SQL features
 - complex EDSLs that cover much of SQL, with a new syntax & lots of fancy type hackery
 
-I'm delighted that so many people are exploring this design space, but I'm not entirely
-satisfied with any of these.  Writing tests that run every query to catch syntax errors is
-surprising when it feels so similar to type checking.  Using Postgres without joins is
-worse.  I never have time to learn a complely new syntax for all the parts of SQL that I
-use, much less rewrite all the queries in my production apps.
+Each approach addresses some of the goals under **Vision**, but none lets me both write
+literal SQL & provides a reasonable degree of type checking.
 
 The most similar design that I've found in Haskell is
 [hasql-th](http://hackage.haskell.org/package/hasql-th).

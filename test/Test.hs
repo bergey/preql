@@ -4,8 +4,14 @@
 
 import Test.Wire (connectionString, wire)
 
-import Preql.QuasiQuoter.Raw.TH
+import Preql.QuasiQuoter.Raw.TH as Raw
 import Preql.Wire
+import Untyped.Name
+import Untyped.Params as Syntax (AntiquoteState(..), numberAntiquotes)
+import Untyped.Parser
+import Untyped.Printer
+import Untyped.Syntax
+import qualified Untyped.Lex as L
 
 import Data.Either
 import Data.Int
@@ -15,7 +21,7 @@ import Prelude hiding (Ordering(..), lex)
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import qualified Preql.QuasiQuoter.Raw.Lex as L
+import qualified Preql.QuasiQuoter.Raw.Lex as Raw
 import qualified Preql.Wire.Query as W
 
 import qualified Data.List.NonEmpty as NE
@@ -69,7 +75,7 @@ printer = testGroup "printer" [
         (fmt(QS OldSelect
               { table = "users"
               , columns = Var "name" :| [ Var "email"]
-              , conditions = Just (Compare Eq "name" (NumberedParam 1))
+              , conditions = Just (Compare Eq "name" (NumberedParam 1 []))
               }))
     ]
 
@@ -162,7 +168,7 @@ parser = testGroup "parser"
     , testCase "lex '' escape" $
       assertEqual "" (Right [L.String "foo'bar", L.EOF]) (L.testLex "'foo''bar'")
     , testCase "lex semicolon" $
-      assertEqual "" (Right [L.Select, L.Number 2.0, L.Add, L.Number 3.0, L.Semicolon, L.EOF]) (L.testLex "SELECT 2 + 3;")
+      assertEqual "" (Right [L.SELECT, L.Number 2.0, L.Add, L.Number 3.0, L.Semicolon, L.EOF]) (L.testLex "SELECT 2 + 3;")
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2;"
       (QS OldSelect
           { table = "bar"
@@ -179,8 +185,12 @@ testParseExpr query expected = testCase query $
 
 antiquotes :: TestTree
 antiquotes = testGroup "antiquotes"
-    [ testCase "numberAntiquotes" $
+    [ testCase "numberAntiquotes, Syntax" $
         assertEqual ""
-            (QS (OldSelect {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (NumberedParam 1))}), AntiquoteState 1 ["foo0"])
-            (numberAntiquotes 0 (QS (OldSelect {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (HaskellParam "foo0"))})))
+            (QS (OldSelect {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (NumberedParam 1 []))}), AntiquoteState 1 ["foo0"])
+            (Syntax.numberAntiquotes 0 (QS (OldSelect {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (HaskellParam "foo0"))})))
+    , testCase "numberAntiquotes, Raw" $
+        assertEqual ""
+            ("SELECT foo, bar FROM baz WHERE foo = $1", ["foo0"])
+            (Raw.numberAntiquotes 0 [ Raw.Sql "SELECT foo, bar FROM baz WHERE foo = ", Raw.HaskellParam "foo0" ])
     ]

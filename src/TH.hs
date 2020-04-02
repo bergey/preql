@@ -10,7 +10,6 @@ import Untyped.Parser (parseQuery)
 import Untyped.Syntax as Syntax
 
 import Data.String (IsString (..))
-import Database.PostgreSQL.Simple (Only (..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax (Lift (..))
@@ -21,7 +20,7 @@ cNames :: Char -> Int -> Q [Name]
 cNames c n = traverse newName (replicate n (c : ""))
 
 tupleType :: [Name] -> Type
-tupleType [v] = AppT (ConT ''Only) (VarT v)
+tupleType [v] = VarT v
 tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
     where n = length names
 
@@ -51,21 +50,21 @@ aritySql  = expressionOnly "aritySql " $ \raw -> do
                 (countColumnsReturned rewritten)
             case positionalCount of
                 0 -> -- only antiquotes (or no params)
-                    return $ TupE [typedQuery, tupleOrOnly antiNames]
+                    return $ TupE [typedQuery, tupleOrSingle antiNames]
                 1 -> do -- one positional param, doesn't take a tuple
                     patternName <- newName "c"
                     return $ LamE [VarP patternName]
-                        (TupE [typedQuery, tupleOrOnly (patternName : antiNames)])
-                _ -> do -- at least one positional parameter
+                        (TupE [typedQuery, tupleOrSingle (patternName : antiNames)])
+                _ -> do -- at least two positional parameters
                     patternNames <- cNames 'q' (fromIntegral positionalCount)
                     return $ LamE
                         [TupP (map VarP patternNames)]
-                        (TupE [typedQuery, tupleOrOnly (patternNames ++ antiNames)])
+                        (TupE [typedQuery, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
 
-tupleOrOnly :: [Name] -> Exp
-tupleOrOnly names = case names of
-    [name] -> AppE (ConE (mkName "Only")) (VarE name)
+tupleOrSingle :: [Name] -> Exp
+tupleOrSingle names = case names of
+    [name] -> VarE name
     vs -> TupE $ map VarE vs
 
 expressionOnly :: String -> (String -> Q Exp) -> QuasiQuoter

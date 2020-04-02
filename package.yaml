@@ -57,6 +57,7 @@ dependencies:
     - postgresql-binary >= 0.12.1
     - postgresql-libpq >= 0.9.4
     - scientific >= 0.3.6
+    - syb
     - template-haskell >= 2.13.0
     - text >= 1.2.3
     - th-lift-instances >= 0.1.11

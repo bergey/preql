@@ -108,25 +108,25 @@ parser = testGroup "parser"
     , testParse "SELECT name FROM users"
       (QS OldSelect
        { table = "users"
-       , columns = Var "name" :| []
+       , columns = CRef (ColumnRef (Var "name") Nothing) :| []
        , conditions = Nothing
        })
     , testParse "SELECT name, email FROM users"
       (QS OldSelect
        { table = "users"
-       , columns = Var "name" :| [Var "email"]
+       , columns = CRef (ColumnRef (Var "name") Nothing) :| [CRef (ColumnRef (Var "email") Nothing)]
        , conditions = Nothing
        })
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
       (QS OldSelect
        { table = "users"
-       , columns = Var "name" :| [Var "email"]
+       , columns = CRef (ColumnRef (Var "name") Nothing) :| [CRef (ColumnRef (Var "email") Nothing)]
        , conditions = Just (Compare Eq "name" (Lit (T "Daniel")))
        })
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
       (QS OldSelect
        { table = "users"
-       , columns = Var "name" :| [Var "email"]
+       , columns = CRef (ColumnRef (Var "name") Nothing) :| [CRef (ColumnRef (Var "email") Nothing)]
        , conditions = Just (Or (Compare Eq "name" (Lit (T "Daniel"))) (Compare Eq "name" (Lit (T "Bergey"))))
        })
     , testParse "SELECT name FROM users WHERE age = 35"
@@ -134,31 +134,31 @@ parser = testGroup "parser"
         -- Just test that both parser rules work
       (QS OldSelect
        { table = "users"
-       , columns = Var "name" :| []
+       , columns = CRef (ColumnRef (Var "name") Nothing) :| []
        , conditions = Just (Compare Eq "age" (Lit (F 35)))
        })
     , testParse "SELECT name FROM users WHERE age = 35.5"
       (QS OldSelect
        { table = "users"
-       , columns = Var "name" :| []
+       , columns = CRef (ColumnRef (Var "name") Nothing) :| []
        , conditions = Just (Compare Eq "age" (Lit (F 35.5)))
        })
     , testParse "SELECT foo FROM bar WHERE baz > -2"
       (QS OldSelect
           { table = "bar"
-          , columns = Var "foo" :| []
+          , columns = CRef (ColumnRef (Var "foo") Nothing) :| []
           , conditions = Just (Compare GT "baz" (Lit (F (-2) )))
           })
     , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
         (QS OldSelect
           { table = "bar"
-          , columns = Var "foo" :| []
+          , columns = CRef (ColumnRef (Var "foo") Nothing) :| []
           , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
           })
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2"
         (QS OldSelect
           { table = "bar"
-          , columns = Var "foo" :| []
+          , columns = CRef (ColumnRef (Var "foo") Nothing) :| []
           , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
           })
     , testParseExpr "2 * 3 + 1"
@@ -172,7 +172,7 @@ parser = testGroup "parser"
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2;"
       (QS OldSelect
           { table = "bar"
-          , columns = Var "foo" :| []
+          , columns = CRef (ColumnRef (Var "foo") Nothing) :| []
           , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
           })
     ]

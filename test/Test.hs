@@ -1,11 +1,9 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
-{-# LANGUAGE QuasiQuotes              #-}
 
-import Test.Wire (connectionString, wire)
+import Test.Wire (wire)
 
 import Preql.QuasiQuoter.Raw.TH as Raw
-import Preql.Wire
 import Untyped.Name
 import Untyped.Params as Syntax (AntiquoteState(..), numberAntiquotes)
 import Untyped.Parser
@@ -14,20 +12,12 @@ import Untyped.Syntax
 import qualified Untyped.Lex as L
 
 import Data.Either
-import Data.Int
 import Data.List.NonEmpty (NonEmpty(..))
-import Database.PostgreSQL.LibPQ (connectdb, finish)
 import Prelude hiding (Ordering(..), lex)
 import Test.Tasty
 import Test.Tasty.HUnit
 
 import qualified Preql.QuasiQuoter.Raw.Lex as Raw
-import qualified Preql.Wire.Query as W
-
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Builder as TLB
 
 main :: IO ()
 main = defaultMain $ testGroup "crispy-broccoli"
@@ -153,13 +143,13 @@ parser = testGroup "parser"
         (QS OldSelect
           { table = "bar"
           , columns = CRef (ColumnRef (Var "foo") Nothing) :| []
-          , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
+          , conditions = Just (Compare Eq "baz" (Lit (F 0.02)))
           })
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2"
         (QS OldSelect
           { table = "bar"
           , columns = CRef (ColumnRef (Var "foo") Nothing) :| []
-          , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
+          , conditions = Just (Compare Eq "baz" (Lit (F 0.02)))
           })
     , testParseExpr "2 * 3 + 1"
       (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
@@ -173,13 +163,15 @@ parser = testGroup "parser"
       (QS OldSelect
           { table = "bar"
           , columns = CRef (ColumnRef (Var "foo") Nothing) :| []
-          , conditions = Just (Compare Eq "baz" (Lit (F (0.02))))
+          , conditions = Just (Compare Eq "baz" (Lit (F 0.02)))
           })
     ]
 
+testParse :: TestName -> Query -> TestTree
 testParse query expected = testCase query $
     assertEqual "" (Right expected) (parseQuery "<testcase>" query)
 
+testParseExpr :: TestName -> Expr -> TestTree
 testParseExpr query expected = testCase query $
     assertEqual "" (Right expected) (parseExpr "<testcase>" query)
 
@@ -187,8 +179,8 @@ antiquotes :: TestTree
 antiquotes = testGroup "antiquotes"
     [ testCase "numberAntiquotes, Syntax" $
         assertEqual ""
-            (QS (OldSelect {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (NumberedParam 1 []))}), AntiquoteState 1 ["foo0"])
-            (Syntax.numberAntiquotes 0 (QS (OldSelect {table =  "baz", columns = Var ( "foo") :| [Var ( "bar")], conditions = Just (Compare Eq ( "foo") (HaskellParam "foo0"))})))
+            (QS (OldSelect {table =  "baz", columns = Var  "foo" :| [Var "bar"], conditions = Just (Compare Eq "foo" (NumberedParam 1 []))}), AntiquoteState 1 ["foo0"])
+            (Syntax.numberAntiquotes 0 (QS (OldSelect {table =  "baz", columns = Var "foo" :| [Var "bar"], conditions = Just (Compare Eq "foo" (HaskellParam "foo0"))})))
     , testCase "numberAntiquotes, Raw" $
         assertEqual ""
             ("SELECT foo, bar FROM baz WHERE foo = $1", ["foo0"])

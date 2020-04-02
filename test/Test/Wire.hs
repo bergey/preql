@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Test.Wire where
 
+import Preql.Effect
 import Preql.Wire
 import Test.Wire.Enum
 

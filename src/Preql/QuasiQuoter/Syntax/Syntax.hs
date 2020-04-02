@@ -117,7 +117,6 @@ data Condition = Compare !Compare !Name !Expr
 
 data Expr = Lit !Literal | Var !Name
     | NumberedParam !Word [Indirection]
-    | InlineParam !Text [Indirection]
     | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr

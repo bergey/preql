@@ -57,7 +57,7 @@ instance Arbitrary Expr where
             then oneof [ Lit <$> arbitrary, Var <$> arbitrary ]
             else scale (`div` 2) $ oneof
                  [ Lit <$> arbitrary, Var <$> arbitrary
-                 , NumberedParam <$> arbitrary <*> pure [] -- never InlineParam
+                 , NumberedParam <$> arbitrary <*> pure []
                  , BinOp <$> arbitrary <*> arbitrary <*> arbitrary
                  , Unary <$> arbitrary <*> arbitrary
                  ]

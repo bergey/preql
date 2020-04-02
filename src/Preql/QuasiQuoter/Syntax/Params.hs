@@ -10,19 +10,6 @@ import Data.Generics
 import Data.Text (Text)
 import Data.Vector (Vector, (!?))
 
--- | Replace all numbered parameter placeholders with values from the provided vector.
-inlineParams :: Vector Text -> Query -> Query
-inlineParams params = -- apply inlineParamsExpr to the Expr terms
-    everywhere (mkT (inlineParamsExpr params))
-
-inlineParamsExpr :: Vector Text -> Expr -> Expr
-inlineParamsExpr params (NumberedParam i indirect) =
-    case params !? fromIntegral (i - 1) of
-        Just txt -> InlineParam txt indirect
-        Nothing -> error $ "not enough parameters provided, needed at least " <> show i
-inlineParamsExpr _ (HaskellParam _) = error "must replace antiquotes by numbered params before inlining values"
-inlineParamsExpr _ expr = expr
-
 numberAntiquotes :: Word -> Query -> (Query, AntiquoteState)
 numberAntiquotes count q =
     let (rewritten, aqs) = runState
@@ -54,7 +41,6 @@ maxParam = everything (+) (mkQ 0 maxParamExpr)
 maxParamExpr :: Expr -> Word
 maxParamExpr expr = case expr of
     NumberedParam i _ -> i
-    InlineParam _ _ -> 0
     HaskellParam _ -> 0
     BinOp _ l r     -> max (maxParamExpr l) (maxParamExpr r)
     Unary _ e       -> maxParamExpr e

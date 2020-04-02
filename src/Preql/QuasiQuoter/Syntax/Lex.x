@@ -1,5 +1,5 @@
 {
-module Untyped.Lex where
+module Preql.QuasiQuoter.Syntax.Lex where
 
 import           Data.Text (Text)
 import           Prelude hiding (LT, GT, lex)

@@ -4,12 +4,12 @@
 import Test.Wire (wire)
 
 import Preql.QuasiQuoter.Raw.TH as Raw
-import Untyped.Name
-import Untyped.Params as Syntax (AntiquoteState(..), numberAntiquotes)
-import Untyped.Parser
-import Untyped.Printer
-import Untyped.Syntax
-import qualified Untyped.Lex as L
+import Preql.QuasiQuoter.Syntax.Name
+import Preql.QuasiQuoter.Syntax.Params as Syntax (AntiquoteState(..), numberAntiquotes)
+import Preql.QuasiQuoter.Syntax.Parser
+import Preql.QuasiQuoter.Syntax.Printer
+import Preql.QuasiQuoter.Syntax.Syntax
+import qualified Preql.QuasiQuoter.Syntax.Lex as L
 
 import Data.Either
 import Data.List.NonEmpty (NonEmpty(..))

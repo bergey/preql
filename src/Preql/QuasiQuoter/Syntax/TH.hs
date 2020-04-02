@@ -2,12 +2,12 @@
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE TemplateHaskell          #-}
-module TH where
+module Preql.QuasiQuoter.Syntax.TH where
 
-import TypedQuery
-import Untyped.Params
-import Untyped.Parser (parseQuery)
-import Untyped.Syntax as Syntax
+import Preql.QuasiQuoter.Syntax.TypedQuery
+import Preql.QuasiQuoter.Syntax.Params
+import Preql.QuasiQuoter.Syntax.Parser (parseQuery)
+import Preql.QuasiQuoter.Syntax.Syntax as Syntax
 
 import Data.String (IsString (..))
 import Language.Haskell.TH

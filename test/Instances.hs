@@ -1,7 +1,7 @@
 module Instances where
 
-import           Untyped.Name
-import           Untyped.Syntax
+import           Preql.QuasiQuoter.Syntax.Name
+import           Preql.QuasiQuoter.Syntax.Syntax
 
 import           Control.Applicative
 import           Data.Char           (toUpper)

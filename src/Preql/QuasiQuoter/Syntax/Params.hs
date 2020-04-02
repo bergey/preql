@@ -1,9 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 -- | Parameter substitution for the Untyped SQL AST.
 
-module Untyped.Params where
+module Preql.QuasiQuoter.Syntax.Params where
 
-import Untyped.Syntax
+import Preql.QuasiQuoter.Syntax.Syntax
 
 import Control.Monad.Trans.State
 import Data.Generics

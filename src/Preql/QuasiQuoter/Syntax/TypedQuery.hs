@@ -1,11 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module TypedQuery where
+module Preql.QuasiQuoter.Syntax.TypedQuery where
 
 import Preql.Wire as W
 import Preql.Wire.Internal as W (Query(..))
-import Untyped.Printer
-import Untyped.Syntax as S (Query)
+import Preql.QuasiQuoter.Syntax.Printer
+import Preql.QuasiQuoter.Syntax.Syntax as S (Query)
 import qualified Preql.Wire.Query as W
 
 import Control.Exception (throwIO)

@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveLift         #-}
 -- | Definitions which need to be private in order to maintain their invariants.
 
-module Untyped.Name where
+module Preql.QuasiQuoter.Syntax.Name where
 
 import           Data.Data
 import           Data.String                (IsString (..))

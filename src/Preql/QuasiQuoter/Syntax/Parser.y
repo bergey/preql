@@ -1,16 +1,16 @@
 {
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Untyped.Parser where
+module Preql.QuasiQuoter.Syntax.Parser where
 
-import Untyped.Syntax
-import Untyped.Name
-import Untyped.Lex (Alex, LocToken(..), Token)
+import Preql.QuasiQuoter.Syntax.Syntax
+import Preql.QuasiQuoter.Syntax.Name
+import Preql.QuasiQuoter.Syntax.Lex (Alex, LocToken(..), Token)
 
 import           Prelude hiding (LT, GT, lex)
 import           Data.List.NonEmpty        (NonEmpty (..))
 
-import qualified Untyped.Lex as L
+import qualified Preql.QuasiQuoter.Syntax.Lex as L
 import qualified Data.List.NonEmpty as NE
 }
 

@@ -5,9 +5,9 @@
 
 -- | Data types reperesenting SQL query syntax.
 
-module Untyped.Syntax where
+module Preql.QuasiQuoter.Syntax.Syntax where
 
-import           Untyped.Name
+import           Preql.QuasiQuoter.Syntax.Name
 
 import           Data.Data
 import           Data.List.NonEmpty         (NonEmpty)

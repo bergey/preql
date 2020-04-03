@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Test.Wire where
 
-import Instances ()
+import Instances -- class needed for older time
 import Preql.Effect
 import Preql.Wire
 import Test.Wire.Enum

@@ -636,7 +636,7 @@ select_with_parens
 -- * 	2002-08-28 bjm
 
 select_no_parens :: { SelectStmt }
-    : simple_select { SimpleSelect $1 }
+    : simple_select { $1 }
     | select_clause sort_clause { SortedSelect $1 $2 }
     -- TODO            | select_clause opt_sort_clause for_locking_clause opt_select_limit
 -- TODO                {
@@ -689,7 +689,7 @@ select_no_parens :: { SelectStmt }
 -- TODO        ;
 
 select_clause :: { SelectStmt }
-    : simple_select                            { SimpleSelect $1 }
+    : simple_select                            { $1 }
     | select_with_parens                    { $1 }
 
 -- * This rule parses SELECT statements that can appear within set operations,
@@ -714,7 +714,7 @@ select_clause :: { SelectStmt }
 -- * NOTE: only the leftmost component SelectStmt should have INTO.
 -- * However, this is not checked by the grammar; parse analysis must check it.
 
-simple_select :: { SimpleSelect }
+simple_select :: { SelectStmt }
            : SELECT opt_all_clause opt_target_list
            into_clause from_clause where_clause
            group_clause having_clause window_clause { SelectUnordered (Unordered Nothing $3 $5 $6 $7 $8 $9) }
@@ -1468,8 +1468,8 @@ Null
         | NOTNULL { NotNull }
 
 columnref :: { ColumnRef }
-: ColId { ColumnRef (Var $1) Nothing }
--- TODO | ColId indirection { ColumnRef $1 (Just $2) }
+    : ColId { ColumnRef (Var $1) Nothing }
+    -- TODO | ColId indirection { ColumnRef $1 (Just $2) }
 
 indirection_el :: { Name } -- TODO bigger type
     : '.' attr_name { $2 }

@@ -59,17 +59,10 @@ data OldSelect = OldSelect
     , conditions :: Maybe Condition
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
--- TODO unifiy SelectStmt & SimpleSelect
--- parser & printer need to know the difference, for parentheses
 data SelectStmt
-    = SimpleSelect SimpleSelect
-    | SortedSelect SelectStmt (NonEmpty SortBy)
-    -- TODO more cases
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
-data SimpleSelect
     = SelectValues (NonEmpty (NonEmpty Expr))
     | SelectUnordered Unordered
+    | SortedSelect SelectStmt (NonEmpty SortBy)
     -- TODO more cases
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
@@ -84,6 +77,7 @@ data Unordered = Unordered
     -- TODO remaining fields
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
+-- TODO joins
 data TableRef = TableRef
     { relation :: Name -- TODO
     , alias :: Maybe Alias
@@ -148,7 +142,7 @@ data ResTarget = Star | ColumnTarget ColumnRef
 
 data ColumnRef = ColumnRef
     { value :: Expr
-    , name :: Maybe Name
+    , name :: Maybe Name -- TODO bigger type
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Window = Window

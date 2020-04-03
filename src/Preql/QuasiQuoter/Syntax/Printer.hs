@@ -7,20 +7,21 @@
 
 module Preql.QuasiQuoter.Syntax.Printer where
 
-import           Preql.QuasiQuoter.Syntax.Name
-import           Preql.QuasiQuoter.Syntax.Syntax
+import Preql.Imports
+import Preql.QuasiQuoter.Syntax.Name
+import Preql.QuasiQuoter.Syntax.Syntax
 
-import           Data.ByteString                  (ByteString)
-import           Data.Foldable                    (toList)
-import           Data.List
-import           Prelude                          hiding (GT, LT, lex)
+import Data.ByteString (ByteString)
+import Data.Foldable (toList)
+import Data.List
+import Prelude hiding (GT, LT, lex)
 
-import qualified Data.Text                        as T
-import qualified Data.Text.Encoding               as T
-import qualified Data.Text.Lazy                   as TL
-import qualified Data.Text.Lazy.Builder           as TLB
-import qualified Data.Text.Lazy.Builder           as B
-import qualified Data.Text.Lazy.Builder.Int       as B
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as B
+import qualified Data.Text.Lazy.Builder as TLB
+import qualified Data.Text.Lazy.Builder.Int as B
 import qualified Data.Text.Lazy.Builder.RealFloat as B
 
 quote :: B.Builder -> B.Builder
@@ -62,7 +63,13 @@ instance FormatSql Query where
     fmt (QS select) = fmt select
 
 commas :: (FormatSql a, Foldable f) => f a -> B.Builder
-commas as = mconcat (intersperse ", " (map fmt (toList as)))
+commas = fmtList ", "
+
+spaces :: (FormatSql a, Foldable f) => f a -> B.Builder
+spaces = fmtList " "
+
+fmtList :: (FormatSql a, Foldable f) => B.Builder -> f a -> B.Builder
+fmtList sep as = mconcat (intersperse sep (map fmt (toList as)))
 
 instance FormatSql B.Builder where
     fmt = id
@@ -134,11 +141,36 @@ instance FormatSql Compare where
         ILike -> "ILIKE"
 
 instance FormatSql SelectStmt where
-    fmt (SimpleSelect simple) = fmt simple
+    fmt (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
+    fmt (SelectUnordered un) = fmt un
     fmt (SortedSelect select sortBy) = fmt select <> " ORDER BY " <> commas sortBy
 
-instance FormatSql SimpleSelect where
-    fmt (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
+instance FormatSql Unordered where
+    fmt Unordered{targetList, from, whereClause, groupBy, having, window}
+        = "SELECT " <> m_distinct <> commas (fmt <$> targetList) <> " FROM " <> commas (fmt <$> from) <>
+          m_where <> m_groupBy <> m_having <> m_window
+        where
+          m_distinct = "" -- TODO
+          m_where = case whereClause of
+              Nothing -> ""
+              Just expr -> " WHERE " <> fmt expr
+          m_groupBy = case groupBy of
+              [] -> ""
+              _ -> " GROUP BY " <> commas (fmt <$> groupBy)
+          m_having = case having of
+              Nothing -> ""
+              Just expr -> " HAVING " <> fmt expr
+          m_window = case window of
+              [] -> ""
+              _ -> " WINDOW " <> commas (fmt <$> window)
+
+instance FormatSql TableRef where
+    fmt TableRef {relation, alias} = fmt relation <> m_alias where
+      m_alias = case alias of
+          Nothing -> ""
+          Just (Alias name columns) -> " AS " <> fmt name <> case columns of
+              [] -> ""
+              _ -> " " <> parens (commas (fmt <$> columns))
 
 instance FormatSql SortBy where
     fmt (SortBy expr order nulls) = fmt expr <> fmt order <> fmt nulls
@@ -158,3 +190,26 @@ instance FormatSql NullsOrder where
     fmt NullsFirst = " NULLS FIRST"
     fmt NullsLast = " NULLS LAST"
     fmt NullsOrderDefault = ""
+
+instance FormatSql ResTarget where
+    fmt Star = "*"
+    fmt (ColumnTarget ref) = fmt ref
+
+instance FormatSql ColumnRef where
+    fmt ColumnRef {value, name} = fmt value <> case name of
+        Nothing -> ""
+        Just n -> "." <> fmt n
+
+instance FormatSql Window where
+    fmt Window {name, refName, partitionClause, orderClause}
+        = m_name <> " AS (" <> mconcat [m_refName, m_partition, m_order ] <> ")" where
+      m_name = case name of
+          Nothing -> error "parser should never give a nameless Window"
+          Just n -> fmt n
+      m_refName = maybe "" fmt refName
+      m_partition = case partitionClause of
+          [] -> ""
+          _ -> " PARTITION BY " <> commas (fmt <$> partitionClause)
+      m_order = case orderClause of
+          [] -> ""
+          _ -> " ORDER BY " <> commas (fmt <$> orderClause)

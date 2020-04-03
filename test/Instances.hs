@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Instances where
 
 import           Preql.QuasiQuoter.Syntax.Name

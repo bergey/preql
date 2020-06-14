@@ -13,16 +13,14 @@ import           Data.Data
 import           Data.List.NonEmpty         (NonEmpty)
 import           Data.Text                  (Text)
 import           GHC.Generics
-import           Instances.TH.Lift
+import           Instances.TH.Lift ()
 import           Language.Haskell.TH.Syntax (Lift (..))
-
-import qualified Data.Text                  as T
 
 -- FIXME rename to Constant?
 data Literal = I !Int | F !Double | T !Text | B !Bool | Null
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Query = QI !Insert | QD !Delete | QU !Update | QS !OldSelect
+data Query = QI !Insert | QD !Delete | QU !Update | QS !SelectStmt
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 -- | Queries of the form @INSERT INTO table (columns) VALUES (values);@
@@ -76,6 +74,17 @@ data Unordered = Unordered
     , window :: [Window]
     -- TODO remaining fields
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+unordered :: Unordered
+unordered = Unordered
+    { distinct = Nothing
+    , targetList = []
+    , from = []
+    , whereClause = Nothing
+    , groupBy = []
+    , having = Nothing
+    , window = []
+    }
 
 -- TODO joins
 data TableRef = TableRef

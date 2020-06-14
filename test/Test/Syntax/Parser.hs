@@ -40,17 +40,15 @@ parser = testGroup "parser"
        , values = Lit (T "4 Ames St") :| [ Lit (T "USA") ]
        })
     , testParse "SELECT name FROM users"
-      (QS OldSelect
-       { table = "users"
-       , columns = CRef (ColumnRef (Var "name") Nothing) :| []
-       , conditions = Nothing
-       })
+      (QS (SelectUnordered unordered
+       { from = [ TableRef "users" Nothing ]
+       , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing) ]
+       }))
     , testParse "SELECT name, email FROM users"
-      (QS OldSelect
-       { table = "users"
-       , columns = CRef (ColumnRef (Var "name") Nothing) :| [CRef (ColumnRef (Var "email") Nothing)]
-       , conditions = Nothing
-       })
+      (QS (SelectUnordered unordered
+       { from = [ TableRef "users" Nothing ]
+       , targetList = [ ColumnTarget ColumnRef (Var "name") Nothing, ColumnTarget (ColumnRef (Var "email") Nothing) ]
+       }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
       (QS OldSelect
        { table = "users"
@@ -118,3 +116,14 @@ testParse query expected = testCase query $
 testParseExpr :: TestName -> Expr -> TestTree
 testParseExpr query expected = testCase query $
     assertEqual "" (Right expected) (parseExpr "<testcase>" query)
+
+unordered :: Unordered
+unordered = Unordered
+    { distinct = Nothing
+    , targetList = []
+    , from = []
+    , whereClause = Nothing
+    , groupBy = []
+    , having = Nothing
+    , window = Nothing
+    }

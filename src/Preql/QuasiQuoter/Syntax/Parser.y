@@ -572,7 +572,7 @@ Query :: { Query }
 
 Query1 :: { Query }
     : Delete { QD $1 }
-    | Select { QS $1 }
+    | SelectStmt { QS $1 }
     | Insert { QI $1 }
     | Update { QU $1 }
 

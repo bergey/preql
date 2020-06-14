@@ -4,15 +4,16 @@
 {-# LANGUAGE TemplateHaskell          #-}
 module Preql.QuasiQuoter.Syntax.TH where
 
-import Preql.QuasiQuoter.Syntax.TypedQuery
+import Preql.Imports
 import Preql.QuasiQuoter.Syntax.Params
 import Preql.QuasiQuoter.Syntax.Parser (parseQuery)
 import Preql.QuasiQuoter.Syntax.Syntax as Syntax
+import Preql.QuasiQuoter.Syntax.TypedQuery
 
-import Data.String (IsString (..))
+import Data.String (IsString(..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax (Lift (..))
+import Language.Haskell.TH.Syntax (Lift(..))
 
 import qualified Data.Text as T
 
@@ -25,12 +26,14 @@ tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
     where n = length names
 
 -- | Synthesize a TypedQuery tagged with tuples of the given size
-makeArityQuery :: String -> Query -> Word -> Int -> Q Exp
+makeArityQuery :: String -> Query -> Word -> Maybe Int -> Q Exp
 makeArityQuery raw parsed p r =
     [e|TypedQuery raw parsed :: TypedQuery params result |]
     where
         params = tupleType <$> cNames 'p' (fromIntegral p)
-        result = tupleType <$> cNames 'r' r
+        result = case r of
+            Just r' -> tupleType <$> cNames 'r' r'
+            Nothing -> VarT <$> newName "r" -- SELECT *
 
 -- | Given a SQL query with ${} antiquotes, splice a pair @(TypedQuery
 -- p r, p)@ or a function @\p' -> (TypedQuery p r, p)@ if the SQL
@@ -75,6 +78,12 @@ expressionOnly name qq = QuasiQuoter
     , quoteDec = \_ -> error $ "qq " ++ name ++ " cannot be used in declaration context"
     }
 
-countColumnsReturned :: Syntax.Query -> Int
-countColumnsReturned (QS (OldSelect {columns})) = length columns
-countColumnsReturned _                       = 0
+countColumnsReturned :: Syntax.Query -> Maybe Int
+countColumnsReturned (QS select) = go select where
+  go s = case s of
+      SelectValues rows -> Just (foldl' max 0 (fmap length rows))
+      SortedSelect unsorted _ -> go unsorted
+      SelectUnordered Unordered{targetList} -> if any (== Star) targetList
+          then Nothing
+          else Just (length targetList)
+countColumnsReturned _                       = Just 0

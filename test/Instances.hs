@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE CPP #-}
 module Instances where
 
@@ -44,7 +45,7 @@ instance Arbitrary Insert where arbitrary = genericArbitraryU
 instance Arbitrary Delete where arbitrary = genericArbitraryU
 instance Arbitrary Setting where arbitrary = genericArbitraryU
 instance Arbitrary Update where arbitrary = genericArbitraryU
-instance Arbitrary OldSelect where arbitrary = genericArbitraryU
+instance Arbitrary SelectStmt where arbitrary = genericArbitraryU
 
 -- Recursive types need more careful treatment to avoid infinite trees
 instance Arbitrary Condition where

@@ -27,8 +27,13 @@ data FieldError = FieldError
 instance Exception FieldError
 $(deriveJSON defaultOptions ''FieldError)
 
+data PgType = Oid PQ.Oid -- ^ A Postgres type with a known ID
+    | TypeName Text -- ^ A Postgres type which we will need to lookup by name
+    deriving (Eq, Show, Typeable)
+$(deriveJSON defaultOptions ''PgType)
+
 data TypeMismatch = TypeMismatch
-    { expected :: PQ.Oid
+    { expected :: PgType
     , actual :: PQ.Oid
     , column :: Int
     , columnName :: Maybe Text

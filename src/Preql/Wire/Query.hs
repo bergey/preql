@@ -9,6 +9,7 @@ import Control.Monad
 import Preql.Imports
 
 import qualified Data.Text as T
+import qualified Data.Vector as V
 import qualified Database.PostgreSQL.LibPQ as PQ
 
 queryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
@@ -18,7 +19,7 @@ queryWith enc dec conn (Query query) params = do
         e_result <- execParams enc conn query params
         case e_result of
             Left err -> return (Left err)
-            Right result -> decodeVector dec result
+            Right result -> decodeVector (lookupType conn) dec result
 
 -- If there is no result, we don't need a Decoder
 queryWith_ :: RowEncoder p -> PQ.Connection -> Query -> p -> IO (Either QueryError ())
@@ -53,3 +54,12 @@ connectionError conn Nothing = do
     case m_msg of
         Just msg -> return (Left (decodeUtf8With lenientDecode msg))
         Nothing -> return (Left "No error message available")
+
+lookupType :: PQ.Connection -> PgType -> IO (Either QueryError PQ.Oid)
+lookupType _ (Oid oid) = return (Right oid)
+lookupType conn (TypeName name) = do
+    e_rows <- query conn "SELECT oid FROM pg_type WHERE typname = $1" name
+    case fmap (V.!? 0) e_rows of
+        Left e -> return (Left e)
+        Right (Just oid) -> return (Right oid)
+        Right Nothing -> return (Left (ConnectionError ("No oid for: " <> name)))

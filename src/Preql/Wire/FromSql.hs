@@ -35,7 +35,7 @@ import qualified Preql.Wire.TypeInfo.Static as OID
 -- | A @FieldDecoder@ for a type @a@ consists of an OID indicating the
 -- Postgres type which can be decoded, and a parser from the binary
 -- representation of that type to the Haskell representation.
-data FieldDecoder a = FieldDecoder PQ.Oid (BP.BinaryParser a)
+data FieldDecoder a = FieldDecoder PgType (BP.BinaryParser a)
     deriving Functor
 
 throwLocated :: UnlocatedFieldError -> InternalDecoder a
@@ -43,13 +43,14 @@ throwLocated failure = do
     DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
     throwError (FieldError (fromIntegral r) (fromIntegral c) failure)
 
-decodeVector :: RowDecoder a -> PQ.Result -> IO (Either QueryError (Vector a))
-decodeVector rd@(RowDecoder oids _parsers) result = do
-    mismatches <- fmap catMaybes $ for (zip [0 ..] oids) $ \(column@(PQ.Col cint), expected) -> do
-        actual <- liftIO $ PQ.ftype result column
-        if actual == expected
-            then return Nothing
-            else do
+decodeVector :: (PgType -> IO (Either QueryError PQ.Oid)) -> RowDecoder a -> PQ.Result -> IO (Either QueryError (Vector a))
+decodeVector lookupType rd@(RowDecoder pgtypes _parsers) result = do
+    mismatches <- fmap catMaybes $ for (zip [0 ..] pgtypes) $ \(column@(PQ.Col cint), expected) -> do
+        actual <- PQ.ftype result column
+        e_expectedOid <- lookupType expected
+        case e_expectedOid of
+            Right oid | actual == oid -> return Nothing
+            _ -> do
                 m_name <- liftIO $ PQ.fname result column
                 let columnName = decodeUtf8With lenientDecode <$> m_name
                 return $ Just (TypeMismatch{column = fromIntegral cint, ..})
@@ -82,44 +83,44 @@ class FromSql a where
     fromSql :: RowDecoder a
 
 instance FromSqlField Bool where
-    fromSqlField = FieldDecoder OID.boolOid PGB.bool
+    fromSqlField = FieldDecoder (Oid OID.boolOid) PGB.bool
 instance FromSql Bool where fromSql = notNull fromSqlField
 
 instance FromSqlField Int16 where
-    fromSqlField = FieldDecoder OID.int2Oid PGB.int
+    fromSqlField = FieldDecoder (Oid OID.int2Oid) PGB.int
 instance FromSql Int16 where fromSql = notNull fromSqlField
 
 instance FromSqlField Int32 where
-    fromSqlField = FieldDecoder OID.int4Oid PGB.int
+    fromSqlField = FieldDecoder (Oid OID.int4Oid) PGB.int
 instance FromSql Int32 where fromSql = notNull fromSqlField
 
 instance FromSqlField Int64  where
-    fromSqlField = FieldDecoder OID.int8Oid PGB.int
+    fromSqlField = FieldDecoder (Oid OID.int8Oid) PGB.int
 instance FromSql Int64 where fromSql = notNull fromSqlField
 
 instance FromSqlField Float where
-    fromSqlField = FieldDecoder OID.float4Oid PGB.float4
+    fromSqlField = FieldDecoder (Oid OID.float4Oid) PGB.float4
 instance FromSql Float where fromSql = notNull fromSqlField
 
 instance FromSqlField Double where
-    fromSqlField = FieldDecoder OID.float8Oid PGB.float8
+    fromSqlField = FieldDecoder (Oid OID.float8Oid) PGB.float8
 instance FromSql Double where fromSql = notNull fromSqlField
 
 -- TODO does Postgres have a single-char type?  Does it always return bpchar?
 -- instance FromSqlField Char where
---     fromSqlField = FieldDecoder OID.charOid PGB.char
+--     fromSqlField = FieldDecoder (Oid OID.charOid) PGB.char
 -- instance FromSql Char where fromSql = notNull fromSqlField
 
 instance FromSqlField String where
-    fromSqlField = FieldDecoder OID.textOid (T.unpack <$> PGB.text_strict)
+    fromSqlField = FieldDecoder (Oid OID.textOid) (T.unpack <$> PGB.text_strict)
 instance FromSql String where fromSql = notNull fromSqlField
 
 instance FromSqlField Text where
-    fromSqlField = FieldDecoder OID.textOid PGB.text_strict
+    fromSqlField = FieldDecoder (Oid OID.textOid) PGB.text_strict
 instance FromSql Text where fromSql = notNull fromSqlField
 
 instance FromSqlField TL.Text where
-    fromSqlField = FieldDecoder OID.textOid PGB.text_lazy
+    fromSqlField = FieldDecoder (Oid OID.textOid) PGB.text_lazy
 instance FromSql TL.Text where fromSql = notNull fromSqlField
 
 -- | If you want to encode some more specific Haskell type via JSON,
@@ -127,43 +128,47 @@ instance FromSql TL.Text where fromSql = notNull fromSqlField
 -- 'PostgreSQL.Binary.Encoding.jsonb_bytes' directly, rather than this
 -- instance.
 instance FromSqlField ByteString where
-    fromSqlField = FieldDecoder OID.byteaOid (BS.copy <$> BP.remainders)
+    fromSqlField = FieldDecoder (Oid OID.byteaOid) (BS.copy <$> BP.remainders)
 instance FromSql ByteString where fromSql = notNull fromSqlField
 
 instance FromSqlField BSL.ByteString where
-    fromSqlField = FieldDecoder OID.byteaOid (BSL.fromStrict . BS.copy <$> BP.remainders)
+    fromSqlField = FieldDecoder (Oid OID.byteaOid) (BSL.fromStrict . BS.copy <$> BP.remainders)
 instance FromSql BSL.ByteString where fromSql = notNull fromSqlField
 
 -- TODO check for integer_datetimes setting
 instance FromSqlField UTCTime where
-    fromSqlField = FieldDecoder OID.timestamptzOid PGB.timestamptz_int
+    fromSqlField = FieldDecoder (Oid OID.timestamptzOid) PGB.timestamptz_int
 instance FromSql UTCTime where fromSql = notNull fromSqlField
 
 instance FromSqlField Day where
-    fromSqlField = FieldDecoder OID.dateOid PGB.date
+    fromSqlField = FieldDecoder (Oid OID.dateOid) PGB.date
 instance FromSql Day where fromSql = notNull fromSqlField
 
 instance FromSqlField TimeOfDay where
-    fromSqlField = FieldDecoder OID.timeOid PGB.time_int
+    fromSqlField = FieldDecoder (Oid OID.timeOid) PGB.time_int
 instance FromSql TimeOfDay where fromSql = notNull fromSqlField
 
 instance FromSqlField TimeTZ where
-    fromSqlField = FieldDecoder OID.timetzOid (uncurry TimeTZ <$> PGB.timetz_int)
+    fromSqlField = FieldDecoder (Oid OID.timetzOid) (uncurry TimeTZ <$> PGB.timetz_int)
 instance FromSql TimeTZ where fromSql = notNull fromSqlField
 
 instance FromSqlField UUID where
-    fromSqlField = FieldDecoder OID.uuidOid PGB.uuid
+    fromSqlField = FieldDecoder (Oid OID.uuidOid) PGB.uuid
 instance FromSql UUID where fromSql = notNull fromSqlField
+
+instance FromSqlField PQ.Oid where
+    fromSqlField = PQ.Oid <$> FieldDecoder (Oid OID.oidOid) PGB.int
+instance FromSql PQ.Oid where fromSql = notNull fromSqlField
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'fromSqlJsonField' rather than this
 -- instance.
 instance FromSqlField JSON.Value where
-    fromSqlField = FieldDecoder OID.jsonbOid PGB.jsonb_ast
+    fromSqlField = FieldDecoder (Oid OID.jsonbOid) PGB.jsonb_ast
 instance FromSql JSON.Value where fromSql = notNull fromSqlField
 
 fromSqlJsonField :: JSON.FromJSON a => FieldDecoder a
-fromSqlJsonField = FieldDecoder OID.jsonbOid
+fromSqlJsonField = FieldDecoder (Oid OID.jsonbOid)
     (PGB.jsonb_bytes (first T.pack . JSON.eitherDecode . BSL.fromStrict))
 
 -- Overlappable so applications can write Maybe for multi-field domain types

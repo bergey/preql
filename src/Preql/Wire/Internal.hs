@@ -25,11 +25,10 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 newtype Query = Query ByteString
     deriving (Show, IsString)
 
--- TODO PgType for non-builtin types
 -- | @RowDecoder@ is 'Applicative' but not 'Monad' so that we can
 -- assemble all of the OIDs before we read any of the field data sent
 -- by Postgresj.
-data RowDecoder a = RowDecoder [PQ.Oid] (InternalDecoder a)
+data RowDecoder a = RowDecoder [PgType] (InternalDecoder a)
     deriving Functor
 
 instance Applicative RowDecoder where

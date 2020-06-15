@@ -1,15 +1,14 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 module Test.Wire where
 
 import Preql.Effect
-import Preql.QuasiQuoter.Raw.TH (sql)
 import Preql.Wire
+import Test.Wire.Enum
 
 import Control.Exception (Exception, bracket_, throwIO)
 import Control.Monad
@@ -18,7 +17,7 @@ import Data.Either
 import Data.Int
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import Data.Time (Day, TimeOfDay, UTCTime, TimeZone)
+import Data.Time (Day, TimeOfDay, UTCTime)
 #if MIN_VERSION_time(1,9,0)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 #else
@@ -174,6 +173,18 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
                 query_ "INSERT INTO encoder_tests (b, i16, i32, i64) VALUES ($1, $2, $3, $4)" v
                 assertQuery [v] "SELECT b, i16, i32, i64 FROM encoder_tests"
             ]
+
+        , testGroup "user-defined types"
+          [ inTransaction "decode enum" $ do
+                  query_ "drop type if exists my_enum" ()
+                  query_ "create type my_enum as enum  ('A', 'B', 'C')" ()
+                  assertQuery [A] "select 'A'::my_enum"
+          , inTransaction "type mismatch error" $ do
+                  assertEqual ""
+                      (Left (PgTypeMismatch
+                             [TypeMismatch {expected = TypeName "my_enum", actual = PQ.Oid 705, column = 0, columnName = Just "?column?"}]))
+                      =<< query @() @MyEnum "select 'A'" ()
+          ]
         ]
 
 initDB :: HasCallStack => IO PQ.Connection

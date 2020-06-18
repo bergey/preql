@@ -1,6 +1,6 @@
 spec-version: 0.30.0
 name: preql
-version: 0.2
+version: 0.3
 synopsis: safe PostgreSQL queries using Quasiquoters
 description: |
   Before you Post(gres)QL, preql.

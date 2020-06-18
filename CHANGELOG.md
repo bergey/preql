@@ -1,3 +1,10 @@
+# 0.3 (2020-06-18)
+
+- lookup types by name when OID is not known statically
+- specify isolation level when running a transaction
+- stop trying to fake nested transactions
+- provide direct access to a Connection when that control is needed
+
 # 0.2 (2020-03-31)
 
 - now we have documentation

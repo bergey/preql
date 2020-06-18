@@ -63,3 +63,22 @@ lookupType conn (TypeName name) = do
         Left e -> return (Left e)
         Right (Just oid) -> return (Right oid)
         Right Nothing -> return (Left (ConnectionError ("No oid for: " <> name)))
+
+data IsolationLevel
+    = ReadCommitted
+    | RepeatableRead
+    | Serializable
+    deriving (Show, Read, Eq, Ord, Enum, Bounded)
+
+begin :: PQ.Connection -> IsolationLevel -> IO (Either QueryError ())
+begin conn level = query_ conn q () where
+  q = case level of
+    ReadCommitted  -> "BEGIN ISOLATION LEVEL READ COMMITTED"
+    RepeatableRead -> "BEGIN ISOLATION LEVEL REPEATABLE READ"
+    Serializable   -> "BEGIN ISOLATION LEVEL SERIALIZABLE"
+
+commit :: PQ.Connection -> IO (Either QueryError ())
+commit conn = query_ conn "COMMIT" ()
+
+rollback :: PQ.Connection -> IO (Either QueryError ())
+rollback conn = query_ conn "ROLLBACK" ()

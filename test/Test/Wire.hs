@@ -6,7 +6,6 @@
 {-# LANGUAGE TypeApplications #-}
 module Test.Wire where
 
-import Preql.Effect
 import Preql.Wire
 import Test.Wire.Enum
 
@@ -17,10 +16,11 @@ import Data.Either
 import Data.Int
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import Data.Time (Day, TimeOfDay, UTCTime)
 #if MIN_VERSION_time(1,9,0)
+import Data.Time (Day, TimeOfDay, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 #else
+import Data.Time (Day, TimeOfDay, UTCTime, TimeZone)
 import Data.Time.Format (parseTimeM, defaultTimeLocale, iso8601DateFormat, ParseTime)
 #endif
 import Data.Text.Encoding (encodeUtf8)

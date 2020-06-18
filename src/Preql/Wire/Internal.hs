@@ -27,7 +27,7 @@ newtype Query = Query ByteString
 
 -- | @RowDecoder@ is 'Applicative' but not 'Monad' so that we can
 -- assemble all of the OIDs before we read any of the field data sent
--- by Postgresj.
+-- by Postgres.
 data RowDecoder a = RowDecoder [PgType] (InternalDecoder a)
     deriving Functor
 
@@ -36,6 +36,9 @@ instance Applicative RowDecoder where
     RowDecoder t1 p1 <*> RowDecoder t2 p2 = RowDecoder (t1 <> t2) (p1 <*> p2)
 
 -- TODO can I use ValidationT instead of ExceptT, since I ensure Column is incremented before errors?
+-- | Internal because we need IO for the libpq FFI, but we promise not
+-- to do any IO besides decoding.  We don't even make network calls to
+-- Postgres in @InternalDecoder@
 type InternalDecoder =  StateT DecoderState (ExceptT FieldError IO)
 
 data DecoderState = DecoderState

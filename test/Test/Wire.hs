@@ -180,10 +180,11 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
                   query_ "create type my_enum as enum  ('A', 'B', 'C')" ()
                   assertQuery [A] "select 'A'::my_enum"
           , inTransaction "type mismatch error" $ do
-                  assertEqual ""
-                      (Left (PgTypeMismatch
-                             [TypeMismatch {expected = TypeName "my_enum", actual = PQ.Oid 705, column = 0, columnName = Just "?column?"}]))
-                      =<< query @() @MyEnum "select 'A'" ()
+                  mismatch <- query @() @MyEnum "select 'A'" ()
+                  case mismatch of
+                      Left (PgTypeMismatch
+                             [TypeMismatch { expected = TypeName "my_enum", column = 0 }]) -> pure ()
+                      _ -> assertFailure "did not get expected TypeMismatch error"
           ]
         ]
 

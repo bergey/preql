@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE NamedFieldPuns           #-}
@@ -60,22 +61,22 @@ sql  = expressionOnly "aritySql " $ \raw -> do
             query <- makeQuery rewritten
             case positionalCount of
                 0 -> -- only antiquotes (or no params)
-                    return $ TupE [query, tupleOrSingle antiNames]
+                    return $ tupleE [query, tupleOrSingle antiNames]
                 1 -> do -- one positional param, doesn't take a tuple
                     patternName <- newName "c"
                     return $ LamE [VarP patternName]
-                        (TupE [query, tupleOrSingle (patternName : antiNames)])
+                        (tupleE [query, tupleOrSingle (patternName : antiNames)])
                 _ -> do -- at least two positional parameters
                     patternNames <- cNames 'q' (fromIntegral positionalCount)
                     return $ LamE
                         [TupP (map VarP patternNames)]
-                        (TupE [query, tupleOrSingle (patternNames ++ antiNames)])
+                        (tupleE [query, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
 
 tupleOrSingle :: [Name] -> Exp
 tupleOrSingle names = case names of
     [name] -> VarE name
-    vs -> TupE $ map VarE vs
+    vs -> tupleE $ map VarE vs
 
 expressionOnly :: String -> (String -> Q Exp) -> QuasiQuoter
 expressionOnly name qq = QuasiQuoter
@@ -104,3 +105,10 @@ numberAntiquotes mp ts = (concat sqlStrings, variableNames) where
               in (unLex (NumberedParam newParam) : ss, name : ns)
           EOF -> go maxParam ts
           _ -> let (ss, ns) = go maxParam ts in (unLex token : ss, ns)
+
+tupleE :: [Exp] -> Exp
+#if MIN_VERSION_template_haskell(2,16,0)
+tupleE = TupE . fmap Just
+#else
+tupleE = TupE
+#endif

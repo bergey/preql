@@ -1,31 +1,31 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Preql.FromSql.Instances where
 
-import Preql.FromSql.Class
-import Preql.FromSql.TH
-import Preql.Wire.Errors
-import Preql.Wire.Internal (applyDecoder)
-import Preql.Wire.Types
+import           Preql.FromSql.Class
+import           Preql.FromSql.TH
+import           Preql.Wire.Errors
+import           Preql.Wire.Internal        (applyDecoder)
+import           Preql.Wire.Types
 
-import Data.Int
-import Data.Time (Day, TimeOfDay, UTCTime)
-import Data.UUID (UUID)
-import GHC.TypeNats
-import Preql.Imports
-import qualified BinaryParser as BP
-import qualified Data.Aeson as JSON
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Database.PostgreSQL.LibPQ as PQ
+import qualified BinaryParser               as BP
+import qualified Data.Aeson                 as JSON
+import qualified Data.ByteString            as BS
+import qualified Data.ByteString.Lazy       as BSL
+import           Data.Int
+import qualified Data.Text                  as T
+import qualified Data.Text.Lazy             as TL
+import           Data.Time                  (Day, TimeOfDay, UTCTime)
+import           Data.UUID                  (UUID)
+import qualified Database.PostgreSQL.LibPQ  as PQ
+import           GHC.TypeNats
 import qualified PostgreSQL.Binary.Decoding as PGB
+import           Preql.Imports
 import qualified Preql.Wire.TypeInfo.Static as OID
 
 instance FromSqlField Bool where
@@ -52,10 +52,9 @@ instance FromSqlField Double where
     fromSqlField = FieldDecoder (Oid OID.float8Oid) PGB.float8
 instance FromSql Double
 
--- TODO does Postgres have a single-char type?  Does it always return bpchar?
--- instance FromSqlField Char where
---     fromSqlField = FieldDecoder (Oid OID.charOid) PGB.char
--- instance FromSql Char
+instance FromSqlField Char where
+    fromSqlField = FieldDecoder (Oid OID.charOid) PGB.char
+instance FromSql Char where fromSql = notNull fromSqlField
 
 instance FromSqlField String where
     fromSqlField = FieldDecoder (Oid OID.textOid) (T.unpack <$> PGB.text_strict)
@@ -105,6 +104,10 @@ instance FromSql UUID
 instance FromSqlField PQ.Oid where
     fromSqlField = PQ.Oid <$> FieldDecoder (Oid OID.oidOid) PGB.int
 instance FromSql PQ.Oid
+
+instance FromSqlField PgName where
+    fromSqlField = FieldDecoder (Oid OID.nameOid) (PgName <$> PGB.text_strict)
+instance FromSql PgName where fromSql = notNull fromSqlField
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'fromSqlJsonField' rather than this

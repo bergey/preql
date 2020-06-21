@@ -15,7 +15,7 @@ module Preql (
     , module Preql.Wire
     ) where
 
-import Preql.Effect
-import Preql.QuasiQuoter.Raw.TH (sql)
-import Preql.QuasiQuoter.Syntax.TH (select, validSql)
-import Preql.Wire
+import           Preql.Effect
+import           Preql.QuasiQuoter.Raw.TH    (sql)
+import           Preql.QuasiQuoter.Syntax.TH (select, validSql)
+import           Preql.Wire

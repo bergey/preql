@@ -1,10 +1,10 @@
 cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.3.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0036497a0a6053fb3fbcb37c9cb9399c232ad4a7c1de337f2233e26f33aeba3d
+-- hash: 81705c135d900a1d7bbcda75479469a21868d7891ff5cf39902bc11d0816da77
 
 name:           preql
 version:        0.4
@@ -136,6 +136,43 @@ test-suite tests
     , tasty >=1.2.3
     , tasty-hedgehog >=1.0
     , tasty-hunit >=0.10.0
+    , template-haskell >=2.15.0.0
+    , text >=1.2.3.2
+    , th-lift-instances >=0.1.17
+    , time >=1.9.3
+    , transformers >=0.5.6.2
+    , uuid >=1.3.13
+    , vector >=0.12.1.2
+    , vector-sized >=1.4.1
+  default-language: Haskell2010
+
+benchmark pgbench
+  type: exitcode-stdio-1.0
+  main-is: Bench.hs
+  other-modules:
+      Paths_preql
+  hs-source-dirs:
+      benchmark
+  default-extensions: OverloadedStrings DataKinds
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      aeson >=1.4.7.1
+    , array >=0.5.4.0
+    , base >=4.13.0.0
+    , binary-parser >=0.5.6
+    , bytestring >=0.10.10.0
+    , bytestring-strict-builder >=0.4.5.3
+    , contravariant >=1.5.2
+    , criterion
+    , deepseq
+    , mtl >=2.2.2
+    , postgresql-binary >=0.12.2
+    , postgresql-libpq >=0.9.4.2
+    , preql
+    , scientific >=0.3.6.2
+    , syb >=0.7.1
     , template-haskell >=2.15.0.0
     , text >=1.2.3.2
     , th-lift-instances >=0.1.17

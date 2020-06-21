@@ -85,6 +85,7 @@ class Monad m => SqlQuery (m :: * -> *) where
     query_ :: ToSql p => (Query 0, p) -> m ()
 
 -- | Most larger applications will define an instance; this one is suitable to test out the library.
+-- A safer version would use @MVar Connection@ to ensure only one thread using it.
 instance SQL (ReaderT Connection IO) where
     withConnection = (ask >>=)
 

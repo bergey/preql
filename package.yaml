@@ -68,3 +68,13 @@ dependencies:
 default-extensions:
   - OverloadedStrings
   - DataKinds
+
+benchmarks:
+  pgbench:
+    main: Bench.hs
+    source-dirs:
+      - benchmark
+    dependencies:
+      - preql
+      - criterion
+      - deepseq

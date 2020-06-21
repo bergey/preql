@@ -32,31 +32,32 @@ import qualified PostgreSQL.Binary.Decoding as PGB
 
 main :: IO ()
 main = do
-    -- TODO connection pool
-    conn <- connectDB
     startTime <- getCurrentTime
     lastPrintTime <- newTVarIO startTime
     lastPrintCount <- newTVarIO 0
     rowCount <- newTVarIO 0
-    forever $ do
-        let
-            typmod = -1 :: Int16
-            isdefined = True
-        res :: Vector (PgName, PQ.Oid, PQ.Oid, Int16, Bool , Char, Bool, Bool, Char , PQ.Oid, PQ.Oid, PQ.Oid) <-
-            flip runReaderT conn $ query [sql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
-        evaluate $ force res
-        now <- getCurrentTime
-        m_print <- atomically $ do
-            modifyTVar' rowCount (+ V.length res)
-            last <- readTVar lastPrintTime
-            if now `diffUTCTime` last > 5 -- seconds
-            then do
-                writeTVar lastPrintTime now
-                rows <- readTVar rowCount
-                last <- swapTVar lastPrintCount rows
-                return $ Just (rows, (rows - last) `div` 5)
-            else return Nothing
-        for_ m_print $ \(rows, rps) -> putStrLn (iso8601Show now ++ ": " ++ show rows ++ " total " ++ show rps ++ " per second")
+    -- TODO make connection count configurable
+    replicateM_ 10 $ do
+        conn <- connectDB
+        forever $ do
+            let
+                typmod = -1 :: Int16
+                isdefined = True
+            res :: Vector (PgName, PQ.Oid, PQ.Oid, Int16, Bool , Char, Bool, Bool, Char , PQ.Oid, PQ.Oid, PQ.Oid) <-
+                flip runReaderT conn $ query [sql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
+            evaluate $ force res
+            now <- getCurrentTime
+            m_print <- atomically $ do
+                modifyTVar' rowCount (+ V.length res)
+                last <- readTVar lastPrintTime
+                if now `diffUTCTime` last > 5 -- seconds
+                then do
+                    writeTVar lastPrintTime now
+                    rows <- readTVar rowCount
+                    last <- swapTVar lastPrintCount rows
+                    return $ Just (rows, (rows - last) `div` 5)
+                else return Nothing
+            for_ m_print $ \(rows, rps) -> putStrLn (iso8601Show now ++ ": " ++ show rows ++ " total " ++ show rps ++ " per second")
 
 connectDB :: IO PQ.Connection
 connectDB = do

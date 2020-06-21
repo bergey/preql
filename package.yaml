@@ -68,3 +68,26 @@ dependencies:
 default-extensions:
   - OverloadedStrings
   - DataKinds
+
+benchmarks:
+  pgbench:
+    main: Bench.hs
+    source-dirs:
+      - benchmark
+    dependencies:
+      - preql
+      - criterion
+      - deepseq
+
+executables:
+  preql-load:
+    main: Load.hs
+    source-dirs:
+      - load-test
+    dependencies:
+      - preql
+      - deepseq
+      - optparse-applicative
+      - resource-pool
+      - stm
+    ghc-options: "-rtsopts -threaded -eventlog -O2 -fprof-auto -fprof-cafs"

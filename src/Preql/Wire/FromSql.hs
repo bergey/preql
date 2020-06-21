@@ -106,10 +106,9 @@ instance FromSqlField Double where
     fromSqlField = FieldDecoder (Oid OID.float8Oid) PGB.float8
 instance FromSql Double where fromSql = notNull fromSqlField
 
--- TODO does Postgres have a single-char type?  Does it always return bpchar?
--- instance FromSqlField Char where
---     fromSqlField = FieldDecoder (Oid OID.charOid) PGB.char
--- instance FromSql Char where fromSql = notNull fromSqlField
+instance FromSqlField Char where
+    fromSqlField = FieldDecoder (Oid OID.charOid) PGB.char
+instance FromSql Char where fromSql = notNull fromSqlField
 
 instance FromSqlField String where
     fromSqlField = FieldDecoder (Oid OID.textOid) (T.unpack <$> PGB.text_strict)
@@ -159,6 +158,10 @@ instance FromSql UUID where fromSql = notNull fromSqlField
 instance FromSqlField PQ.Oid where
     fromSqlField = PQ.Oid <$> FieldDecoder (Oid OID.oidOid) PGB.int
 instance FromSql PQ.Oid where fromSql = notNull fromSqlField
+
+instance FromSqlField PgName where
+    fromSqlField = FieldDecoder (Oid OID.nameOid) (PgName <$> PGB.text_strict)
+instance FromSql PgName where fromSql = notNull fromSqlField
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'fromSqlJsonField' rather than this

@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-duplicate-exports #-}
 module Preql (
-    SQL(..), sql
-    , Transaction, Query
+    SQL(..), SqlQuery(..), sql
+    , runTransaction, Transaction, Query
     -- * functions for writing SQL instances
     , runTransactionIO
     -- * Decoding rows

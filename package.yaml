@@ -72,3 +72,13 @@ benchmarks:
       - preql
       - criterion
       - deepseq
+
+executables:
+  preql-load:
+    main: Load.hs
+    source-dirs:
+      - load-test
+    dependencies:
+      - preql
+      - deepseq
+      - stm

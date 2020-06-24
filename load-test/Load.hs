@@ -1,34 +1,37 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE NumericUnderscores         #-}
+{-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 
 module Main where
 
-import Preql
-import qualified Preql.Wire.TypeInfo.Static as OID
+import           Preql
+import qualified Preql.Wire.TypeInfo.Static  as OID
 
-import Control.Concurrent.STM.TVar
-import Control.DeepSeq (NFData(..), force)
-import Control.Exception (evaluate, throwIO)
-import Control.Monad
-import Control.Monad.STM (atomically)
-import Control.Monad.Trans.Reader (ReaderT(..), ask, runReaderT)
-import Data.ByteString (ByteString)
-import Data.Foldable (for_)
-import Data.Int
-import Data.Text (Text)
-import Data.Text.Encoding (encodeUtf8)
-import Data.Time (diffUTCTime, getCurrentTime)
-import Data.Time.Format.ISO8601 (iso8601Show)
-import Data.Vector (Vector)
-import System.Environment (lookupEnv)
-import qualified Data.Text as T
-import qualified Data.Vector as V
-import qualified Database.PostgreSQL.LibPQ as PQ
-import qualified PostgreSQL.Binary.Decoding as PGB
+import           Control.Concurrent          (forkIO, myThreadId, threadDelay)
+import           Control.Concurrent.STM.TVar
+import           Control.DeepSeq             (NFData (..), force)
+import           Control.Exception           (evaluate, throwIO)
+import           Control.Monad
+import           Control.Monad.STM           (atomically)
+import           Control.Monad.Trans.Reader  (ReaderT (..), ask, runReaderT)
+import           Data.ByteString             (ByteString)
+import           Data.Foldable               (for_)
+import           Data.Int
+import           Data.Text                   (Text)
+import qualified Data.Text                   as T
+import           Data.Text.Encoding          (encodeUtf8)
+import           Data.Time                   (diffUTCTime, getCurrentTime)
+import           Data.Time.Format.ISO8601    (iso8601Show)
+import           Data.Vector                 (Vector)
+import qualified Data.Vector                 as V
+import qualified Database.PostgreSQL.LibPQ   as PQ
+import qualified PostgreSQL.Binary.Decoding  as PGB
+import           System.Environment          (lookupEnv)
+import           System.Exit                 (exitSuccess)
+import           System.IO
 
 main :: IO ()
 main = do
@@ -36,8 +39,9 @@ main = do
     lastPrintTime <- newTVarIO startTime
     lastPrintCount <- newTVarIO 0
     rowCount <- newTVarIO 0
+    hSetBuffering stdout LineBuffering
     -- TODO make connection count configurable
-    replicateM_ 10 $ do
+    replicateM_ 10 $ forkIO $ do
         conn <- connectDB
         forever $ do
             let
@@ -46,18 +50,19 @@ main = do
             res :: Vector (PgName, PQ.Oid, PQ.Oid, Int16, Bool , Char, Bool, Bool, Char , PQ.Oid, PQ.Oid, PQ.Oid) <-
                 flip runReaderT conn $ query [sql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
             evaluate $ force res
-            now <- getCurrentTime
-            m_print <- atomically $ do
-                modifyTVar' rowCount (+ V.length res)
-                last <- readTVar lastPrintTime
-                if now `diffUTCTime` last > 5 -- seconds
-                then do
-                    writeTVar lastPrintTime now
-                    rows <- readTVar rowCount
-                    last <- swapTVar lastPrintCount rows
-                    return $ Just (rows, (rows - last) `div` 5)
-                else return Nothing
-            for_ m_print $ \(rows, rps) -> putStrLn (iso8601Show now ++ ": " ++ show rows ++ " total " ++ show rps ++ " per second")
+            -- threadId <- myThreadId
+            -- pushLogStrLn logger (toLogStr (iso8601Show now ++ " " ++ show threadId))
+            atomically $ modifyTVar' rowCount (+ V.length res)
+    forever $ do
+        threadDelay 5_000_000
+        now <- getCurrentTime
+        m_print <- atomically $ do
+            rows <- readTVar rowCount
+            last <- swapTVar lastPrintCount rows
+            lastTime <- swapTVar lastPrintTime now
+            let dt = floor (now `diffUTCTime` lastTime)
+            return $ Just (rows, (rows - last) `div` dt)
+        for_ m_print $ \(rows, rps) -> putStrLn (iso8601Show now ++ ": " ++ show rows ++ " total " ++ show rps ++ " per second")
 
 connectDB :: IO PQ.Connection
 connectDB = do
@@ -70,7 +75,7 @@ connectionString :: IO ByteString
 connectionString = do
     m_dbname <- lookupEnv "PREQL_TESTS_DB"
     let dbname = case m_dbname of
-            Just s -> encodeUtf8 (T.pack s)
+            Just s  -> encodeUtf8 (T.pack s)
             Nothing -> "preql_tests"
     return $ "dbname=" <> dbname
 

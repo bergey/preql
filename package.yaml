@@ -88,3 +88,4 @@ executables:
       - preql
       - deepseq
       - stm
+    ghc-options: "-rtsopts -threaded"

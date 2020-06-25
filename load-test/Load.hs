@@ -1,7 +1,9 @@
+{-# LANGUAGE ApplicativeDo              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 
@@ -21,6 +23,7 @@ import           Control.Monad.Trans.Reader  (ReaderT (..), ask, runReaderT)
 import           Data.ByteString             (ByteString)
 import           Data.Foldable               (for_)
 import           Data.Int
+import           Data.Pool
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 import           Data.Text.Encoding          (encodeUtf8)
@@ -29,6 +32,7 @@ import           Data.Time.Format.ISO8601    (iso8601Show)
 import           Data.Vector                 (Vector)
 import qualified Data.Vector                 as V
 import qualified Database.PostgreSQL.LibPQ   as PQ
+import           Options.Applicative
 import qualified PostgreSQL.Binary.Decoding  as PGB
 import           System.Environment          (lookupEnv)
 import           System.Exit                 (exitSuccess)
@@ -36,25 +40,33 @@ import           System.IO
 
 main :: IO ()
 main = do
+    Options {..} <- execParser (info (options <**> helper) fullDesc)
+    m_pool :: Maybe (Pool PQ.Connection) <- traverse (createPool connectDB PQ.finish 1 1) connections
     startTime <- getCurrentTime
     lastPrintTime <- newTVarIO startTime
     lastPrintCount <- newTVarIO 0
     rowCount <- newTVarIO 0
     hSetBuffering stdout LineBuffering
-    -- TODO make connection count configurable
-    replicateM_ 10 $ forkIO $ do
-        conn <- connectDB
-        forever $ do
-            let
-                typmod = -1 :: Int16
-                isdefined = True
-            res :: Vector (PgName, PQ.Oid, PQ.Oid, Int16, Bool , Char, Bool, Bool, Char , PQ.Oid, PQ.Oid, PQ.Oid) <-
-                flip runReaderT conn $ query [sql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
-            evaluate $ force res
-            -- threadId <- myThreadId
-            -- pushLogStrLn logger (toLogStr (iso8601Show now ++ " " ++ show threadId))
-            atomically $ modifyTVar' rowCount (+ V.length res)
-    replicateM_ 15 $ do
+    replicateM_ threads $ forkIO $ do
+        let
+            typmod = -1 :: Int16
+            isdefined = True
+            selectRows :: PQ.Connection -> IO ()
+            selectRows conn = do
+                res :: Vector (PgName, PQ.Oid, PQ.Oid, Int16, Bool , Char, Bool, Bool, Char , PQ.Oid, PQ.Oid, PQ.Oid) <-
+                    flip runReaderT conn $ query [sql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
+                evaluate $ force res
+                atomically $ modifyTVar' rowCount (+ V.length res)
+        case m_pool of
+            Just pool -> forever (withResource pool selectRows)
+            Nothing   -> do
+                conn <- connectDB
+                forever (selectRows conn)
+
+    let repeatedly = case duration of
+            Nothing      -> forever
+            Just seconds -> replicateM_ seconds
+    repeatedly $ do
         threadDelay 1_000_000
         now <- getCurrentTime
         m_print <- atomically $ do
@@ -79,6 +91,26 @@ connectionString = do
             Just s  -> encodeUtf8 (T.pack s)
             Nothing -> "preql_tests"
     return $ "dbname=" <> dbname
+
+data Options = Options
+    { threads     :: Int
+    , connections :: Maybe Int
+    , duration    :: Maybe Int
+    }
+    deriving (Show)
+
+options :: Parser Options
+options = do
+    threads <- option auto
+        ( long "threads" <> short 't' <> metavar "THREADS"
+          <> help "number of Haskell threads to fork" <> value 1)
+    connections <- optional (option auto
+        ( long "connections" <> short 'c' <>
+          help "number of connections in pool (default no pool, 1 connection per thread)" ))
+    duration <- optional $ option auto
+        ( long "duration" <> short 'd' <> metavar "SECONDS"
+          <> help "duration in seconds to run (default until killed)" )
+    return Options {..}
 
 instance NFData PQ.Oid where
     rnf (PQ.Oid oid) = rnf oid

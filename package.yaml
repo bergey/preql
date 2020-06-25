@@ -25,6 +25,7 @@ extra-doc-files:
 
 library:
   source-dirs: [src]
+  ghc-options: "-O2"
 
 tests:
   tests:
@@ -81,5 +82,7 @@ executables:
     dependencies:
       - preql
       - deepseq
+      - optparse-applicative
+      - resource-pool
       - stm
-    ghc-options: "-rtsopts -threaded -eventlog"
+    ghc-options: "-rtsopts -threaded -eventlog -O2 -fprof-auto -fprof-cafs"

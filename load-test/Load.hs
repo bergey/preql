@@ -10,7 +10,8 @@ module Main where
 import           Preql
 import qualified Preql.Wire.TypeInfo.Static  as OID
 
-import           Control.Concurrent          (forkIO, myThreadId, threadDelay)
+import           Control.Concurrent          (forkIO, forkOS, myThreadId,
+                                              threadDelay)
 import           Control.Concurrent.STM.TVar
 import           Control.DeepSeq             (NFData (..), force)
 import           Control.Exception           (evaluate, throwIO)
@@ -53,8 +54,8 @@ main = do
             -- threadId <- myThreadId
             -- pushLogStrLn logger (toLogStr (iso8601Show now ++ " " ++ show threadId))
             atomically $ modifyTVar' rowCount (+ V.length res)
-    forever $ do
-        threadDelay 5_000_000
+    replicateM_ 15 $ do
+        threadDelay 1_000_000
         now <- getCurrentTime
         m_print <- atomically $ do
             rows <- readTVar rowCount

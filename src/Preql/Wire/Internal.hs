@@ -1,7 +1,7 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards            #-}
 
 -- | The types in this module have invariants which cannot be checked
 -- if their constructors are in scope.  Preql.Wire exports the type
@@ -9,14 +9,16 @@
 
 module Preql.Wire.Internal where
 
-import Preql.Wire.Errors
+import           Preql.Wire.Errors
 
-import Control.Monad.Trans.Except
-import Control.Monad.Trans.State
-import Data.String (IsString)
-import Preql.Imports
+import           Control.Exception          (throwIO)
+import           Control.Monad.Except
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.State
+import           Data.String                (IsString)
+import           Preql.Imports
 
-import qualified Database.PostgreSQL.LibPQ as PQ
+import qualified Database.PostgreSQL.LibPQ  as PQ
 
 -- TODO less ambiguous name (or rename others)
 -- | The IsString instance does no validation; the limited instances
@@ -39,15 +41,17 @@ instance Applicative RowDecoder where
 -- | Internal because we need IO for the libpq FFI, but we promise not
 -- to do any IO besides decoding.  We don't even make network calls to
 -- Postgres in @InternalDecoder@
-type InternalDecoder =  StateT DecoderState (ExceptT FieldError IO)
+type InternalDecoder =  StateT DecoderState IO
 
 data DecoderState = DecoderState
-    { result :: PQ.Result
-    , row :: PQ.Row
-    , column :: PQ.Column
-    } deriving (Show, Eq)
+    { result :: !PQ.Result
+    , row    :: !PQ.Row
+    , column :: !PQ.Column
+    }
+    deriving (Show, Eq)
 
-decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> ExceptT FieldError IO a
+-- | Can throw FieldError
+decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> IO a
 decodeRow (RowDecoder _ parsers) result row =
     evalStateT parsers (DecoderState result row 0)
 
@@ -56,3 +60,8 @@ getNextValue = do
     s@DecoderState{..} <- get
     put (s { column = column + 1 } :: DecoderState)
     liftIO $ PQ.getvalue result row column
+
+throwLocated :: UnlocatedFieldError -> InternalDecoder a
+throwLocated failure = do
+    DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
+    lift $ throwIO (FieldError (fromIntegral r) (fromIntegral c) failure)

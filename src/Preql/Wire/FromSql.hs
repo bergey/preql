@@ -1,34 +1,36 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
+{-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 -- | Decoding values from Postgres wire format to Haskell.
 
 module Preql.Wire.FromSql where
 
-import Preql.Wire.Errors
-import Preql.Wire.Internal
-import Preql.Wire.Tuples (deriveFromSqlTuple)
-import Preql.Wire.Types
+import           Preql.Wire.Errors
+import           Preql.Wire.Internal        (RowDecoder (..), decodeRow,
+                                             getNextValue, throwLocated)
+import           Preql.Wire.Tuples          (deriveFromSqlTuple)
+import           Preql.Wire.Types
 
-import Control.Monad.Except
-import Control.Monad.Trans.State
-import Data.Int
-import Data.Time (Day, TimeOfDay, UTCTime)
-import Data.UUID (UUID)
-import Preql.Imports
+import           Control.Exception          (try)
+import           Control.Monad.Except
+import           Control.Monad.Trans.State
+import           Data.Int
+import           Data.Time                  (Day, TimeOfDay, UTCTime)
+import           Data.UUID                  (UUID)
+import           Preql.Imports
 
-import qualified BinaryParser as BP
-import qualified Data.Aeson as JSON
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Vector as V
-import qualified Database.PostgreSQL.LibPQ as PQ
+import qualified BinaryParser               as BP
+import qualified Data.Aeson                 as JSON
+import qualified Data.ByteString            as BS
+import qualified Data.ByteString.Lazy       as BSL
+import qualified Data.Text                  as T
+import qualified Data.Text.Lazy             as TL
+import qualified Data.Vector                as V
+import qualified Database.PostgreSQL.LibPQ  as PQ
 import qualified PostgreSQL.Binary.Decoding as PGB
 import qualified Preql.Wire.TypeInfo.Static as OID
 
@@ -37,11 +39,6 @@ import qualified Preql.Wire.TypeInfo.Static as OID
 -- representation of that type to the Haskell representation.
 data FieldDecoder a = FieldDecoder PgType (BP.BinaryParser a)
     deriving Functor
-
-throwLocated :: UnlocatedFieldError -> InternalDecoder a
-throwLocated failure = do
-    DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
-    throwError (FieldError (fromIntegral r) (fromIntegral c) failure)
 
 decodeVector :: (PgType -> IO (Either QueryError PQ.Oid)) -> RowDecoder a -> PQ.Result -> IO (Either QueryError (Vector a))
 decodeVector lookupType rd@(RowDecoder pgtypes _parsers) result = do
@@ -59,7 +56,7 @@ decodeVector lookupType rd@(RowDecoder pgtypes _parsers) result = do
         else do
             (PQ.Row ntuples) <- liftIO $ PQ.ntuples result
             let toRow = PQ.toRow . fromIntegral
-            fmap (first DecoderError) . runExceptT $
+            fmap (first DecoderError) . try $
                 V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow)
 
 notNull :: FieldDecoder a -> RowDecoder a

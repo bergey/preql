@@ -1,15 +1,16 @@
 module Preql.Wire.Query where
 
-import Preql.Wire.Errors
-import Preql.Wire.FromSql
-import Preql.Wire.Internal
-import Preql.Wire.ToSql
+import           Preql.Wire.Errors
+import           Preql.Wire.FromSql
+import           Preql.Wire.Internal
+import           Preql.Wire.ToSql
 
-import Control.Monad
-import Preql.Imports
+import           Control.Monad
+import           Debug.Trace
+import           Preql.Imports
 
-import qualified Data.Text as T
-import qualified Data.Vector as V
+import qualified Data.Text                 as T
+import qualified Data.Vector               as V
 import qualified Database.PostgreSQL.LibPQ as PQ
 
 queryWith :: RowEncoder p -> RowDecoder r -> PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
@@ -17,8 +18,9 @@ queryWith enc dec conn (Query query) params = do
     -- TODO safer Connection type
     -- withMVar (connectionHandle conn) $ \connRaw -> do
         e_result <- execParams enc conn query params
+        traceEventIO "execParams > decodeVector"
         case e_result of
-            Left err -> return (Left err)
+            Left err     -> return (Left err)
             Right result -> decodeVector (lookupType conn) dec result
 
 -- If there is no result, we don't need a Decoder
@@ -53,7 +55,7 @@ connectionError conn Nothing = do
     m_msg <- liftIO $ PQ.errorMessage conn
     case m_msg of
         Just msg -> return (Left (decodeUtf8With lenientDecode msg))
-        Nothing -> return (Left "No error message available")
+        Nothing  -> return (Left "No error message available")
 
 lookupType :: PQ.Connection -> PgType -> IO (Either QueryError PQ.Oid)
 lookupType _ (Oid oid) = return (Right oid)
@@ -64,8 +66,7 @@ lookupType conn (TypeName name) = do
         Right (Just oid) -> return (Right oid)
         Right Nothing -> return (Left (ConnectionError ("No oid for: " <> name)))
 
-data IsolationLevel
-    = ReadCommitted
+data IsolationLevel = ReadCommitted
     | RepeatableRead
     | Serializable
     deriving (Show, Read, Eq, Ord, Enum, Bounded)

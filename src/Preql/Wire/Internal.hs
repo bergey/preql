@@ -13,6 +13,7 @@ module Preql.Wire.Internal where
 
 import Preql.Wire.Errors
 
+import Control.Monad.Except
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 import Data.String (IsString)
@@ -51,16 +52,17 @@ applyDecoder (RowDecoder vm f) (RowDecoder vn a) = RowDecoder (vm VS.++ vn) (f <
 -- | Internal because we need IO for the libpq FFI, but we promise not
 -- to do any IO besides decoding.  We don't even make network calls to
 -- Postgres in @InternalDecoder@
-type InternalDecoder =  StateT DecoderState (ExceptT FieldError IO)
+type InternalDecoder =  StateT DecoderState IO
 
 data DecoderState = DecoderState
-    { result :: PQ.Result
-    , row    :: PQ.Row
-    , column :: PQ.Column
+    { result :: !PQ.Result
+    , row    :: !PQ.Row
+    , column :: !PQ.Column
     }
     deriving (Show, Eq)
 
-decodeRow :: RowDecoder n a -> PQ.Result -> PQ.Row -> ExceptT FieldError IO a
+-- | Can throw FieldError
+decodeRow :: RowDecoder n a -> PQ.Result -> PQ.Row -> IO a
 decodeRow (RowDecoder _ parsers) result row =
     evalStateT parsers (DecoderState result row 0)
 

@@ -11,6 +11,7 @@ module Preql.Wire.Decode where
 import Preql.Wire.Errors
 import Preql.Wire.Internal
 
+import Control.Exception (try)
 import Control.Monad.Except
 import GHC.TypeNats
 import Preql.Imports
@@ -35,5 +36,5 @@ decodeVector lookupType rd@(RowDecoder pgtypes _parsers) result = do
         then return (Left (PgTypeMismatch mismatches))
         else do
             (PQ.Row ntuples) <- liftIO $ PQ.ntuples result
-            fmap (first DecoderError) . runExceptT $
+            fmap (first DecoderError) . try $
                 V.generateM (fromIntegral ntuples) (decodeRow rd result . PQ.toRow)

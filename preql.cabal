@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c211ae737c41da977f0fcc3c29a3502ebe689089bae4a9f9774ff872acc170a0
+-- hash: 35c1431368b7d0caabc3ab5970f071a4f1210b941eff76ea52b8b93e22e2e746
 
 name:           preql
 version:        0.4
@@ -73,6 +73,7 @@ library
   hs-source-dirs:
       src
   default-extensions: OverloadedStrings DataKinds
+  ghc-options: -O2
   build-tools:
       alex
     , happy
@@ -88,6 +89,45 @@ library
     , postgresql-binary >=0.12.2
     , postgresql-libpq >=0.9.4.2
     , scientific >=0.3.6.2
+    , syb >=0.7.1
+    , template-haskell >=2.15.0.0
+    , text >=1.2.3.2
+    , th-lift-instances >=0.1.17
+    , time >=1.9.3
+    , transformers >=0.5.6.2
+    , uuid >=1.3.13
+    , vector >=0.12.1.2
+    , vector-sized >=1.4.1
+  default-language: Haskell2010
+
+executable preql-load
+  main-is: Load.hs
+  other-modules:
+      Paths_preql
+  hs-source-dirs:
+      load-test
+  default-extensions: OverloadedStrings DataKinds
+  ghc-options: -rtsopts -threaded -eventlog -O2 -fprof-auto -fprof-cafs
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      aeson >=1.4.7.1
+    , array >=0.5.4.0
+    , base >=4.13.0.0
+    , binary-parser >=0.5.6
+    , bytestring >=0.10.10.0
+    , bytestring-strict-builder >=0.4.5.3
+    , contravariant >=1.5.2
+    , deepseq
+    , mtl >=2.2.2
+    , optparse-applicative
+    , postgresql-binary >=0.12.2
+    , postgresql-libpq >=0.9.4.2
+    , preql
+    , resource-pool
+    , scientific >=0.3.6.2
+    , stm
     , syb >=0.7.1
     , template-haskell >=2.15.0.0
     , text >=1.2.3.2

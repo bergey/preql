@@ -1,4 +1,6 @@
 {-# LANGUAGE ApplicativeDo              #-}
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NumericUnderscores         #-}
@@ -32,6 +34,8 @@ import           Data.Time.Format.ISO8601    (iso8601Show)
 import           Data.Vector                 (Vector)
 import qualified Data.Vector                 as V
 import qualified Database.PostgreSQL.LibPQ   as PQ
+import           Debug.Trace                 (traceEventIO)
+import           GHC.Generics
 import           Options.Applicative
 import qualified PostgreSQL.Binary.Decoding  as PGB
 import           System.Environment          (lookupEnv)
@@ -53,9 +57,12 @@ main = do
             isdefined = True
             selectRows :: PQ.Connection -> IO ()
             selectRows conn = do
-                res :: Vector (PgName, PQ.Oid, PQ.Oid, Int16, Bool , Char, Bool, Bool, Char , PQ.Oid, PQ.Oid, PQ.Oid) <-
+                traceEventIO "before query"
+                res :: Vector TypeInfo <-
                     flip runReaderT conn $ query [sql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
+                traceEventIO "after query"
                 evaluate $ force res
+                traceEventIO "forced rows"
                 atomically $ modifyTVar' rowCount (+ V.length res)
         case m_pool of
             Just pool -> forever (withResource pool selectRows)
@@ -122,3 +129,25 @@ instance (NFData a1, NFData a2, NFData a3, NFData a4, NFData a5, NFData a6, NFDa
       `seq` rnf x11 `seq` rnf x12
 
 deriving newtype instance NFData PgName
+
+data TypeInfo = TypeInfo
+    { typname        :: !PgName
+    , typnamespace   :: !PQ.Oid
+    , typowner       :: !PQ.Oid
+    , typlen         :: !Int16
+    , typbyval       :: !Bool
+    , typcategory    :: !Char
+    , typispreferred :: !Bool
+    , typisdefined   :: !Bool
+    , typdelim       :: !Char
+    , typrelid       :: !PQ.Oid
+    , typelem        :: !PQ.Oid
+    , typarray       :: !PQ.Oid
+    }
+    deriving (Generic, NFData)
+
+instance FromSql TypeInfo where
+    fromSql = TypeInfo <$>
+        fromSql <*> fromSql <*> fromSql <*> fromSql <*>
+        fromSql <*> fromSql <*> fromSql <*> fromSql <*>
+        fromSql <*> fromSql <*> fromSql <*> fromSql

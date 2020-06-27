@@ -1,7 +1,9 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TypeOperators              #-}
 
 -- | The types in this module have invariants which cannot be checked
 -- if their constructors are in scope.  Preql.Wire exports the type
@@ -14,8 +16,10 @@ import Preql.Wire.Errors
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 import Data.String (IsString)
+import GHC.TypeNats
 import Preql.Imports
 
+import qualified Data.Vector.Sized as VS
 import qualified Database.PostgreSQL.LibPQ as PQ
 
 -- TODO less ambiguous name (or rename others)
@@ -25,15 +29,18 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 newtype Query = Query ByteString
     deriving (Show, IsString)
 
+-- TODO fix comment; not Applicative either
 -- | @RowDecoder@ is 'Applicative' but not 'Monad' so that we can
 -- assemble all of the OIDs before we read any of the field data sent
 -- by Postgres.
-data RowDecoder a = RowDecoder [PgType] (InternalDecoder a)
+data RowDecoder (n :: Nat) a = RowDecoder (VS.Vector n PgType) (InternalDecoder a)
     deriving Functor
 
-instance Applicative RowDecoder where
-    pure a = RowDecoder [] (pure a)
-    RowDecoder t1 p1 <*> RowDecoder t2 p2 = RowDecoder (t1 <> t2) (p1 <*> p2)
+pureDecoder :: a -> RowDecoder 0 a
+pureDecoder a = RowDecoder VS.empty (pure a)
+
+applyDecoder :: RowDecoder m (a -> b) -> RowDecoder n a -> RowDecoder (m+n) b
+applyDecoder (RowDecoder vm f) (RowDecoder vn a) = RowDecoder (vm VS.++ vn) (f <*> a)
 
 -- TODO can I use ValidationT instead of ExceptT, since I ensure Column is incremented before errors?
 -- | Internal because we need IO for the libpq FFI, but we promise not
@@ -43,11 +50,12 @@ type InternalDecoder =  StateT DecoderState (ExceptT FieldError IO)
 
 data DecoderState = DecoderState
     { result :: PQ.Result
-    , row :: PQ.Row
+    , row    :: PQ.Row
     , column :: PQ.Column
-    } deriving (Show, Eq)
+    }
+    deriving (Show, Eq)
 
-decodeRow :: RowDecoder a -> PQ.Result -> PQ.Row -> ExceptT FieldError IO a
+decodeRow :: RowDecoder n a -> PQ.Result -> PQ.Row -> ExceptT FieldError IO a
 decodeRow (RowDecoder _ parsers) result row =
     evalStateT parsers (DecoderState result row 0)
 

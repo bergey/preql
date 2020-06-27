@@ -1,9 +1,13 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
+{-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 -- | Decoding values from Postgres wire format to Haskell.
 
@@ -19,6 +23,7 @@ import Control.Monad.Trans.State
 import Data.Int
 import Data.Time (Day, TimeOfDay, UTCTime)
 import Data.UUID (UUID)
+import GHC.TypeNats
 import Preql.Imports
 
 import qualified BinaryParser as BP
@@ -28,6 +33,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Vector as V
+import qualified Data.Vector.Sized as VS
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified PostgreSQL.Binary.Decoding as PGB
 import qualified Preql.Wire.TypeInfo.Static as OID
@@ -43,9 +49,10 @@ throwLocated failure = do
     DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
     throwError (FieldError (fromIntegral r) (fromIntegral c) failure)
 
-decodeVector :: (PgType -> IO (Either QueryError PQ.Oid)) -> RowDecoder a -> PQ.Result -> IO (Either QueryError (Vector a))
+decodeVector :: KnownNat n =>
+    (PgType -> IO (Either QueryError PQ.Oid)) -> RowDecoder n a -> PQ.Result -> IO (Either QueryError (Vector a))
 decodeVector lookupType rd@(RowDecoder pgtypes _parsers) result = do
-    mismatches <- fmap catMaybes $ for (zip [0 ..] pgtypes) $ \(column@(PQ.Col cint), expected) -> do
+    mismatches <- fmap (catMaybes . VS.toList) $ for (VS.zip (VS.enumFromN 0) pgtypes) $ \(column@(PQ.Col cint), expected) -> do
         actual <- PQ.ftype result column
         e_expectedOid <- lookupType expected
         case e_expectedOid of
@@ -62,15 +69,15 @@ decodeVector lookupType rd@(RowDecoder pgtypes _parsers) result = do
             fmap (first DecoderError) . runExceptT $
                 V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow)
 
-notNull :: FieldDecoder a -> RowDecoder a
-notNull (FieldDecoder oid parser) = RowDecoder [oid] $ do
+notNull :: FieldDecoder a -> RowDecoder 1 a
+notNull (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
     m_bs <- getNextValue
     case m_bs of
         Nothing -> throwLocated UnexpectedNull
         Just bs -> either (throwLocated . ParseFailure) pure (BP.run parser bs)
 
-nullable :: FieldDecoder a -> RowDecoder (Maybe a)
-nullable (FieldDecoder oid parser) = RowDecoder [oid] $ do
+nullable :: FieldDecoder a -> RowDecoder 1 (Maybe a)
+nullable (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
     m_bs <- getNextValue
     case m_bs of
         Nothing -> return Nothing
@@ -79,49 +86,59 @@ nullable (FieldDecoder oid parser) = RowDecoder [oid] $ do
 class FromSqlField a where
     fromSqlField :: FieldDecoder a
 
+-- | A type which can be decoded from a SQL row.  Note that this
+-- includes the canonical order of fields.
+--
+-- The default (empty) instance works for any type with a
+-- 'FromSqlField' instance
 class FromSql a where
-    fromSql :: RowDecoder a
+    type Width a :: Nat
+    type Width a = 1
+
+    fromSql :: RowDecoder (Width a) a
+    default fromSql :: (FromSqlField a, Width a ~ 1) => RowDecoder (Width a) a
+    fromSql = notNull fromSqlField
 
 instance FromSqlField Bool where
     fromSqlField = FieldDecoder (Oid OID.boolOid) PGB.bool
-instance FromSql Bool where fromSql = notNull fromSqlField
+instance FromSql Bool
 
 instance FromSqlField Int16 where
     fromSqlField = FieldDecoder (Oid OID.int2Oid) PGB.int
-instance FromSql Int16 where fromSql = notNull fromSqlField
+instance FromSql Int16
 
 instance FromSqlField Int32 where
     fromSqlField = FieldDecoder (Oid OID.int4Oid) PGB.int
-instance FromSql Int32 where fromSql = notNull fromSqlField
+instance FromSql Int32
 
 instance FromSqlField Int64  where
     fromSqlField = FieldDecoder (Oid OID.int8Oid) PGB.int
-instance FromSql Int64 where fromSql = notNull fromSqlField
+instance FromSql Int64
 
 instance FromSqlField Float where
     fromSqlField = FieldDecoder (Oid OID.float4Oid) PGB.float4
-instance FromSql Float where fromSql = notNull fromSqlField
+instance FromSql Float
 
 instance FromSqlField Double where
     fromSqlField = FieldDecoder (Oid OID.float8Oid) PGB.float8
-instance FromSql Double where fromSql = notNull fromSqlField
+instance FromSql Double
 
 -- TODO does Postgres have a single-char type?  Does it always return bpchar?
 -- instance FromSqlField Char where
 --     fromSqlField = FieldDecoder (Oid OID.charOid) PGB.char
--- instance FromSql Char where fromSql = notNull fromSqlField
+-- instance FromSql Char
 
 instance FromSqlField String where
     fromSqlField = FieldDecoder (Oid OID.textOid) (T.unpack <$> PGB.text_strict)
-instance FromSql String where fromSql = notNull fromSqlField
+instance FromSql String
 
 instance FromSqlField Text where
     fromSqlField = FieldDecoder (Oid OID.textOid) PGB.text_strict
-instance FromSql Text where fromSql = notNull fromSqlField
+instance FromSql Text
 
 instance FromSqlField TL.Text where
     fromSqlField = FieldDecoder (Oid OID.textOid) PGB.text_lazy
-instance FromSql TL.Text where fromSql = notNull fromSqlField
+instance FromSql TL.Text
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'Data.Aeson.encode' and
@@ -129,43 +146,43 @@ instance FromSql TL.Text where fromSql = notNull fromSqlField
 -- instance.
 instance FromSqlField ByteString where
     fromSqlField = FieldDecoder (Oid OID.byteaOid) (BS.copy <$> BP.remainders)
-instance FromSql ByteString where fromSql = notNull fromSqlField
+instance FromSql ByteString
 
 instance FromSqlField BSL.ByteString where
     fromSqlField = FieldDecoder (Oid OID.byteaOid) (BSL.fromStrict . BS.copy <$> BP.remainders)
-instance FromSql BSL.ByteString where fromSql = notNull fromSqlField
+instance FromSql BSL.ByteString
 
 -- TODO check for integer_datetimes setting
 instance FromSqlField UTCTime where
     fromSqlField = FieldDecoder (Oid OID.timestamptzOid) PGB.timestamptz_int
-instance FromSql UTCTime where fromSql = notNull fromSqlField
+instance FromSql UTCTime
 
 instance FromSqlField Day where
     fromSqlField = FieldDecoder (Oid OID.dateOid) PGB.date
-instance FromSql Day where fromSql = notNull fromSqlField
+instance FromSql Day
 
 instance FromSqlField TimeOfDay where
     fromSqlField = FieldDecoder (Oid OID.timeOid) PGB.time_int
-instance FromSql TimeOfDay where fromSql = notNull fromSqlField
+instance FromSql TimeOfDay
 
 instance FromSqlField TimeTZ where
     fromSqlField = FieldDecoder (Oid OID.timetzOid) (uncurry TimeTZ <$> PGB.timetz_int)
-instance FromSql TimeTZ where fromSql = notNull fromSqlField
+instance FromSql TimeTZ
 
 instance FromSqlField UUID where
     fromSqlField = FieldDecoder (Oid OID.uuidOid) PGB.uuid
-instance FromSql UUID where fromSql = notNull fromSqlField
+instance FromSql UUID
 
 instance FromSqlField PQ.Oid where
     fromSqlField = PQ.Oid <$> FieldDecoder (Oid OID.oidOid) PGB.int
-instance FromSql PQ.Oid where fromSql = notNull fromSqlField
+instance FromSql PQ.Oid
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'fromSqlJsonField' rather than this
 -- instance.
 instance FromSqlField JSON.Value where
     fromSqlField = FieldDecoder (Oid OID.jsonbOid) PGB.jsonb_ast
-instance FromSql JSON.Value where fromSql = notNull fromSqlField
+instance FromSql JSON.Value
 
 fromSqlJsonField :: JSON.FromJSON a => FieldDecoder a
 fromSqlJsonField = FieldDecoder (Oid OID.jsonbOid)
@@ -176,10 +193,12 @@ instance {-# OVERLAPPABLE #-} FromSqlField a => FromSql (Maybe a) where
     fromSql = nullable fromSqlField
 
 instance (FromSql a, FromSql b) => FromSql (a, b) where
-    fromSql = (,) <$> fromSql <*> fromSql
+    type Width (a, b) = Width a + Width b
+    fromSql = ((,) <$> fromSql) `applyDecoder` fromSql
 
 instance (FromSql a, FromSql b, FromSql c) => FromSql (a, b, c) where
-    fromSql = (,,) <$> fromSql <*> fromSql <*> fromSql
+    type Width (a, b, c) = (Width a + Width b) + Width c
+    fromSql = ((,,) <$> fromSql) `applyDecoder` fromSql `applyDecoder` fromSql
 
 -- The instances below all follow the pattern laid out by the tuple
 -- instances above.  The ones above are written out without the macro

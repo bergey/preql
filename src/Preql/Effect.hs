@@ -1,9 +1,10 @@
-{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
 
 -- | SQL Effect class, basically capturing some way of accessing a database.
 
@@ -21,10 +22,11 @@ import Control.Monad.Trans.Except (ExceptT(..), runExceptT)
 import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
 import Control.Monad.Trans.Reader (ReaderT(..), ask, runReaderT)
 import Database.PostgreSQL.LibPQ (Connection)
-import qualified Control.Monad.Trans.State.Lazy as SL
-import qualified Control.Monad.Trans.State.Strict as SS
+import GHC.TypeNats
 import qualified Control.Monad.Trans.RWS.Lazy as L
 import qualified Control.Monad.Trans.RWS.Strict as S
+import qualified Control.Monad.Trans.State.Lazy as SL
+import qualified Control.Monad.Trans.State.Strict as SS
 
 import qualified Preql.Wire.Query as W
 
@@ -50,8 +52,10 @@ class SqlQuery m => SQL (m :: * -> *) where
     withConnection :: (Connection -> m a) -> m a
 
     -- | Run a query on the specified 'Connection'
-    queryOn :: (ToSql p, FromSql r) => Connection -> (Query, p) -> m (Vector r)
-    default queryOn :: (ToSql p, FromSql r, MonadIO m) => Connection -> (Query, p) -> m (Vector r)
+    queryOn :: (ToSql p, FromSql r, KnownNat (Width r)) =>
+        Connection -> (Query, p) -> m (Vector r)
+    default queryOn :: (ToSql p, FromSql r, KnownNat (Width r), MonadIO m) =>
+        Connection -> (Query, p) -> m (Vector r)
     queryOn conn (q, p) = liftIO $ either throwIO pure =<< W.query conn q p
 
     queryOn_ :: ToSql p => Connection -> (Query, p) -> m ()
@@ -72,7 +76,7 @@ runTransaction = runTransaction' Serializable
 class Monad m => SqlQuery (m :: * -> *) where
     -- | Run a parameterized query that returns data.  The tuple argument is typically provided by
     -- the 'sql' Quasiquoter.
-    query :: (ToSql p, FromSql r) => (Query, p) -> m (Vector r)
+    query :: (ToSql p, FromSql r, KnownNat (Width r)) => (Query, p) -> m (Vector r)
 
     -- | Run a parameterized query that does not return data.
     query_ :: ToSql p => (Query, p) -> m ()
@@ -93,7 +97,7 @@ runTransactionIO level (Transaction m) conn = do
     either throwIO pure =<< W.begin conn level
     e_a <- runReaderT (runExceptT m) conn
     void $ case e_a of
-        Left _ -> W.rollback conn
+        Left _  -> W.rollback conn
         Right _ -> W.commit conn
     return e_a
 

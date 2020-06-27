@@ -53,13 +53,13 @@ class SqlQuery m => SQL (m :: * -> *) where
 
     -- | Run a query on the specified 'Connection'
     queryOn :: (ToSql p, FromSql r, KnownNat (Width r)) =>
-        Connection -> (Query, p) -> m (Vector r)
+        Connection -> (Query (Width r), p) -> m (Vector r)
     default queryOn :: (ToSql p, FromSql r, KnownNat (Width r), MonadIO m) =>
-        Connection -> (Query, p) -> m (Vector r)
+        Connection -> (Query (Width r), p) -> m (Vector r)
     queryOn conn (q, p) = liftIO $ either throwIO pure =<< W.query conn q p
 
-    queryOn_ :: ToSql p => Connection -> (Query, p) -> m ()
-    default queryOn_ :: (ToSql p, MonadIO m) => Connection -> (Query, p) -> m ()
+    queryOn_ :: ToSql p => Connection -> (Query 0, p) -> m ()
+    default queryOn_ :: (ToSql p, MonadIO m) => Connection -> (Query 0, p) -> m ()
     queryOn_ conn (q, p) = liftIO $ either throwIO pure =<< W.query_ conn q p
 
 -- | Run a Transaction with full Serializable isolation.
@@ -76,10 +76,10 @@ runTransaction = runTransaction' Serializable
 class Monad m => SqlQuery (m :: * -> *) where
     -- | Run a parameterized query that returns data.  The tuple argument is typically provided by
     -- the 'sql' Quasiquoter.
-    query :: (ToSql p, FromSql r, KnownNat (Width r)) => (Query, p) -> m (Vector r)
+    query :: (ToSql p, FromSql r, KnownNat (Width r)) => (Query (Width r), p) -> m (Vector r)
 
     -- | Run a parameterized query that does not return data.
-    query_ :: ToSql p => (Query, p) -> m ()
+    query_ :: ToSql p => (Query 0, p) -> m ()
 
 -- | Most larger applications will define an instance; this one is suitable to test out the library.
 instance SQL (ReaderT Connection IO) where

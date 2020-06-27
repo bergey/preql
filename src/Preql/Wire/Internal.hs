@@ -25,8 +25,9 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 -- TODO less ambiguous name (or rename others)
 -- | The IsString instance does no validation; the limited instances
 -- discourage directly manipulating strings, with the high risk of SQL
--- injection.
-newtype Query = Query ByteString
+-- injection.  A @Query@ is tagged with a 'Nat' representing the width
+-- of its return type.
+newtype Query (n :: Nat) = Query ByteString
     deriving (Show, IsString)
 
 -- TODO fix comment; not Applicative either

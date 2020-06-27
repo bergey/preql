@@ -15,7 +15,7 @@ import qualified Data.Vector as V
 import qualified Database.PostgreSQL.LibPQ as PQ
 
 queryWith :: KnownNat n => RowEncoder p -> RowDecoder n r ->
-    PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
+    PQ.Connection -> Query n -> p -> IO (Either QueryError (Vector r))
 queryWith enc dec conn (Query query) params = do
     -- TODO safer Connection type
     -- withMVar (connectionHandle conn) $ \connRaw -> do
@@ -25,7 +25,7 @@ queryWith enc dec conn (Query query) params = do
             Right result -> decodeVector (lookupType conn) dec result
 
 -- If there is no result, we don't need a Decoder
-queryWith_ :: RowEncoder p -> PQ.Connection -> Query -> p -> IO (Either QueryError ())
+queryWith_ :: RowEncoder p -> PQ.Connection -> Query n -> p -> IO (Either QueryError ())
 queryWith_ enc conn (Query query) params = do
     e_result <- execParams enc conn query params
     return (void e_result)
@@ -45,10 +45,10 @@ execParams enc conn query params = do
                     return (Left (ConnectionError msg))
 
 query :: (ToSql p, FromSql r, KnownNat (Width r)) =>
-    PQ.Connection -> Query -> p -> IO (Either QueryError (Vector r))
+    PQ.Connection -> Query (Width r) -> p -> IO (Either QueryError (Vector r))
 query = queryWith toSql fromSql
 
-query_ :: ToSql p => PQ.Connection -> Query -> p -> IO (Either QueryError ())
+query_ :: ToSql p => PQ.Connection -> Query n -> p -> IO (Either QueryError ())
 query_ = queryWith_ toSql
 
 connectionError :: PQ.Connection -> Maybe a -> IO (Either Text a)

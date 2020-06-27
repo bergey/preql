@@ -11,10 +11,13 @@ import Preql.Wire (Query)
 import Data.String (IsString(..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
+import Language.Haskell.TH.Syntax (Lift(..))
+
+import qualified Data.Text as T
 
 -- | Convert a rewritten SQL string to a ByteString
 makeQuery :: String -> Q Exp
-makeQuery string = [e|(fromString string :: Query) |]
+makeQuery string = [e|(fromString string :: Query $(VarT <$> (newName "n"))) |]
 
 -- | Given a SQL query with ${} antiquotes, splice a pair @(Query
 -- p r, p)@ or a function @\p' -> (Query p r, p)@ if the SQL
@@ -39,7 +42,7 @@ makeQuery string = [e|(fromString string :: Query) |]
 -- @(Query, p)@ where p includes both named & numbered params.  For example:
 -- @\a -> ("SELECT name, age FROM cats WHERE age >= $1 and age < $2", (a, maxAge))@
 sql  :: QuasiQuoter
-sql  = expressionOnly "aritySql " $ \raw -> do
+sql  = expressionOnly "sql " $ \raw -> do
     loc <- location
     let e_ast = parseQuery (show loc) raw
     case e_ast of
@@ -64,13 +67,12 @@ sql  = expressionOnly "aritySql " $ \raw -> do
                         (TupE [query, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
 
-
 maxParam :: [Token] -> Word
 maxParam = foldr nextParam 0 where
   nextParam token maxParam =
       case token of
           NumberedParam i -> max i maxParam
-          _ -> maxParam
+          _               -> maxParam
 
 numberAntiquotes :: Word -> [Token] -> (String, [String])
 numberAntiquotes mp ts = (concat sqlStrings, variableNames) where

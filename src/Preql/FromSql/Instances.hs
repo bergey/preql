@@ -1,103 +1,32 @@
-{-# LANGUAGE DefaultSignatures     #-}
-{-# LANGUAGE DeriveDataTypeable    #-}
-{-# LANGUAGE DeriveFunctor         #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TemplateHaskell #-}
 
--- | Decoding values from Postgres wire format to Haskell.
+module Preql.FromSql.Instances where
 
-module Preql.Wire.FromSql where
-
+import Preql.FromSql.Class
+import Preql.FromSql.TH
 import Preql.Wire.Errors
-import Preql.Wire.Internal
-import Preql.Wire.Tuples (deriveFromSqlTuple)
+import Preql.Wire.Internal (applyDecoder)
 import Preql.Wire.Types
 
-import Control.Monad.Except
-import Control.Monad.Trans.State
 import Data.Int
 import Data.Time (Day, TimeOfDay, UTCTime)
 import Data.UUID (UUID)
 import GHC.TypeNats
 import Preql.Imports
-
 import qualified BinaryParser as BP
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import qualified Data.Vector as V
-import qualified Data.Vector.Sized as VS
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified PostgreSQL.Binary.Decoding as PGB
 import qualified Preql.Wire.TypeInfo.Static as OID
-
--- | A @FieldDecoder@ for a type @a@ consists of an OID indicating the
--- Postgres type which can be decoded, and a parser from the binary
--- representation of that type to the Haskell representation.
-data FieldDecoder a = FieldDecoder PgType (BP.BinaryParser a)
-    deriving Functor
-
-throwLocated :: UnlocatedFieldError -> InternalDecoder a
-throwLocated failure = do
-    DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
-    throwError (FieldError (fromIntegral r) (fromIntegral c) failure)
-
-decodeVector :: KnownNat n =>
-    (PgType -> IO (Either QueryError PQ.Oid)) -> RowDecoder n a -> PQ.Result -> IO (Either QueryError (Vector a))
-decodeVector lookupType rd@(RowDecoder pgtypes _parsers) result = do
-    mismatches <- fmap (catMaybes . VS.toList) $ for (VS.zip (VS.enumFromN 0) pgtypes) $ \(column@(PQ.Col cint), expected) -> do
-        actual <- PQ.ftype result column
-        e_expectedOid <- lookupType expected
-        case e_expectedOid of
-            Right oid | actual == oid -> return Nothing
-            _ -> do
-                m_name <- liftIO $ PQ.fname result column
-                let columnName = decodeUtf8With lenientDecode <$> m_name
-                return $ Just (TypeMismatch{column = fromIntegral cint, ..})
-    if not (null mismatches)
-        then return (Left (PgTypeMismatch mismatches))
-        else do
-            (PQ.Row ntuples) <- liftIO $ PQ.ntuples result
-            let toRow = PQ.toRow . fromIntegral
-            fmap (first DecoderError) . runExceptT $
-                V.generateM (fromIntegral ntuples) (decodeRow rd result . toRow)
-
-notNull :: FieldDecoder a -> RowDecoder 1 a
-notNull (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
-    m_bs <- getNextValue
-    case m_bs of
-        Nothing -> throwLocated UnexpectedNull
-        Just bs -> either (throwLocated . ParseFailure) pure (BP.run parser bs)
-
-nullable :: FieldDecoder a -> RowDecoder 1 (Maybe a)
-nullable (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
-    m_bs <- getNextValue
-    case m_bs of
-        Nothing -> return Nothing
-        Just bs -> either (throwLocated . ParseFailure) (pure . Just) (BP.run parser bs)
-
-class FromSqlField a where
-    fromSqlField :: FieldDecoder a
-
--- | A type which can be decoded from a SQL row.  Note that this
--- includes the canonical order of fields.
---
--- The default (empty) instance works for any type with a
--- 'FromSqlField' instance
-class FromSql a where
-    type Width a :: Nat
-    type Width a = 1
-
-    fromSql :: RowDecoder (Width a) a
-    default fromSql :: (FromSqlField a, Width a ~ 1) => RowDecoder (Width a) a
-    fromSql = notNull fromSqlField
 
 instance FromSqlField Bool where
     fromSqlField = FieldDecoder (Oid OID.boolOid) PGB.bool

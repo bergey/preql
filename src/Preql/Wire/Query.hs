@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Preql.Wire.Query where
 
+import Preql.FromSql
 import Preql.Wire.Errors
-import Preql.Wire.FromSql
+import Preql.Wire.Decode
 import Preql.Wire.Internal
 import Preql.Wire.ToSql
 
@@ -14,14 +15,15 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Database.PostgreSQL.LibPQ as PQ
 
-queryWith :: KnownNat n => RowEncoder p -> RowDecoder n r ->
-    PQ.Connection -> Query n -> p -> IO (Either QueryError (Vector r))
+queryWith :: KnownNat (Width r) =>
+  RowEncoder p -> RowDecoder (Width r) r -> PQ.Connection ->
+  Query (Width r) -> p -> IO (Either QueryError (Vector r))
 queryWith enc dec conn (Query query) params = do
     -- TODO safer Connection type
     -- withMVar (connectionHandle conn) $ \connRaw -> do
         e_result <- execParams enc conn query params
         case e_result of
-            Left err     -> return (Left err)
+            Left err -> return (Left err)
             Right result -> decodeVector (lookupType conn) dec result
 
 -- If there is no result, we don't need a Decoder
@@ -29,6 +31,13 @@ queryWith_ :: RowEncoder p -> PQ.Connection -> Query n -> p -> IO (Either QueryE
 queryWith_ enc conn (Query query) params = do
     e_result <- execParams enc conn query params
     return (void e_result)
+
+query :: (ToSql p, FromSql r, KnownNat (Width r)) =>
+    PQ.Connection -> Query (Width r) -> p -> IO (Either QueryError (Vector r))
+query = queryWith toSql fromSql
+
+query_ :: ToSql p => PQ.Connection -> Query n -> p -> IO (Either QueryError ())
+query_ = queryWith_ toSql
 
 execParams :: RowEncoder p -> PQ.Connection -> ByteString -> p -> IO (Either QueryError PQ.Result)
 execParams enc conn query params = do
@@ -44,20 +53,13 @@ execParams enc conn query params = do
                         <&> maybe (T.pack (show status)) (decodeUtf8With lenientDecode)
                     return (Left (ConnectionError msg))
 
-query :: (ToSql p, FromSql r, KnownNat (Width r)) =>
-    PQ.Connection -> Query (Width r) -> p -> IO (Either QueryError (Vector r))
-query = queryWith toSql fromSql
-
-query_ :: ToSql p => PQ.Connection -> Query n -> p -> IO (Either QueryError ())
-query_ = queryWith_ toSql
-
 connectionError :: PQ.Connection -> Maybe a -> IO (Either Text a)
 connectionError _conn (Just a) = return (Right a)
 connectionError conn Nothing = do
     m_msg <- liftIO $ PQ.errorMessage conn
     case m_msg of
         Just msg -> return (Left (decodeUtf8With lenientDecode msg))
-        Nothing  -> return (Left "No error message available")
+        Nothing -> return (Left "No error message available")
 
 lookupType :: PQ.Connection -> PgType -> IO (Either QueryError PQ.Oid)
 lookupType _ (Oid oid) = return (Right oid)
@@ -68,7 +70,8 @@ lookupType conn (TypeName name) = do
         Right (Just oid) -> return (Right oid)
         Right Nothing -> return (Left (ConnectionError ("No oid for: " <> name)))
 
-data IsolationLevel = ReadCommitted
+data IsolationLevel
+    = ReadCommitted
     | RepeatableRead
     | Serializable
     deriving (Show, Read, Eq, Ord, Enum, Bounded)

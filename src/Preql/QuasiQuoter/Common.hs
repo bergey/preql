@@ -22,3 +22,6 @@ expressionOnly name qq = QuasiQuoter
     , quoteType = \_ -> error $ "qq " ++ name ++ " cannot be used in type context"
     , quoteDec = \_ -> error $ "qq " ++ name ++ " cannot be used in declaration context"
     }
+
+alphabet :: [String]
+alphabet = cycle (map (:"") ['a'..'z'])

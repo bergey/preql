@@ -50,10 +50,10 @@ parser = testGroup "parser"
        , targetList = [ ColumnTarget ColumnRef (Var "name") Nothing, ColumnTarget (ColumnRef (Var "email") Nothing) ]
        }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
-      (QS OldSelect
-       { table = "users"
-       , columns = CRef (ColumnRef (Var "name") Nothing) :| [CRef (ColumnRef (Var "email") Nothing)]
-       , conditions = Just (Compare Eq "name" (Lit (T "Daniel")))
+      (QS (SelectUnordered unordered
+       { from = [ TableRef "users" Nothing ]
+       , targetList = [ ColumnTarget ColumnRef (Var "name") Nothing, ColumnTarget ColumnRef (Var "email") Nothing ]
+       , whereClause = Just (BinOp (Comp Eq) (Var "name") (Lit (T "Daniel")))
        })
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
       (QS OldSelect
@@ -116,14 +116,3 @@ testParse query expected = testCase query $
 testParseExpr :: TestName -> Expr -> TestTree
 testParseExpr query expected = testCase query $
     assertEqual "" (Right expected) (parseExpr "<testcase>" query)
-
-unordered :: Unordered
-unordered = Unordered
-    { distinct = Nothing
-    , targetList = []
-    , from = []
-    , whereClause = Nothing
-    , groupBy = []
-    , having = Nothing
-    , window = Nothing
-    }

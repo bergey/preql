@@ -75,6 +75,8 @@ data Unordered = Unordered
     -- TODO remaining fields
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
+
+-- This is really for writing tests, but put it here for faster type check errors
 unordered :: Unordered
 unordered = Unordered
     { distinct = Nothing

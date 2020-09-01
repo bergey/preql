@@ -46,6 +46,13 @@ instance Arbitrary Delete where arbitrary = genericArbitraryU
 instance Arbitrary Setting where arbitrary = genericArbitraryU
 instance Arbitrary Update where arbitrary = genericArbitraryU
 instance Arbitrary SelectStmt where arbitrary = genericArbitraryU
+instance Arbitrary Unordered where arbitrary = genericArbitraryU
+instance Arbitrary TableRef where arbitrary = genericArbitraryU
+instance Arbitrary Alias where arbitrary = genericArbitraryU
+instance Arbitrary SortBy where arbitrary = genericArbitraryU
+instance Arbitrary SortOrderOrUsing where arbitrary = genericArbitraryU
+instance Arbitrary SortOrder where arbitrary = genericArbitraryU -- TODO better for enum?
+instance Arbitrary NullsOrder where arbitrary = genericArbitraryU
 
 -- Recursive types need more careful treatment to avoid infinite trees
 instance Arbitrary Condition where
@@ -76,6 +83,11 @@ instance Arbitrary Expr where
 instance Arbitrary BinOp where arbitrary = genericArbitraryU
 instance Arbitrary UnaryOp where arbitrary = genericArbitraryU
 instance Arbitrary Compare where arbitrary = genericArbitraryU
+instance Arbitrary AllOrDistinct where arbitrary = genericArbitraryU
+instance Arbitrary DistinctClause where arbitrary = genericArbitraryU
+instance Arbitrary ResTarget where arbitrary = genericArbitraryU
+instance Arbitrary ColumnRef where arbitrary = genericArbitraryU
+instance Arbitrary Window where arbitrary = genericArbitraryU
 
 #if !MIN_VERSION_time(1,9,0)
 class ParseTime8601 t where

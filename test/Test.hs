@@ -56,13 +56,13 @@ antiquotes = testGroup "antiquotes"
         assertEqual ""
             (QS (SelectUnordered unordered
                  { from =  [ TableRef "baz" Nothing ]
-                 , targetList = [ Column (Var  "foo") Nothing, Column (Var "bar") Nothing ]
-                 , whereClause = Just (BinOp (Comp Eq) (Var "foo") (NumberedParam 1 []))
+                 , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
+                 , whereClause = Just (BinOp (Comp Eq) (CRef "foo") (NumberedParam 1 []))
                  }), AntiquoteState 1 ["foo0"])
             (Syntax.numberAntiquotes 0 (QS (SelectUnordered unordered
                  { from =  [ TableRef "baz" Nothing ]
-                 , targetList = [ Column (Var  "foo") Nothing, Column (Var "bar") Nothing ]
-                 , whereClause = Just (BinOp (Comp Eq) (Var "foo") (HaskellParam "foo0"))
+                 , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
+                 , whereClause = Just (BinOp (Comp Eq) (CRef "foo") (HaskellParam "foo0"))
                  })))
     , testCase "numberAntiquotes, Raw" $
         assertEqual ""

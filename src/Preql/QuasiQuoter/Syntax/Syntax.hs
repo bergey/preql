@@ -120,12 +120,11 @@ data Condition = Compare !Compare !Name !Expr
     | Not Condition
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Expr = Lit !Literal | Var !Name
+data Expr = Lit !Literal | CRef Name
     | NumberedParam !Word [Indirection]
     | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
-    | CRef Name
     | Indirection Expr [Indirection]
     | SelectExpr SelectStmt [Indirection]
     -- TODO replace Condition, drop E from these names

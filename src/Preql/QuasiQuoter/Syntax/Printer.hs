@@ -110,8 +110,8 @@ instance FormatSql Condition where
 
 instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit
-    fmt (Var name) = fmt name
-    fmt (NumberedParam i indirect) = B.fromString ('$' : show i) <> mconcat (intersperse "." (map fmt indirect))
+    fmt (CRef name) = fmt name
+    fmt (NumberedParam i indirect) = B.fromString ('$' : show i) <> fmtIndirections indirect
     fmt (HaskellParam txt) = "${" <> B.fromText txt <> "}"
     fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
     fmt (Unary op expr) = case op of
@@ -119,6 +119,13 @@ instance FormatSql Expr where
         NegateBool -> "NOT " <> parens (fmt expr)
         IsNull     -> parens (fmt expr) <> " IS NULL"
         NotNull    -> parens (fmt expr) <> " IS NOT NULL"
+    fmt (SelectExpr stmt indirects) = parens (fmt stmt) <> fmtIndirections indirects
+    fmt (AndE l r) = fmt l <> " AND " <> fmt r
+    fmt (OrE l r) = fmt l <> " OR " <> fmt r
+    fmt (NotE expr) = "NOT " <> fmt expr
+
+fmtIndirections :: [Indirection] -> TLB.Builder
+fmtIndirections = mconcat . map (("." <>) . fmt)
 
 instance FormatSql BinOp where
     fmt op = case op of

@@ -1444,7 +1444,7 @@ Name : IDENT { mkName $1 }
 
 Expr :: { Expr }
     : Literal { Lit $1 }
-    | Name { Var $1 }
+    | Name { CRef $1 }
     | c_expr { $1 }
     | '(' Expr ')' { $2 }
     | Expr '^' Expr { BinOp Exponent $1 $3 }

@@ -42,56 +42,56 @@ parser = testGroup "parser"
     , testParse "SELECT name FROM users"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ Column (Var "name") Nothing ]
+       , targetList = [ Column (CRef "name") Nothing ]
        }))
     , testParse "SELECT name, email FROM users"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ Column (Var "name") Nothing, Column (Var "email") Nothing ]
+       , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
        }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ Column (Var "name") Nothing, Column (Var "email") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (Var "name") (Lit (T "Daniel")))
+       , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
+       , whereClause = Just (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel")))
        }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ Column (Var "name") Nothing, Column (Var "email") Nothing ]
-       , whereClause = Just (OrE (BinOp (Comp Eq) (Var "name") (Lit (T "Daniel"))) (BinOp (Comp Eq) (Var "name") (Lit (T "Bergey"))))
+       , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
+       , whereClause = Just (OrE (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel"))) (BinOp (Comp Eq) (CRef "name") (Lit (T "Bergey"))))
        }))
     , testParse "SELECT name FROM users WHERE age = 35"
         -- We currently parse integers & decimals all to Double
         -- Just test that both parser rules work
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ Column (Var "name") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (Var "age") (Lit (F 35)))
+       , targetList = [ Column (CRef "name") Nothing ]
+       , whereClause = Just (BinOp (Comp Eq) (CRef "age") (Lit (F 35)))
        }))
     , testParse "SELECT name FROM users WHERE age = 35.5"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ Column (Var "name") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (Var "age") (Lit (F 35.5)))
+       , targetList = [ Column (CRef "name") Nothing ]
+       , whereClause = Just (BinOp (Comp Eq) (CRef "age") (Lit (F 35.5)))
        }))
     , testParse "SELECT foo FROM bar WHERE baz > -2"
       (QS (SelectUnordered unordered
        { from = [ TableRef "bar" Nothing ]
-       , targetList = [ Column (Var "foo") Nothing ]
-       , whereClause = Just (BinOp (Comp GT) (Var "bas") (Lit (F (-2))))
+       , targetList = [ Column (CRef "foo") Nothing ]
+       , whereClause = Just (BinOp (Comp GT) (CRef "bas") (Lit (F (-2))))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
       (QS (SelectUnordered unordered
        { from = [ TableRef "bar" Nothing ]
-       , targetList = [ Column (Var "foo") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (Var "bas") (Lit (F 0.02)))
+       , targetList = [ Column (CRef "foo") Nothing ]
+       , whereClause = Just (BinOp (Comp Eq) (CRef "bas") (Lit (F 0.02)))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2"
       (QS (SelectUnordered unordered
        { from = [ TableRef "bar" Nothing ]
-       , targetList = [ Column (Var "foo") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (Var "bas") (Lit (F 0.02)))
+       , targetList = [ Column (CRef "foo") Nothing ]
+       , whereClause = Just (BinOp (Comp Eq) (CRef "bas") (Lit (F 0.02)))
        }))
     , testParseExpr "2 * 3 + 1"
       (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
@@ -101,12 +101,6 @@ parser = testGroup "parser"
       assertEqual "" (Right [L.String "foo'bar", L.EOF]) (L.testLex "'foo''bar'")
     , testCase "lex semicolon" $
       assertEqual "" (Right [L.SELECT, L.Number 2.0, L.Add, L.Number 3.0, L.Semicolon, L.EOF]) (L.testLex "SELECT 2 + 3;")
-    -- , testParse "SELECT foo FROM bar WHERE baz = 2E-2;"
-    --   (QS OldSelect
-    --       { table = "bar"
-    --       , columns = CRef (ColumnRef (Var "foo") Nothing) :| []
-    --       , conditions = Just (Compare Eq "baz" (Lit (F 0.02)))
-    --       })
     ]
 
 testParse :: TestName -> Query -> TestTree

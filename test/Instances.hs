@@ -67,9 +67,9 @@ instance Arbitrary Expr where
     arbitrary = do
         size <- getSize
         if size <= 1
-            then oneof [ Lit <$> arbitrary, Var <$> arbitrary ]
+            then oneof [ Lit <$> arbitrary, CRef <$> arbitrary ]
             else scale (`div` 2) $ oneof
-                 [ Lit <$> arbitrary, Var <$> arbitrary
+                 [ Lit <$> arbitrary, CRef <$> arbitrary
                  , NumberedParam <$> arbitrary <*> pure []
                  , BinOp <$> arbitrary <*> arbitrary <*> arbitrary
                  , Unary <$> arbitrary <*> arbitrary

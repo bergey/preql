@@ -105,6 +105,28 @@ data Alias = Alias
     , columnNames :: [ Name ]
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
+data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data AllOrDistinct = All | Distinct
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data ResTarget = Star | Column Expr (Maybe Name)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+-- data ColumnRef = ColumnRef
+--     { value :: Name
+--     , indirection :: Maybe Name -- TODO bigger type
+--     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data Window = Window
+    { name :: Maybe Name
+    , refName :: Maybe Name
+    , partitionClause :: [Expr]
+    , orderClause :: [SortBy ]
+    , frameOptions :: () -- FIXME implement
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
 data SortBy = SortBy
     { column :: Expr
     , direction :: SortOrderOrUsing
@@ -157,25 +179,3 @@ data UnaryOp = NegateNum | NegateBool | IsNull | NotNull
 
 data Compare = Eq | LT | LTE | GT | GTE | NEq |  Like | ILike
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
-data AllOrDistinct = All | Distinct
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
-data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
-data ResTarget = Star | Column Expr (Maybe Name)
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
--- data ColumnRef = ColumnRef
---     { value :: Name
---     , indirection :: Maybe Name -- TODO bigger type
---     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
-data Window = Window
-    { name :: Maybe Name
-    , refName :: Maybe Name
-    , partitionClause :: [Expr]
-    , orderClause :: [SortBy ]
-    , frameOptions :: () -- FIXME implement
-    } deriving (Show, Eq, Generic, Typeable, Data, Lift)

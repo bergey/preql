@@ -1534,7 +1534,7 @@ Setting :: { Setting }
 Name : IDENT { mkName $1 }
 
 Expr :: { Expr }
-    : Literal { Lit $1 }
+    : AexprConst { Lit $1 }
     | Name { CRef $1 }
     | c_expr { $1 }
     | '(' Expr ')' { $2 }
@@ -1554,9 +1554,6 @@ Expr :: { Expr }
     | NOT Expr { Unary NegateBool $2 }
     | '-' Expr { Unary NegateNum $2 }
     | Expr Null { Unary $2 $1 }
-
--- FIXME remove this alias
-Literal : AexprConst { $1 }
 
 Null
         : IS NULL { IsNull }

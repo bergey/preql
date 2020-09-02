@@ -30,7 +30,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.stack
-        key: ${{ runner.os }}-${{ matrix.resolver}}-${{ hashFiles('stack.yaml') }}
+        key: ${{ runner.os }}-${{ matrix.plan.resolver }}-${{ hashFiles('stack.yaml') }}
         restore-keys: ${{ runner.os }}-${{ matrix.resolver}}-
     # - uses: actions/setup-haskell@v1
       # with:

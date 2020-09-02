@@ -26,6 +26,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: restore from cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.stack
+        key: ${{ runner.os }}-${{ matrix.plan.resolver }}-${{ hashFiles('stack.yaml') }}
+        restore-keys: ${{ runner.os }}-${{ matrix.resolver}}-
     # - uses: actions/setup-haskell@v1
       # with:
       #   ghc-version: '8.8.3'

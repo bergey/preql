@@ -743,27 +743,9 @@ simple_select :: { SelectStmt }
 -- TODO                    n->windowClause = $9;
 -- TODO                    $$ = (Node *)n;
 -- TODO                }
-            | values_clause                            { SelectValues $1 }
--- TODO TODO select * in AST
--- TODO            | TABLE relation_expr
--- TODO                {
--- TODO                    /* same as SELECT * FROM relation_expr */
--- TODO                    ColumnRef *cr = makeNode(ColumnRef);
--- TODO                    ResTarget *rt = makeNode(ResTarget);
--- TODO                    SelectStmt *n = makeNode(SelectStmt);
--- TODO
--- TODO                    cr->fields = list_make1(makeNode(A_Star));
--- TODO                    cr->location = -1;
--- TODO
--- TODO                    rt->name = NULL;
--- TODO                    rt->indirection = NIL;
--- TODO                    rt->val = (Node *)cr;
--- TODO                    rt->location = -1;
--- TODO
--- TODO                    n->targetList = list_make1(rt);
--- TODO                    n->fromClause = list_make1($2);
--- TODO                    $$ = (Node *)n;
--- TODO                }
+            | values_clause { SelectValues $1 }
+            | TABLE relation_expr { Simple select { targetList = [ Star ], from = [ TableRef $2 Nothing ] } }
+            -- * same as SELECT * FROM relation_expr
 -- TODO TODO UNION in AST
 -- TODO            | select_clause UNION all_or_distinct select_clause
 -- TODO                {

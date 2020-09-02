@@ -45,34 +45,46 @@ $z = [zZ]
 tokens :-
 
     $white+            ;
-    $a $s $c { lex ASC }
-    $d $e $s $c { lex DESC }
-    $o $r $d $e $r { lex ORDER }
-    $b $y { lex BY }
-    $u $s $i $n $g { lex USING }
-    $o $p $e $r $a $t $o $r { lex OPERATOR }
-    $u $n $i $o $n { lex UNION }
-    $e $x $c $e $p $t { lex EXCEPT }
-    $n $u $l $l $s { lex Nulls }
-    $f $i $r $s $t { lex First }
-    $l $a $s $t { lex Last }
+
     $a $l $l  {lex ALL }
-    $d $i $s $t $i $n $c $t { lex DISTINCT }
-    $o $n { lex ON }
+    $a $n $d { lex AND }
+    $a $s $c { lex ASC }
     $a $s { lex AS }
+    $b $y { lex BY }
     $d $e $l $e $t $e { lex DELETE_P }
-    $s $e $l $e $c $t { lex SELECT }
-    $i $n $s $e $r $t { lex INSERT }
-    $u $p $d $a $t $e { lex UPDATE }
-    $f $r $o $m { lex FROM }
-    $w $h $e $r $e { lex WHERE }
-    $i $n $t $o { lex INTO }
-    $v $a $l $u $e $s { lex VALUES }
-    $s $e $t { lex SET }
-    $t $r $u $e { lex TRUE_P }
+    $d $e $s $c { lex DESC }
+    $d $i $s $t $i $n $c $t { lex DISTINCT }
+    $e $x $c $e $p $t { lex EXCEPT }
     $f $a $l $s $e { lex FALSE_P }
-    $o $f $f $s $e $t { lex OFFSET }
+    $f $i $r $s $t { lex First }
+    $f $r $o $m { lex FROM }
+    $i $l $i $k $e { lex ILIKE }
+    $i $n $s $e $r $t { lex INSERT }
+    $i $n $t $o { lex INTO }
+    $i $s $n $u $l $l { lex ISNULL }
+    $i $s { lex IS }
+    $l $a $s $t { lex Last }
+    $l $i $k $e { lex LIKE }
     $l $i $m $i $t { lex LIMIT }
+    $n $o $t $n $u $l $l { lex NOTNULL }
+    $n $o $t { lex NOT }
+    $n $u $l $l $s { lex Nulls }
+    $n $u $l $l { lex NULL_P }
+    $o $f $f $s $e $t { lex OFFSET }
+    $o $n { lex ON }
+    $o $p $e $r $a $t $o $r { lex OPERATOR }
+    $o $r $d $e $r { lex ORDER }
+    $o $r { lex OR }
+    $s $e $l $e $c $t { lex SELECT }
+    $s $e $t { lex SET }
+    $t $a $b $l $e { lex TABLE }
+    $t $r $u $e { lex TRUE_P }
+    $u $n $i $o $n { lex UNION }
+    $u $p $d $a $t $e { lex UPDATE }
+    $u $s $i $n $g { lex USING }
+    $v $a $l $u $e $s { lex VALUES }
+    $w $h $e $r $e { lex WHERE }
+
     "(" { lex LParen }
     "," { lex Comma }
     ")" { lex RParen }
@@ -82,11 +94,6 @@ tokens :-
     "+" { lex Add }
     "-" { lex Sub }
     "^" { lex Exponent }
-    $i $s { lex IS }
-    $n $o $t { lex NOT }
-    $n $u $l $l { lex NULL_P }
-    $i $s $n $u $l $l { lex ISNULL }
-    $n $o $t $n $u $l $l { lex NOTNULL }
     "<>" { lex NotEquals }
     "!=" { lex NotEquals }
     "<" { lex LT }
@@ -94,15 +101,14 @@ tokens :-
     ">" { lex GT }
     ">=" { lex GTE }
     "=" { lex Equals }
-    $l $i $k $e { lex LIKE }
-    $i $l $i $k $e { lex ILIKE }
-    $a $n $d { lex AND }
-    $o $r { lex OR }
+
     [\'] ("''" | $quoted)* [\'] { lex' (String . T.pack . unquoteString) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
+
     "-"? $digit+ { lex' (Iconst . read) }
     "-"? $digit+ ("." $digit+) { lex' (Fconst . read) }
     "-"? $digit+ ("." $digit+)? ($e "-"? $digit+) { lex' (Fconst . read) }
+
     "$" $digit+ { lex' (NumberedParam . read . tail) }
     "${" $haskell+ "}" { lex' (HaskellParam . T.pack . init . drop 2) }
     ";" { lex Semicolon }

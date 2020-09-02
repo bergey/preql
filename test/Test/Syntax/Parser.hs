@@ -145,6 +145,8 @@ parser = testGroup "parser"
     , testParse "SELECT * FROM foobar OFFSET 25"
       (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
           selectOptions { offset = Just (Lit (I 25)) }))
+    , testParse "TABLE foo"
+      (QS (Simple select { from = [TableRef "foo" Nothing ], targetList = [Star] }))
     ]
   ]
 

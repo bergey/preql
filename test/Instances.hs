@@ -55,14 +55,6 @@ instance Arbitrary SortOrder where arbitrary = genericArbitraryU -- TODO better 
 instance Arbitrary NullsOrder where arbitrary = genericArbitraryU
 
 -- Recursive types need more careful treatment to avoid infinite trees
-instance Arbitrary Condition where
-    arbitrary = do
-        size <- getSize
-        if size <= 1
-            then Compare <$> arbitrary <*> arbitrary <*> arbitrary
-            else scale  (`div` 2) genericArbitraryU
-    shrink = genericShrink
-
 instance Arbitrary Expr where
     arbitrary = do
         size <- getSize
@@ -73,6 +65,9 @@ instance Arbitrary Expr where
                  , NumberedParam <$> arbitrary <*> pure []
                  , BinOp <$> arbitrary <*> arbitrary <*> arbitrary
                  , Unary <$> arbitrary <*> arbitrary
+                 , And <$> arbitrary <*> arbitrary
+                 , Or <$> arbitrary <*> arbitrary
+                 , Not <$> arbitrary -- scale /2 doesn't really make sense for unary constructors
                  ]
     shrink expr = case expr of
         -- either subterm, or shrink one or both subterms

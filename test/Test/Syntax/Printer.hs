@@ -23,10 +23,10 @@ printer = testGroup "printer" [
                   }))
     , testCase "DELETE, = condition" $
         assertEqual ""
-            "DELETE FROM taffy WHERE flavor = 'blueberry'"
+            "DELETE FROM taffy WHERE (flavor) = ('blueberry')"
             (fmt (QD Delete
                   { table = mkName "taffy"
-                  , conditions = Just (Compare Eq (mkName "flavor") (Lit (T"blueberry")))
+                  , conditions = Just (BinOp (Comp Eq) (CRef "flavor") (Lit (T"blueberry")))
                   }))
     , testCase "INSERT, one column" $
         assertEqual ""

@@ -36,7 +36,7 @@ data Insert = Insert
 -- | Queries of the form @DELETE FROM table WHERE conditions@.
 data Delete = Delete
     { table      :: !Name
-    , conditions :: Maybe Condition
+    , conditions :: Maybe Expr
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Setting = Setting !Name !Expr
@@ -47,7 +47,7 @@ data Setting = Setting !Name !Expr
 data Update = Update
     { table      :: !Name
     , settings   :: NonEmpty Setting
-    , conditions :: Maybe Condition
+    , conditions :: Maybe Expr
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SelectStmt
@@ -107,12 +107,6 @@ data SortOrder = Ascending | Descending | DefaultSortOrder
 data NullsOrder = NullsFirst | NullsLast | NullsOrderDefault
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Condition = Compare !Compare !Name !Expr
-    | Or Condition Condition
-    | And Condition Condition
-    | Not Condition
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
 data Expr = Lit !Literal | CRef Name
     | NumberedParam !Word [Indirection]
     | HaskellParam !Text
@@ -120,14 +114,14 @@ data Expr = Lit !Literal | CRef Name
     | Unary !UnaryOp !Expr
     | Indirection Expr [Indirection]
     | SelectExpr SelectStmt [Indirection]
-    -- TODO replace Condition, drop E from these names
-    | AndE Expr Expr
-    | OrE Expr Expr
-    | NotE Expr
+    | And Expr Expr
+    | Or Expr Expr
+    | Not Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 type Indirection = Name -- FIXME
 
+-- TODO refactor BinOp & Compare to better match parser
 data BinOp = Mul | Div | Add | Sub | Exponent | Mod | Comp !Compare
            | IsDistinctFrom | IsNotDistinctFrom
     deriving (Show, Eq, Generic, Typeable, Data, Lift)

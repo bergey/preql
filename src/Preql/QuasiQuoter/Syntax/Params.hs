@@ -48,6 +48,6 @@ maxParamExpr expr = case expr of
     CRef _ -> 0
     Indirection e _ -> maxParamExpr e
     SelectExpr stmt _ -> everything max (mkQ 0 maxParamExpr) stmt
-    AndE l r -> max (maxParamExpr l) (maxParamExpr r)
-    OrE l r -> max (maxParamExpr l) (maxParamExpr r)
-    NotE e -> maxParamExpr e
+    And l r -> max (maxParamExpr l) (maxParamExpr r)
+    Or l r -> max (maxParamExpr l) (maxParamExpr r)
+    Not e -> maxParamExpr e

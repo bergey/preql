@@ -15,7 +15,6 @@ import qualified Data.List.NonEmpty as NE
 }
 
 %name parseQuery_ Query
-%name parseCondition_ Condition
 %name parseExpr_ a_expr
 %tokentype { L.LocToken }
 %monad { Alex }
@@ -577,7 +576,7 @@ Query1 :: { Query }
     | Update { QU $1 }
 
 Delete
-    : DELETE FROM Name WHERE Condition { Delete $3 (Just $5) }
+    : DELETE FROM Name WHERE Expr { Delete $3 (Just $5) }
     | DELETE FROM Name { Delete $3 Nothing }
 
 -- * A complete SELECT statement looks like this.
@@ -1126,9 +1125,9 @@ a_expr :: { Expr }
     | a_expr '>=' a_expr { BinOp (Comp GTE) $1 $3 }
     | a_expr '!=' a_expr { BinOp (Comp NEq) $1 $3 }
     | a_expr qual_Op a_expr				%prec Op { BinOp $2 $1 $3 } 
-    | a_expr AND a_expr { AndE $1 $3 }
-	  | a_expr OR a_expr { OrE $1 $3 }
-    | NOT a_expr { NotE $2 }
+    | a_expr AND a_expr { And $1 $3 }
+	  | a_expr OR a_expr { Or $1 $3 }
+    | NOT a_expr { Not $2 }
 -- TODO 			| NOT_LA a_expr						%prec NOT
 -- TODO 				{ $$ = makeNotExpr($2, @1); }
 
@@ -1380,7 +1379,7 @@ Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
 
 Update :: { Update }
-    : UPDATE Name SET SettingList WHERE Condition { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
+    : UPDATE Name SET SettingList WHERE Expr { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
     | UPDATE Name SET SettingList { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Nothing } }
 
 {- These lists are non-empty by construction, but not by type. List head is the right-most element. -}
@@ -1442,13 +1441,6 @@ Compare :: { Compare }
     | '>=' { GTE }
     | LIKE { Like }
     | ILIKE { ILike }
-
-Condition
-    : Name Compare Expr { Compare $2 $1 $3 }
-    | Condition AND Condition { And $1 $3 }
-    | Condition OR Condition { Or $1 $3 }
-    | NOT Condition { Not $2 }
-    | '(' Condition ')' { $2 }
 
 Setting :: { Setting }
     : Name '=' Expr { Setting $1 $3 }
@@ -2235,9 +2227,6 @@ happyError (L.LocToken p t) =
 
 parseQuery :: FilePath -> String -> Either String Query
 parseQuery = L.runAlexWithFilepath parseQuery_
-
-parseCondition :: FilePath -> String -> Either String Condition
-parseCondition = L.runAlexWithFilepath parseCondition_
 
 parseExpr :: FilePath -> String -> Either String Expr
 parseExpr = L.runAlexWithFilepath parseExpr_

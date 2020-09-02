@@ -28,12 +28,12 @@ parser = testGroup "parser"
     , testParse "dEleTe FROM taffy WHERE flavor = 'blueberry'"
       (QD Delete
           { table = mkName "taffy"
-          , conditions = Just (Compare Eq (mkName "flavor") (Lit (T"blueberry")))
+          , conditions = Just (BinOp (Comp Eq) (CRef "flavor") (Lit (T"blueberry")))
           })
     , testParse "DELETE FROM users WHERE email != 'bergey@teallabs.org'"
       (QD Delete
        { table = mkName "users"
-       , conditions = Just (Compare NEq (mkName "email") (Lit (T "bergey@teallabs.org")))
+       , conditions = Just (BinOp (Comp NEq) (CRef "email") (Lit (T "bergey@teallabs.org")))
        })
     , testParse "INSERT INTO users (email) VALUES ('bergey@teallabs.org')"
         (QI Insert
@@ -69,7 +69,7 @@ parser = testGroup "parser"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
        , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
-       , whereClause = Just (OrE (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel"))) (BinOp (Comp Eq) (CRef "name") (Lit (T "Bergey"))))
+       , whereClause = Just (Or (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel"))) (BinOp (Comp Eq) (CRef "name") (Lit (T "Bergey"))))
        }))
     , testParse "SELECT name FROM users WHERE age = 35"
         -- We currently parse integers & decimals all to Double

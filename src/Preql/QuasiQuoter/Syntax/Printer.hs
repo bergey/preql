@@ -95,12 +95,6 @@ instance FormatSql Update where
                 Nothing         -> ""
                 Just conditions -> " WHERE " <> fmt conditions
 
-instance FormatSql Condition where
-    fmt (Compare op column value) = fmt column <> " " <> fmt op <> " " <> fmt value
-    fmt (Or l r) = parens (fmt l) <> " OR " <> parens (fmt r)
-    fmt (And l r) = parens (fmt l) <> " AND " <> parens (fmt r)
-    fmt (Not cond) = "NOT" <> parens (fmt cond)
-
 instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit
     fmt (CRef name) = fmt name
@@ -113,9 +107,9 @@ instance FormatSql Expr where
         IsNull     -> parens (fmt expr) <> " IS NULL"
         NotNull    -> parens (fmt expr) <> " IS NOT NULL"
     fmt (SelectExpr stmt indirects) = parens (fmt stmt) <> fmtIndirections indirects
-    fmt (AndE l r) = fmt l <> " AND " <> fmt r
-    fmt (OrE l r) = fmt l <> " OR " <> fmt r
-    fmt (NotE expr) = "NOT " <> fmt expr
+    fmt (And l r) = fmt l <> " AND " <> fmt r
+    fmt (Or l r) = fmt l <> " OR " <> fmt r
+    fmt (Not expr) = "NOT " <> fmt expr
 
 fmtIndirections :: [Indirection] -> TLB.Builder
 fmtIndirections = mconcat . map (("." <>) . fmt)

@@ -50,13 +50,6 @@ data Update = Update
     , conditions :: Maybe Condition
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
--- | Queries of the form @SELECT columns FROM table WHERE conditions@.
-data OldSelect = OldSelect
-    { table      :: !Name
-    , columns    :: NonEmpty Expr
-    , conditions :: Maybe Condition
-    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
 data SelectStmt
     = SelectValues (NonEmpty (NonEmpty Expr))
     | SelectUnordered Unordered

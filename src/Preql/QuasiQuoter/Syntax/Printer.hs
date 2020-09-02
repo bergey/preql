@@ -95,13 +95,6 @@ instance FormatSql Update where
                 Nothing         -> ""
                 Just conditions -> " WHERE " <> fmt conditions
 
-instance FormatSql OldSelect where
-    fmt OldSelect{table, columns, conditions} =
-        "SELECT " <> commas columns <> " FROM " <> fmt table <> wh
-      where wh = case conditions of
-                Nothing         -> ""
-                Just conditions -> " WHERE " <> fmt conditions
-
 instance FormatSql Condition where
     fmt (Compare op column value) = fmt column <> " " <> fmt op <> " " <> fmt value
     fmt (Or l r) = parens (fmt l) <> " OR " <> parens (fmt r)

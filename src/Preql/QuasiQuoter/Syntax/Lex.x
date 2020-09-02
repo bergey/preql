@@ -100,8 +100,9 @@ tokens :-
     $o $r { lex OR }
     [\'] ("''" | $quoted)* [\'] { lex' (String . T.pack . unquoteString) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
-    -- FIXME integer literal
-    "-"? $digit+ ("." $digit+)? ($e "-"? $digit+)? { lex' (Number . read) }
+    "-"? $digit+ { lex' (Iconst . read) }
+    "-"? $digit+ ("." $digit+) { lex' (Fconst . read) }
+    "-"? $digit+ ("." $digit+)? ($e "-"? $digit+) { lex' (Fconst . read) }
     "$" $digit+ { lex' (NumberedParam . read . tail) }
     "${" $haskell+ "}" { lex' (HaskellParam . T.pack . init . drop 2) }
     ";" { lex Semicolon }
@@ -121,7 +122,7 @@ data Token = -- Delete | Select | Insert | Update
     -- | Union | Except
     -- | From | Where | Into | Values | Set
     -- TODO rename Name -> Ident to match bison
-    | Name Text | String Text | Number Double
+    | Name Text | String Text | Iconst Int | Fconst Double
     | NumberedParam Word | HaskellParam Text
     | LParen | RParen | Comma
     | Mul | Div | Add | Sub | Mod | Exponent
@@ -212,7 +213,8 @@ unLex :: Token -> String
 unLex t = case t of
     Name n -> T.unpack n 
     String s -> T.unpack s
-    Number n -> show n
+    Iconst n -> show n
+    Fconst n -> show n
     NumberedParam i -> '$' : show i
     HaskellParam s -> "${" ++ T.unpack s ++ "}"
     LParen  -> "("

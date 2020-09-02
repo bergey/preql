@@ -15,19 +15,23 @@ import Test.Tasty.HUnit
 
 lexer :: TestTree
 lexer = testGroup "lexer"
-    [ testCase "lex '' escape" $
-      assertEqual "" (Right [L.String "foo'bar", L.EOF]) (L.testLex "'foo''bar'")
-    , testCase "lex semicolon" $
-      assertEqual "" (Right [L.SELECT, L.Number 2.0, L.Add, L.Number 3.0, L.Semicolon, L.EOF]) (L.testLex "SELECT 2 + 3;")
+    [ testLex "'foo''bar'" [L.String "foo'bar"]
+    , testLex "SELECT 2 + 3;" [L.SELECT, L.Iconst 2, L.Add, L.Iconst 3, L.Semicolon]
+    , testLex "5" [L.Iconst 5]
+    , testLex "2.5" [L.Fconst 2.5]
+    , testLex "2e-2" [L.Fconst 0.02]
+    , testLex "2.5e-1" [L.Fconst 0.25]
+    , testLex "1 2.3" [ L.Iconst 1, L.Fconst 2.3 ]
+    , testLex "1 ." [ L.Iconst 1, L.Dot ]
     ]
 
 parser :: TestTree
 parser = testGroup "parser"
   [ testGroup "Expr"
     [ testParseExpr "2 * 3 + 1"
-      (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
+      (BinOp Add (BinOp Mul (Lit (I 2)) (Lit (I 3))) (Lit (I 1)))
     , testParseExpr "1 + 2 * 3"
-      (BinOp Add (Lit (F 1)) (BinOp Mul (Lit (F 2)) (Lit (F 3))) )
+      (BinOp Add (Lit (I 1)) (BinOp Mul (Lit (I 2)) (Lit (I 3))) )
     , testParseExpr "name = 'Daniel'"
       (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel")))
     , testParseExpr "TRUE" (Lit (B True))
@@ -89,7 +93,7 @@ parser = testGroup "parser"
       (QS (Simple select
        { from = [ TableRef "users" Nothing ]
        , targetList = [ Column (CRef "name") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (CRef "age") (Lit (F 35)))
+       , whereClause = Just (BinOp (Comp Eq) (CRef "age") (Lit (I 35)))
        }))
     , testParse "SELECT name FROM users WHERE age = 35.5"
       (QS (Simple select
@@ -101,7 +105,7 @@ parser = testGroup "parser"
       (QS (Simple select
        { from = [ TableRef "bar" Nothing ]
        , targetList = [ Column (CRef "foo") Nothing ]
-       , whereClause = Just (BinOp (Comp GT) (CRef "baz") (Lit (F (-2))))
+       , whereClause = Just (BinOp (Comp GT) (CRef "baz") (Lit (I (-2))))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
       (QS (Simple select
@@ -134,13 +138,13 @@ parser = testGroup "parser"
           selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder Ascending) NullsLast ] }))
     , testParse "SELECT * FROM foobar LIMIT 5"
       (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
-          selectOptions { limit = Just (Lit (F 5)) }))
+          selectOptions { limit = Just (Lit (I 5)) }))
     , testParse "SELECT * FROM foobar LIMIT 5 OFFSET 5"
       (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
-          selectOptions { limit = Just (Lit (F 5)), offset = Just (Lit (F 5)) }))
+          selectOptions { limit = Just (Lit (I 5)), offset = Just (Lit (I 5)) }))
     , testParse "SELECT * FROM foobar OFFSET 25"
       (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
-          selectOptions { offset = Just (Lit (F 25)) }))
+          selectOptions { offset = Just (Lit (I 25)) }))
     ]
   ]
 
@@ -151,3 +155,7 @@ testParse query expected = testCase query $
 testParseExpr :: TestName -> Expr -> TestTree
 testParseExpr query expected = testCase query $
     assertEqual "testParseExpr" (Right expected) (parseExpr "<testcase>" query)
+
+testLex :: TestName -> [L.Token] -> TestTree
+testLex query expected = testCase query $
+    assertEqual "testLex" (Right (expected ++ [L.EOF])) (L.testLex query)

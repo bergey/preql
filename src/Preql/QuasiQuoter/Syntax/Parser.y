@@ -117,7 +117,8 @@ import qualified Data.List.NonEmpty as NE
 
     IDENT { LocToken _ (L.Name $$) }
     STRING { LocToken _ (L.String $$) }
-    NUMBER { LocToken _ (L.Number $$) }
+    Iconst { LocToken _ (L.Iconst $$) }
+    Fconst { LocToken _ (L.Fconst $$) }
     PARAM { LocToken _ (L.NumberedParam $$) }
     HASKELL_PARAM { LocToken _ (L.HaskellParam $$) }
 
@@ -846,7 +847,7 @@ limit_clause :: { Expr }
         -- * decision about what rule reduces ROW or ROWS to the point where
         -- * we can see the ONLY token in the lookahead slot.
         | FETCH first_or_next select_fetch_first_value row_or_rows ONLY { $3 }
-        | FETCH first_or_next row_or_rows ONLY { Lit (F 1) } -- FIXME Int literal
+        | FETCH first_or_next row_or_rows ONLY { Lit (I 1) }
 
 offset_clause :: { Expr }
     : OFFSET select_offset_value { $2 }
@@ -882,9 +883,8 @@ select_fetch_first_value :: { Expr }
     | '-' I_or_F_const { Unary NegateNum (Lit $2) }
 
 I_or_F_const :: { Literal }
-    : NUMBER { F $1 }
-    -- : Iconst									{ $$ = makeIntConst($1,@1); }
-    -- | FCONST								{ $$ = makeFloatConst($1,@1); }
+    : Fconst { F $1 }
+    | Iconst { I $1 }
 
 -- * noise words
 row_or_rows :: { () }
@@ -1694,8 +1694,8 @@ index_name : ColId { $1 }
 -- * Constants
 
 AexprConst :: { Literal }
--- TODO     : Iconst
-    : NUMBER { F $1 }
+    : Iconst { I $1 }
+    | Fconst { F $1 }
     | Sconst { T $1 }
 -- TODO 			| BCONST
 -- TODO 				{

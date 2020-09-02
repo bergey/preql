@@ -21,6 +21,7 @@ main = defaultMain $ testGroup "preql"
     [ antiquotes
     , wire
     , printer
+    , lexer
     , parser
     -- , integration
     ]

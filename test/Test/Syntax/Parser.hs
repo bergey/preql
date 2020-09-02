@@ -13,17 +13,29 @@ import Prelude hiding (Ordering(..), lex)
 import Test.Tasty
 import Test.Tasty.HUnit
 
-parser :: TestTree
-parser = testGroup "parser"
+lexer :: TestTree
+lexer = testGroup "lexer"
     [ testCase "lex '' escape" $
       assertEqual "" (Right [L.String "foo'bar", L.EOF]) (L.testLex "'foo''bar'")
     , testCase "lex semicolon" $
       assertEqual "" (Right [L.SELECT, L.Number 2.0, L.Add, L.Number 3.0, L.Semicolon, L.EOF]) (L.testLex "SELECT 2 + 3;")
-    , testParseExpr "2 * 3 + 1"
+    ]
+
+parser :: TestTree
+parser = testGroup "parser"
+  [ testGroup "Expr"
+    [ testParseExpr "2 * 3 + 1"
       (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
     , testParseExpr "1 + 2 * 3"
       (BinOp Add (Lit (F 1)) (BinOp Mul (Lit (F 2)) (Lit (F 3))) )
-    , testParse "DELETE FROM taffy"
+    , testParseExpr "name = 'Daniel'"
+      (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel")))
+    , testParseExpr "TRUE" (Lit (B True))
+    , testParseExpr "true" (Lit (B True))
+    , testParseExpr "false" (Lit (B False))
+    ]
+  , testGroup "Query"
+    [ testParse "DELETE FROM taffy"
         (QD (Delete (mkName "taffy") Nothing))
     , testParse "dEleTe FROM taffy WHERE flavor = 'blueberry'"
       (QD Delete
@@ -47,7 +59,9 @@ parser = testGroup "parser"
        , columns = "street" :| ["country" ]
        , values = Lit (T "4 Ames St") :| [ Lit (T "USA") ]
        })
-    , testParse "SELECT name FROM users"
+    ]
+  , testGroup "Select"
+    [ testParse "SELECT name FROM users"
       (QS (Simple select
        { from = [ TableRef "users" Nothing ]
        , targetList = [ Column (CRef "name") Nothing ]
@@ -57,8 +71,6 @@ parser = testGroup "parser"
        { from = [ TableRef "users" Nothing ]
        , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
        }))
-    , testParseExpr "name = 'Daniel'"
-      (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel")))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
       (QS (Simple select
        { from = [ TableRef "users" Nothing ]
@@ -108,9 +120,6 @@ parser = testGroup "parser"
        { from = [ TableRef "foobar" Nothing ]
        , targetList = [ Star ]
        }))
-    , testParseExpr "TRUE" (Lit (B True))
-    , testParseExpr "true" (Lit (B True))
-    , testParseExpr "false" (Lit (B False))
     , testParse "SELECT * FROM foo ORDER BY bar"
       (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
           selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder DefaultSortOrder) NullsOrderDefault ] }))
@@ -133,6 +142,7 @@ parser = testGroup "parser"
       (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
           selectOptions { offset = Just (Lit (F 25)) }))
     ]
+  ]
 
 testParse :: TestName -> Query -> TestTree
 testParse query expected = testCase query $

@@ -47,9 +47,9 @@ printer = testGroup "printer" [
     , testCase "params" $
       assertEqual ""
         "SELECT name, email FROM users WHERE name = $1"
-        (fmt(QS OldSelect
-              { table = "users"
-              , columns = Var "name" :| [ Var "email"]
-              , conditions = Just (Compare Eq "name" (NumberedParam 1 []))
-              }))
+        (fmt (QS (SelectUnordered unordered
+                  { from = [ TableRef "users" Nothing ]
+                  , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing), ColumnTarget (ColumnRef (Var "email") Nothing) ]
+                  , whereClause = Just (BinOp (Comp Eq) (Var "name") (NumberedParam 1 []))
+                  })))
     ]

@@ -54,8 +54,16 @@ antiquotes :: TestTree
 antiquotes = testGroup "antiquotes"
     [ testCase "numberAntiquotes, Syntax" $
         assertEqual ""
-            (QS (OldSelect {table =  "baz", columns = Var  "foo" :| [Var "bar"], conditions = Just (Compare Eq "foo" (NumberedParam 1 []))}), AntiquoteState 1 ["foo0"])
-            (Syntax.numberAntiquotes 0 (QS (OldSelect {table =  "baz", columns = Var "foo" :| [Var "bar"], conditions = Just (Compare Eq "foo" (HaskellParam "foo0"))})))
+            (QS (SelectUnordered unordered
+                 { from =  [ TableRef "baz" Nothing ]
+                 , targetList = [ ColumnTarget (ColumnRef (Var  "foo") Nothing), ColumnTarget (ColumnRef (Var "bar") Nothing) ]
+                 , whereClause = Just (BinOp (Comp Eq) (Var "foo") (NumberedParam 1 []))
+                 }), AntiquoteState 1 ["foo0"])
+            (Syntax.numberAntiquotes 0 (QS (SelectUnordered unordered
+                 { from =  [ TableRef "baz" Nothing ]
+                 , targetList = [ ColumnTarget (ColumnRef (Var  "foo") Nothing), ColumnTarget (ColumnRef (Var "bar") Nothing) ]
+                 , whereClause = Just (BinOp (Comp Eq) (Var "foo") (HaskellParam "foo0"))
+                 })))
     , testCase "numberAntiquotes, Raw" $
         assertEqual ""
             ("SELECT foo, bar FROM baz WHERE foo = $1", ["foo0"])

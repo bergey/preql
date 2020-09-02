@@ -69,6 +69,8 @@ tokens :-
     $i $n $t $o { lex INTO }
     $v $a $l $u $e $s { lex VALUES }
     $s $e $t { lex SET }
+    $t $r $u $e { lex TRUE_P }
+    $f $a $l $s $e { lex FALSE_P }
     "(" { lex LParen }
     "," { lex Comma }
     ")" { lex RParen }

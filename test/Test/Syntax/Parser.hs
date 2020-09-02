@@ -108,6 +108,9 @@ parser = testGroup "parser"
        { from = [ TableRef "foobar" Nothing ]
        , targetList = [ Star ]
        }))
+    , testParseExpr "TRUE" (Lit (B True))
+    , testParseExpr "true" (Lit (B True))
+    , testParseExpr "false" (Lit (B False))
     ]
 
 testParse :: TestName -> Query -> TestTree

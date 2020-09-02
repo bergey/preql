@@ -46,7 +46,8 @@ printer = testGroup "printer" [
                  }))
     , testCase "params" $
       assertEqual ""
-        "SELECT name, email FROM users WHERE name = $1"
+        -- Extra parens until the printer is clever about Expr precedence
+        "SELECT name, email FROM users WHERE (name) = ($1)"
         (fmt (QS (SelectUnordered unordered
                   { from = [ TableRef "users" Nothing ]
                   , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]

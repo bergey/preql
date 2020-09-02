@@ -16,7 +16,7 @@ import qualified Data.List.NonEmpty as NE
 
 %name parseQuery_ Query
 %name parseCondition_ Condition
-%name parseExpr_ Expr
+%name parseExpr_ a_expr
 %tokentype { L.LocToken }
 %monad { Alex }
 %lexer { lexwrap } {  L.LocToken _ L.EOF }
@@ -621,7 +621,7 @@ SelectStmt :: { SelectStmt }
     : select_no_parens { $1 }
     | select_with_parens { $1 }
 
-select_with_parens
+select_with_parens :: { SelectStmt }
     : '(' select_no_parens ')' { $2 }
     | '(' select_with_parens ')' { $2 }
 
@@ -714,6 +714,8 @@ select_clause :: { SelectStmt }
 -- * NOTE: only the leftmost component SelectStmt should have INTO.
 -- * However, this is not checked by the grammar; parse analysis must check it.
 
+-- TODO include opt_all_clause
+-- TODO include into_clause
 simple_select :: { SelectStmt }
            : SELECT opt_all_clause opt_target_list
            into_clause from_clause where_clause
@@ -1109,6 +1111,21 @@ a_expr :: { Expr }
 -- TODO 											   list_make2($5, $1),
 -- TODO 											   @2);
 -- What about lines 13060-13102 of gram.y?
+    | '+' a_expr					%prec UMINUS { $2 } -- TODO keep + for round-trip?
+    | '-' a_expr					%prec UMINUS { Unary NegateNum $2 }
+    | a_expr '+' a_expr { BinOp Add $1 $3 }
+    | a_expr '-' a_expr { BinOp Sub $1 $3 }
+    | a_expr '*' a_expr { BinOp Mul $1 $3 }
+    | a_expr '/' a_expr { BinOp Div $1 $3 }
+    | a_expr '%' a_expr { BinOp Mod $1 $3 }
+    | a_expr '^' a_expr { BinOp Exponent $1 $3 }
+    | a_expr '<' a_expr { BinOp (Comp LT) $1 $3 }
+    | a_expr '>' a_expr { BinOp (Comp GT) $1 $3 }
+    | a_expr '=' a_expr { BinOp (Comp Eq) $1 $3 }
+    | a_expr '<=' a_expr { BinOp (Comp LTE) $1 $3 }
+    | a_expr '>=' a_expr { BinOp (Comp GTE) $1 $3 }
+    | a_expr '!=' a_expr { BinOp (Comp NEq) $1 $3 }
+    | a_expr qual_Op a_expr				%prec Op { BinOp $2 $1 $3 } 
     | a_expr AND a_expr { AndE $1 $3 }
 	  | a_expr OR a_expr { OrE $1 $3 }
     | NOT a_expr { NotE $2 }
@@ -1359,10 +1376,6 @@ opt_frame_clause : { () }
 
 
 -- FIXME handwritten
-Select :: { OldSelect }
-    : SELECT expr_list FROM Name WHERE Condition { OldSelect { table = $4, columns = NE.fromList (reverse $2), conditions = Just $6 } }
-    | SELECT expr_list FROM Name { OldSelect { table = $4, columns = NE.fromList (reverse $2), conditions = Nothing } }
-
 Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
 

@@ -15,7 +15,15 @@ import Test.Tasty.HUnit
 
 parser :: TestTree
 parser = testGroup "parser"
-    [ testParse "DELETE FROM taffy"
+    [ testCase "lex '' escape" $
+      assertEqual "" (Right [L.String "foo'bar", L.EOF]) (L.testLex "'foo''bar'")
+    , testCase "lex semicolon" $
+      assertEqual "" (Right [L.SELECT, L.Number 2.0, L.Add, L.Number 3.0, L.Semicolon, L.EOF]) (L.testLex "SELECT 2 + 3;")
+    , testParseExpr "2 * 3 + 1"
+      (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
+    , testParseExpr "1 + 2 * 3"
+      (BinOp Add (Lit (F 1)) (BinOp Mul (Lit (F 2)) (Lit (F 3))) )
+    , testParse "DELETE FROM taffy"
         (QD (Delete (mkName "taffy") Nothing))
     , testParse "dEleTe FROM taffy WHERE flavor = 'blueberry'"
       (QD Delete
@@ -100,14 +108,6 @@ parser = testGroup "parser"
        { from = [ TableRef "foobar" Nothing ]
        , targetList = [ Star ]
        }))
-    , testParseExpr "2 * 3 + 1"
-      (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
-    , testParseExpr "1 + 2 * 3"
-      (BinOp Add (Lit (F 1)) (BinOp Mul (Lit (F 2)) (Lit (F 3))) )
-    , testCase "lex '' escape" $
-      assertEqual "" (Right [L.String "foo'bar", L.EOF]) (L.testLex "'foo''bar'")
-    , testCase "lex semicolon" $
-      assertEqual "" (Right [L.SELECT, L.Number 2.0, L.Add, L.Number 3.0, L.Semicolon, L.EOF]) (L.testLex "SELECT 2 + 3;")
     ]
 
 testParse :: TestName -> Query -> TestTree

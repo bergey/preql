@@ -114,6 +114,15 @@ parser = testGroup "parser"
     , testParse "SELECT * FROM foo ORDER BY bar"
       (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
           selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder DefaultSortOrder) NullsOrderDefault ] }))
+    , testParse "SELECT * FROM foo ORDER BY bar DESC"
+      (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
+          selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder Descending) NullsOrderDefault ] }))
+    , testParse "SELECT * FROM foo ORDER BY bar NULLS FIRST"
+      (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
+          selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder DefaultSortOrder) NullsFirst ] }))
+    , testParse "SELECT * FROM foo ORDER BY bar ASC NULLS LAST"
+      (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
+          selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder Ascending) NullsLast ] }))
     , testParse "SELECT * FROM foobar LIMIT 5"
       (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
           selectOptions { limit = Just (Lit (F 5)) }))

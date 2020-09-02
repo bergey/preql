@@ -13,7 +13,8 @@ jobs:
       matrix:
         plan:
           - { build: stack, resolver: "" }
-          - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6
+          # GHC 8.6 takes 40 minutes on the parser, more with haddocks
+          # - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6
 
     runs-on: ubuntu-latest
 

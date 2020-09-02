@@ -1108,6 +1108,12 @@ a_expr :: { Expr }
 -- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("timezone"),
 -- TODO 											   list_make2($5, $1),
 -- TODO 											   @2);
+-- What about lines 13060-13102 of gram.y?
+    | a_expr AND a_expr { AndE $1 $3 }
+	  | a_expr OR a_expr { OrE $1 $3 }
+    | NOT a_expr { NotE $2 }
+-- TODO 			| NOT_LA a_expr						%prec NOT
+-- TODO 				{ $$ = makeNotExpr($2, @1); }
 
 -- * Restricted expressions
 -- *

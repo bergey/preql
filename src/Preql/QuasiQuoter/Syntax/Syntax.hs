@@ -128,6 +128,10 @@ data Expr = Lit !Literal | Var !Name
     | CRef ColumnRef
     | Indirection Expr [Indirection]
     | SelectExpr SelectStmt [Indirection]
+    -- TODO replace Condition, drop E from these names
+    | AndE Expr Expr
+    | OrE Expr Expr
+    | NotE Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 type Indirection = Name -- FIXME

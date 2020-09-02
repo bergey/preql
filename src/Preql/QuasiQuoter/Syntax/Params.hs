@@ -36,7 +36,7 @@ initialAntiquoteState = AntiquoteState 0 []
 
 -- | Return the highest-numbered $1-style parameter.
 maxParam :: Query -> Word
-maxParam = everything (+) (mkQ 0 maxParamExpr)
+maxParam = everything max (mkQ 0 maxParamExpr)
 
 maxParamExpr :: Expr -> Word
 maxParamExpr expr = case expr of
@@ -45,7 +45,9 @@ maxParamExpr expr = case expr of
     BinOp _ l r     -> max (maxParamExpr l) (maxParamExpr r)
     Unary _ e       -> maxParamExpr e
     Lit _           -> 0
-    Var _           -> 0
     CRef _ -> 0
     Indirection e _ -> maxParamExpr e
-    SelectExpr stmt _ -> everything (+) (mkQ 0 maxParamExpr) stmt
+    SelectExpr stmt _ -> everything max (mkQ 0 maxParamExpr) stmt
+    AndE l r -> max (maxParamExpr l) (maxParamExpr r)
+    OrE l r -> max (maxParamExpr l) (maxParamExpr r)
+    NotE e -> maxParamExpr e

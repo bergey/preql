@@ -95,6 +95,11 @@ parser = testGroup "parser"
        , targetList = [ Column (CRef "foo") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (CRef "baz") (Lit (F 0.02)))
        }))
+    , testParse "SELECT * FROM foobar"
+      (QS (SelectUnordered unordered
+       { from = [ TableRef "foobar" Nothing ]
+       , targetList = [ Star ]
+       }))
     , testParseExpr "2 * 3 + 1"
       (BinOp Add (BinOp Mul (Lit (F 2)) (Lit (F 3))) (Lit (F 1)))
     , testParseExpr "1 + 2 * 3"

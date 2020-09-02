@@ -52,12 +52,11 @@ data Update = Update
 
 data SelectStmt
     = SelectValues (NonEmpty (NonEmpty Expr))
-    | SelectUnordered Unordered
-    | SortedSelect SelectStmt (NonEmpty SortBy)
-    -- TODO more cases
+    | Simple Select
+    | S SelectStmt SelectOptions
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Unordered = Unordered
+data Select = Select
     { distinct :: Maybe DistinctClause
     , targetList :: [ResTarget]
     , from :: [TableRef]
@@ -68,10 +67,13 @@ data Unordered = Unordered
     -- TODO remaining fields
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
+data SelectOptions = SelectOptions
+    { sortBy :: [SortBy]
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 -- This is really for writing tests, but put it here for faster type check errors
-unordered :: Unordered
-unordered = Unordered
+select :: Select
+select = Select
     { distinct = Nothing
     , targetList = []
     , from = []
@@ -80,6 +82,12 @@ unordered = Unordered
     , having = Nothing
     , window = []
     }
+
+selectOptions :: SelectOptions
+selectOptions = SelectOptions
+    { sortBy = []
+    }
+
 
 -- TODO joins
 data TableRef = TableRef

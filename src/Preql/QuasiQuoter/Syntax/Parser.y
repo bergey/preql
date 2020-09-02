@@ -636,7 +636,7 @@ select_with_parens :: { SelectStmt }
 
 select_no_parens :: { SelectStmt }
     : simple_select { $1 }
-    | select_clause sort_clause { SortedSelect $1 $2 }
+    | select_clause sort_clause { S $1 selectOptions { sortBy = $2 } }
     -- TODO            | select_clause opt_sort_clause for_locking_clause opt_select_limit
 -- TODO                {
 -- TODO                    insertSelectOptions((SelectStmt *) $1, $2, $3,
@@ -713,12 +713,20 @@ select_clause :: { SelectStmt }
 -- * NOTE: only the leftmost component SelectStmt should have INTO.
 -- * However, this is not checked by the grammar; parse analysis must check it.
 
--- TODO include opt_all_clause
 -- TODO include into_clause
 simple_select :: { SelectStmt }
            : SELECT opt_all_clause opt_target_list
            into_clause from_clause where_clause
-           group_clause having_clause window_clause { SelectUnordered (Unordered Nothing $3 $5 $6 $7 $8 $9) }
+           group_clause having_clause window_clause { Simple (Select
+                { distinct = Nothing
+                , targetList = $3
+                , from = $5
+                , whereClause = $6
+                , groupBy = $7
+                , having = $8
+                , window = $9
+                })
+           }
 -- TODO WIP
 -- TODO                {
 -- TODO                    SelectStmt *n = makeNode(SelectStmt);
@@ -816,12 +824,12 @@ opt_all_clause
     : ALL { () }
     | { () }
 
-opt_sort_clause :: { [SortBy ] }
-    : sort_clause { NE.toList $1 }
+opt_sort_clause :: { [SortBy] }
+    : sort_clause { $1 }
     | { [] }
 
-sort_clause :: { NonEmpty SortBy }
-    : ORDER BY sortby_list { NE.fromList (reverse $3) }
+sort_clause :: { [SortBy] }
+    : ORDER BY sortby_list { reverse $3 }
 
 sortby_list : list(sortby) { $1 }
 

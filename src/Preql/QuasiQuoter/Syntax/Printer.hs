@@ -71,6 +71,14 @@ spaces = fmtList " "
 fmtList :: (FormatSql a, Foldable f) => B.Builder -> f a -> B.Builder
 fmtList sep as = mconcat (intersperse sep (map fmt (toList as)))
 
+optList :: FormatSql a => B.Builder -> [a] -> B.Builder
+optList _ [] = ""
+optList prepend as = prepend <> commas as
+
+opt :: FormatSql a => B.Builder -> Maybe a -> B.Builder
+opt _ Nothing = ""
+opt prepend (Just a) = prepend <> fmt a
+
 instance FormatSql B.Builder where
     fmt = id
 
@@ -136,27 +144,21 @@ instance FormatSql Compare where
 
 instance FormatSql SelectStmt where
     fmt (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
-    fmt (SelectUnordered un) = fmt un
-    fmt (SortedSelect select sortBy) = fmt select <> " ORDER BY " <> commas sortBy
+    fmt (Simple un) = fmt un
+    fmt (S ss so) = fmt ss <> fmt so
 
-instance FormatSql Unordered where
-    fmt Unordered{targetList, from, whereClause, groupBy, having, window}
-        = "SELECT " <> m_distinct <> commas (fmt <$> targetList) <> " FROM " <> commas (fmt <$> from) <>
-          m_where <> m_groupBy <> m_having <> m_window
+instance FormatSql Select where
+    fmt Select{targetList, from, whereClause, groupBy, having, window}
+        = "SELECT " <> m_distinct <> commas (fmt <$> targetList) <> " FROM " <> commas from
+          <> opt " WHERE " whereClause
+          <> optList " GROUP BY " groupBy
+          <> opt " HAVING " having
+          <> optList " WINDOW " window
         where
           m_distinct = "" -- TODO
-          m_where = case whereClause of
-              Nothing -> ""
-              Just expr -> " WHERE " <> fmt expr
-          m_groupBy = case groupBy of
-              [] -> ""
-              _ -> " GROUP BY " <> commas (fmt <$> groupBy)
-          m_having = case having of
-              Nothing -> ""
-              Just expr -> " HAVING " <> fmt expr
-          m_window = case window of
-              [] -> ""
-              _ -> " WINDOW " <> commas (fmt <$> window)
+
+instance FormatSql SelectOptions where
+    fmt SelectOptions{sortBy} = optList " ORDER BY " sortBy
 
 instance FormatSql TableRef where
     fmt TableRef {relation, alias} = fmt relation <> m_alias where

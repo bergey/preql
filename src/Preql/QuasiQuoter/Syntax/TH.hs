@@ -82,8 +82,8 @@ countColumnsReturned :: Syntax.Query -> Maybe Int
 countColumnsReturned (QS select) = go select where
   go s = case s of
       SelectValues rows -> Just (foldl' max 0 (fmap length rows))
-      SortedSelect unsorted _ -> go unsorted
-      SelectUnordered Unordered{targetList} -> if any (== Star) targetList
+      Simple Select {targetList} -> if any (== Star) targetList
           then Nothing
           else Just (length targetList)
+      S ss _ -> go ss
 countColumnsReturned _                       = Just 0

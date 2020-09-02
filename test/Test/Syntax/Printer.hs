@@ -48,7 +48,7 @@ printer = testGroup "printer" [
       assertEqual ""
         -- Extra parens until the printer is clever about Expr precedence
         "SELECT name, email FROM users WHERE (name) = ($1)"
-        (fmt (QS (SelectUnordered unordered
+        (fmt (QS (Simple select
                   { from = [ TableRef "users" Nothing ]
                   , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
                   , whereClause = Just (BinOp (Comp Eq) (CRef "name") (NumberedParam 1 []))

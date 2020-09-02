@@ -54,12 +54,12 @@ antiquotes :: TestTree
 antiquotes = testGroup "antiquotes"
     [ testCase "numberAntiquotes, Syntax" $
         assertEqual ""
-            (QS (SelectUnordered unordered
+            (QS (Simple select
                  { from =  [ TableRef "baz" Nothing ]
                  , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
                  , whereClause = Just (BinOp (Comp Eq) (CRef "foo") (NumberedParam 1 []))
                  }), AntiquoteState 1 ["foo0"])
-            (Syntax.numberAntiquotes 0 (QS (SelectUnordered unordered
+            (Syntax.numberAntiquotes 0 (QS (Simple select
                  { from =  [ TableRef "baz" Nothing ]
                  , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
                  , whereClause = Just (BinOp (Comp Eq) (CRef "foo") (HaskellParam "foo0"))

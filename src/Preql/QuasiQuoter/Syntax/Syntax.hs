@@ -125,7 +125,7 @@ data Expr = Lit !Literal | Var !Name
     | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
-    | CRef ColumnRef
+    | CRef Name
     | Indirection Expr [Indirection]
     | SelectExpr SelectStmt [Indirection]
     -- TODO replace Condition, drop E from these names
@@ -152,13 +152,13 @@ data AllOrDistinct = All | Distinct
 data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data ResTarget = Star | ColumnTarget ColumnRef
+data ResTarget = Star | Column Expr (Maybe Name)
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data ColumnRef = ColumnRef
-    { value :: Expr
-    , name :: Maybe Name -- TODO bigger type
-    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+-- data ColumnRef = ColumnRef
+--     { value :: Name
+--     , indirection :: Maybe Name -- TODO bigger type
+--     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Window = Window
     { name :: Maybe Name

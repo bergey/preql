@@ -42,23 +42,23 @@ parser = testGroup "parser"
     , testParse "SELECT name FROM users"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing) ]
+       , targetList = [ Column (Var "name") Nothing ]
        }))
     , testParse "SELECT name, email FROM users"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing), ColumnTarget (ColumnRef (Var "email") Nothing) ]
+       , targetList = [ Column (Var "name") Nothing, Column (Var "email") Nothing ]
        }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing), ColumnTarget (ColumnRef (Var "email") Nothing) ]
+       , targetList = [ Column (Var "name") Nothing, Column (Var "email") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (Var "name") (Lit (T "Daniel")))
        }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing), ColumnTarget (ColumnRef (Var "email") Nothing) ]
+       , targetList = [ Column (Var "name") Nothing, Column (Var "email") Nothing ]
        , whereClause = Just (OrE (BinOp (Comp Eq) (Var "name") (Lit (T "Daniel"))) (BinOp (Comp Eq) (Var "name") (Lit (T "Bergey"))))
        }))
     , testParse "SELECT name FROM users WHERE age = 35"
@@ -66,31 +66,31 @@ parser = testGroup "parser"
         -- Just test that both parser rules work
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing) ]
+       , targetList = [ Column (Var "name") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (Var "age") (Lit (F 35)))
        }))
     , testParse "SELECT name FROM users WHERE age = 35.5"
       (QS (SelectUnordered unordered
        { from = [ TableRef "users" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing) ]
+       , targetList = [ Column (Var "name") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (Var "age") (Lit (F 35.5)))
        }))
     , testParse "SELECT foo FROM bar WHERE baz > -2"
       (QS (SelectUnordered unordered
        { from = [ TableRef "bar" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "foo") Nothing) ]
+       , targetList = [ Column (Var "foo") Nothing ]
        , whereClause = Just (BinOp (Comp GT) (Var "bas") (Lit (F (-2))))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
       (QS (SelectUnordered unordered
        { from = [ TableRef "bar" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "foo") Nothing) ]
+       , targetList = [ Column (Var "foo") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (Var "bas") (Lit (F 0.02)))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2"
       (QS (SelectUnordered unordered
        { from = [ TableRef "bar" Nothing ]
-       , targetList = [ ColumnTarget (ColumnRef (Var "foo") Nothing) ]
+       , targetList = [ Column (Var "foo") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (Var "bas") (Lit (F 0.02)))
        }))
     , testParseExpr "2 * 3 + 1"

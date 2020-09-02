@@ -1473,8 +1473,8 @@ Null
         | IS NOT NULL { NotNull }
         | NOTNULL { NotNull }
 
-columnref :: { ColumnRef }
-    : ColId { ColumnRef (Var $1) Nothing }
+columnref :: { Name }
+    : ColId { $1 }
     -- TODO | ColId indirection { ColumnRef $1 (Just $2) }
 
 indirection_el :: { Name } -- TODO bigger type
@@ -1528,9 +1528,9 @@ opt_target_list :: { [ResTarget] }
 target_list : list(target_el) { NE.fromList (reverse $1) }
 
 target_el :: { ResTarget }
-    : a_expr AS ColLabel { ColumnTarget (ColumnRef $1 (Just $3)) }
-    | a_expr Name { ColumnTarget (ColumnRef $1 (Just $2)) }
-    | a_expr { ColumnTarget (ColumnRef $1 Nothing) }
+    : a_expr AS ColLabel { Column $1 (Just $3) }
+    | a_expr Name { Column $1 (Just $2) }
+    | a_expr { Column $1 Nothing }
     | '*' { Star }
 
  -- *	Names and constants
@@ -1703,6 +1703,7 @@ Sconst : STRING { $1 }
 ColId :: { Name }
     :		Name									{ $1 }
     | unreserved_keyword					{ $1 }
+		| col_name_keyword						{ $1 }
 
 -- * Type/function identifier -- *- names that can be type or function names.
 type_function_name :: { Name }

@@ -193,12 +193,13 @@ instance FormatSql NullsOrder where
 
 instance FormatSql ResTarget where
     fmt Star = "*"
-    fmt (ColumnTarget ref) = fmt ref
+    fmt (Column expr Nothing) = fmt expr
+    fmt (Column expr (Just name)) = fmt expr <> " AS " <> fmt name
 
-instance FormatSql ColumnRef where
-    fmt ColumnRef {value, name} = fmt value <> case name of
-        Nothing -> ""
-        Just n -> "." <> fmt n
+-- instance FormatSql ColumnRef where
+--     fmt ColumnRef {value, name} = fmt value <> case name of
+--         Nothing -> ""
+--         Just n -> "." <> fmt n
 
 instance FormatSql Window where
     fmt Window {name, refName, partitionClause, orderClause}

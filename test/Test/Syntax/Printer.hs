@@ -49,7 +49,7 @@ printer = testGroup "printer" [
         "SELECT name, email FROM users WHERE name = $1"
         (fmt (QS (SelectUnordered unordered
                   { from = [ TableRef "users" Nothing ]
-                  , targetList = [ ColumnTarget (ColumnRef (Var "name") Nothing), ColumnTarget (ColumnRef (Var "email") Nothing) ]
+                  , targetList = [ Column (Var "name") Nothing, Column (Var "email") Nothing ]
                   , whereClause = Just (BinOp (Comp Eq) (Var "name") (NumberedParam 1 []))
                   })))
     ]

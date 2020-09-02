@@ -111,12 +111,24 @@ parser = testGroup "parser"
     , testParseExpr "TRUE" (Lit (B True))
     , testParseExpr "true" (Lit (B True))
     , testParseExpr "false" (Lit (B False))
+    , testParse "SELECT * FROM foo ORDER BY bar"
+      (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
+          selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder DefaultSortOrder) NullsOrderDefault ] }))
+    , testParse "SELECT * FROM foobar LIMIT 5"
+      (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
+          selectOptions { limit = Just (Lit (F 5)) }))
+    , testParse "SELECT * FROM foobar LIMIT 5 OFFSET 5"
+      (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
+          selectOptions { limit = Just (Lit (F 5)), offset = Just (Lit (F 5)) }))
+    , testParse "SELECT * FROM foobar OFFSET 25"
+      (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
+          selectOptions { offset = Just (Lit (F 25)) }))
     ]
 
 testParse :: TestName -> Query -> TestTree
 testParse query expected = testCase query $
-    assertEqual "" (Right expected) (parseQuery "<testcase>" query)
+    assertEqual "testParse" (Right expected) (parseQuery "<testcase>" query)
 
 testParseExpr :: TestName -> Expr -> TestTree
 testParseExpr query expected = testCase query $
-    assertEqual "" (Right expected) (parseExpr "<testcase>" query)
+    assertEqual "testParseExpr" (Right expected) (parseExpr "<testcase>" query)

@@ -71,6 +71,8 @@ tokens :-
     $s $e $t { lex SET }
     $t $r $u $e { lex TRUE_P }
     $f $a $l $s $e { lex FALSE_P }
+    $o $f $f $s $e $t { lex OFFSET }
+    $l $i $m $i $t { lex LIMIT }
     "(" { lex LParen }
     "," { lex Comma }
     ")" { lex RParen }

@@ -69,6 +69,9 @@ data Select = Select
 
 data SelectOptions = SelectOptions
     { sortBy :: [SortBy]
+    , offset :: Maybe Expr
+    , limit :: Maybe Expr
+    , locking :: [Locking]
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 -- This is really for writing tests, but put it here for faster type check errors
@@ -86,8 +89,10 @@ select = Select
 selectOptions :: SelectOptions
 selectOptions = SelectOptions
     { sortBy = []
+    , offset = Nothing
+    , limit = Nothing
+    , locking = []
     }
-
 
 -- TODO joins
 data TableRef = TableRef
@@ -114,6 +119,19 @@ data SortOrder = Ascending | Descending | DefaultSortOrder
 
 data NullsOrder = NullsFirst | NullsLast | NullsOrderDefault
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data Locking = Locking
+    { strength :: LockingStrength
+    , tables :: [Name]
+    , wait :: LockWait
+    } deriving (Show, Eq, Generic, Data, Lift)
+
+data LockingStrength
+    = ForUpdate | ForNoKeyUpdate | ForShare | ForKeyShare
+    deriving (Show, Eq, Enum, Bounded, Data, Lift, Generic)
+
+data LockWait = LockWaitError | LockWaitSkip | LockWaitBlock
+    deriving (Show, Eq, Enum, Bounded, Data, Lift, Generic)
 
 data Expr = Lit !Literal | CRef Name
     | NumberedParam !Word [Indirection]

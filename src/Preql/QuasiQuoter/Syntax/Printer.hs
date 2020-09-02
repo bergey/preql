@@ -158,7 +158,10 @@ instance FormatSql Select where
           m_distinct = "" -- TODO
 
 instance FormatSql SelectOptions where
-    fmt SelectOptions{sortBy} = optList " ORDER BY " sortBy
+    fmt SelectOptions{sortBy, offset, limit, locking} = spaces locking -- no commas
+        <> optList " ORDER BY " sortBy
+        <> opt " LIMIT " limit
+        <> opt " OFFSET " offset
 
 instance FormatSql TableRef where
     fmt TableRef {relation, alias} = fmt relation <> m_alias where
@@ -186,6 +189,21 @@ instance FormatSql NullsOrder where
     fmt NullsFirst = " NULLS FIRST"
     fmt NullsLast = " NULLS LAST"
     fmt NullsOrderDefault = ""
+
+instance FormatSql Locking where
+    fmt Locking{strength, tables, wait} =
+        fmt strength <> optList " OF " tables <> " " <> fmt wait
+
+instance FormatSql LockingStrength where
+    fmt ForUpdate = "FOR UPDATE"
+    fmt ForNoKeyUpdate = "FOR NO KEY UPDATE"
+    fmt ForShare = "FOR SHARE"
+    fmt ForKeyShare = "FOR KEY SHARE"
+
+instance FormatSql LockWait where
+    fmt LockWaitError = "NOWAIT"
+    fmt LockWaitSkip = "SKIP LOCKED"
+    fmt LockWaitBlock = ""
 
 instance FormatSql ResTarget where
     fmt Star = "*"

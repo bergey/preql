@@ -53,4 +53,11 @@ printer = testGroup "printer" [
                   , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
                   , whereClause = Just (BinOp (Comp Eq) (CRef "name") (NumberedParam 1 []))
                   })))
+    , testPrint "SELECT * FROM foobar LIMIT 5.0"
+        (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
+             selectOptions { limit = Just (Lit (F 5)) }))
     ]
+
+testPrint :: TestName -> Query -> TestTree
+testPrint expected query = testCase expected $
+    assertEqual "testPrint" expected (formatAsString query)

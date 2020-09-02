@@ -54,6 +54,9 @@ instance Arbitrary SortBy where arbitrary = genericArbitraryU
 instance Arbitrary SortOrderOrUsing where arbitrary = genericArbitraryU
 instance Arbitrary SortOrder where arbitrary = genericArbitraryU -- TODO better for enum?
 instance Arbitrary NullsOrder where arbitrary = genericArbitraryU
+instance Arbitrary Locking where arbitrary = genericArbitraryU
+instance Arbitrary LockingStrength where arbitrary = genericArbitraryU
+instance Arbitrary LockWait where arbitrary = genericArbitraryU
 
 -- Recursive types need more careful treatment to avoid infinite trees
 instance Arbitrary Expr where

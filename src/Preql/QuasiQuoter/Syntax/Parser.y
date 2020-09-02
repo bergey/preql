@@ -637,22 +637,10 @@ select_with_parens :: { SelectStmt }
 select_no_parens :: { SelectStmt }
     : simple_select { $1 }
     | select_clause sort_clause { S $1 selectOptions { sortBy = $2 } }
-    -- TODO            | select_clause opt_sort_clause for_locking_clause opt_select_limit
--- TODO                {
--- TODO                    insertSelectOptions((SelectStmt *) $1, $2, $3,
--- TODO                                        list_nth($4, 0), list_nth($4, 1),
--- TODO                                        NULL,
--- TODO                                        yyscanner);
--- TODO                    $$ = $1;
--- TODO                }
--- TODO            | select_clause opt_sort_clause select_limit opt_for_locking_clause
--- TODO                {
--- TODO                    insertSelectOptions((SelectStmt *) $1, $2, $4,
--- TODO                                        list_nth($3, 0), list_nth($3, 1),
--- TODO                                        NULL,
--- TODO                                        yyscanner);
--- TODO                    $$ = $1;
--- TODO                }
+    | select_clause opt_sort_clause for_locking_clause opt_select_limit
+        { S $1 selectOptions { sortBy = $2, locking = $3, offset = fst $4, limit = snd $4 } }
+    | select_clause opt_sort_clause select_limit opt_for_locking_clause
+        { S $1 selectOptions { sortBy = $2, offset = fst $3, limit = snd $3, locking = $4 } }
 -- TODO            | with_clause select_clause
 -- TODO                {
 -- TODO                    insertSelectOptions((SelectStmt *) $2, NULL, NIL,
@@ -837,16 +825,75 @@ sortby
     : a_expr USING qual_all_Op opt_nulls_order { SortBy $1 (Using $3) $4 }
     | a_expr opt_asc_desc opt_nulls_order { SortBy $1 (SortOrder $2) $3 }
 
--- TODO select_limit:
--- TODO opt_select_limit:
--- TODO limit_clause:
--- TODO offset_clause:
--- TODO select_limit_value:
--- TODO select_offset_value:
--- TODO select_fetch_first_value:
--- TODO I_or_F_const:
--- TODO row_or_rows
--- TODO first_or_next
+select_limit :: { (Maybe Expr, Maybe Expr) }
+    : limit_clause offset_clause { (Just $2, Just $1) }
+    | offset_clause limit_clause { (Just $1, Just $2) }
+    | limit_clause { (Nothing, Just $1) }
+    | offset_clause { (Just $1, Nothing) }
+
+opt_select_limit :: { (Maybe Expr, Maybe Expr) }
+    : select_limit { $1 }
+    | { (Nothing, Nothing) }
+
+limit_clause :: { Expr }
+    : LIMIT select_limit_value { $2 }
+        -- * Disabled because it was too confusing, bjm 2002-02-18 */
+        -- | LIMIT select_limit_value ',' select_offset_value
+        -- * SQL:2008 syntax */
+        -- * to avoid shift/reduce conflicts, handle the optional value with
+        -- * a separate production rather than an opt_ expression.  The fact
+        -- * that ONLY is fully reserved means that this way, we defer any
+        -- * decision about what rule reduces ROW or ROWS to the point where
+        -- * we can see the ONLY token in the lookahead slot.
+        | FETCH first_or_next select_fetch_first_value row_or_rows ONLY { $3 }
+        | FETCH first_or_next row_or_rows ONLY { Lit (F 1) } -- FIXME Int literal
+
+offset_clause :: { Expr }
+    : OFFSET select_offset_value { $2 }
+    -- * SQL:2008 syntax */
+    | OFFSET select_fetch_first_value row_or_rows { $2 }
+
+select_limit_value :: { Expr }
+    : a_expr { $1 }
+    -- * LIMIT ALL is represented as a NULL constant */
+    | ALL { Lit Null }
+
+select_offset_value :: { Expr }
+    : a_expr { $1 }
+
+-- * Allowing full expressions without parentheses causes various parsing
+-- * problems with the trailing ROW/ROWS key words.  SQL spec only calls for
+-- * <simple value specification>, which is either a literal or a parameter (but
+-- * an <SQL parameter reference> could be an identifier, bringing up conflicts
+-- * with ROW/ROWS). We solve this by leveraging the presence of ONLY (see above)
+-- * to determine whether the expression is missing rather than trying to make it
+-- * optional in this rule.
+-- *
+-- * c_expr covers almost all the spec-required cases (and more), but it doesn't
+-- * cover signed numeric literals, which are allowed by the spec. So we include
+-- * those here explicitly. We need FCONST as well as ICONST because values that
+-- * don't fit in the platform's "long", but do fit in bigint, should still be
+-- * accepted here. (This is possible in 64-bit Windows as well as all 32-bit
+-- * builds.)
+
+select_fetch_first_value :: { Expr }
+    : c_expr { $1 }
+    | '+' I_or_F_const { Lit $2 }
+    | '-' I_or_F_const { Unary NegateNum (Lit $2) }
+
+I_or_F_const :: { Literal }
+    : NUMBER { F $1 }
+    -- : Iconst									{ $$ = makeIntConst($1,@1); }
+    -- | FCONST								{ $$ = makeFloatConst($1,@1); }
+
+-- * noise words
+row_or_rows :: { () }
+  : ROW { () }
+  | ROWS { () }
+
+first_or_next :: { () }
+  : FIRST_P { () }
+  | NEXT { () }
 
 -- * This syntax for group_clause tries to follow the spec quite closely.
 -- * However, the spec allows only column references, not expressions,
@@ -867,13 +914,13 @@ sortby
 -- * Each item in the group_clause list is either an expression tree or a
 -- * GroupingSet node of some type.
 group_clause :: { [Expr] }
-			: GROUP_P BY group_by_list				{ reverse $3 }
-			| { [] }
+    : GROUP_P BY group_by_list { reverse $3 }
+    | { [] }
 
 group_by_list : list(group_by_item) { $1 }
 
 group_by_item
-			: a_expr									{ $1 }
+    : a_expr { $1 }
 -- TODO 			| empty_grouping_set					{ $$ = $1; }
 -- TODO 			| cube_clause							{ $$ = $1; }
 -- TODO 			| rollup_clause							{ $$ = $1; }
@@ -892,6 +939,37 @@ having_clause :: { Maybe Expr }
     : HAVING a_expr { Just $2 }
     | { Nothing }
 
+for_locking_clause :: { [Locking] }
+    : for_locking_items { reverse $1 }
+    | FOR READ ONLY { [] }
+
+opt_for_locking_clause :: { [Locking] }
+    : for_locking_clause { $1 }
+    | { [] }
+
+for_locking_items :: { [Locking] }
+    : for_locking_item { [$1] }
+    | for_locking_items for_locking_item { $2 : $1 }
+
+for_locking_item :: { Locking }
+    : for_locking_strength locked_rels_list opt_nowait_or_skip
+    { Locking $1 (reverse $2) $3 }
+
+for_locking_strength :: { LockingStrength }
+    : FOR UPDATE  { ForUpdate }
+    | FOR NO KEY UPDATE  { ForNoKeyUpdate }
+    | FOR SHARE  { ForShare }
+    | FOR KEY SHARE  { ForKeyShare }
+
+locked_rels_list :: { [Name] }
+    : OF qualified_name_list { $2 }
+    | { [] }
+
+opt_nowait_or_skip :: { LockWait }
+    : NOWAIT { LockWaitError }
+    | SKIP LOCKED { LockWaitSkip }
+    | { LockWaitBlock }
+
 -- * We should allow ROW '(' expr_list ')' too, but that seems to require
 -- * making VALUES a fully reserved word, which will probably break more apps
 -- * than allowing the noise-word is worth.
@@ -902,7 +980,7 @@ values_clause :: { NE.NonEmpty (NE.NonEmpty Expr) }
  -- *	clauses common to all Optimizable Stmts:
  -- *		from_clause		- allow list of both JOIN expressions and table names
  -- *		where_clause	- qualifications for joins or restrictions
- 
+
 from_clause :: { [TableRef] }
     : FROM from_list { reverse $2 }
 	| 							{ [] }
@@ -1034,7 +1112,7 @@ opt_alias_clause :: { Maybe Alias }
     : alias_clause { Just $1 }
     | { Nothing }
 -- TODO func_alias_clause:
--- TODO join_type:	
+-- TODO join_type:
 -- TODO join_outer:
 -- TODO join_qual:
 
@@ -1132,7 +1210,7 @@ a_expr :: { Expr }
     | a_expr '<=' a_expr { BinOp (Comp LTE) $1 $3 }
     | a_expr '>=' a_expr { BinOp (Comp GTE) $1 $3 }
     | a_expr '!=' a_expr { BinOp (Comp NEq) $1 $3 }
-    | a_expr qual_Op a_expr				%prec Op { BinOp $2 $1 $3 } 
+    | a_expr qual_Op a_expr				%prec Op { BinOp $2 $1 $3 }
     | a_expr AND a_expr { And $1 $3 }
 	  | a_expr OR a_expr { Or $1 $3 }
     | NOT a_expr { Not $2 }
@@ -1165,7 +1243,7 @@ b_expr :: { Expr }
 | b_expr '<=' b_expr { BinOp (Comp LTE) $1 $3 }
 | b_expr '>=' b_expr { BinOp (Comp GTE) $1 $3 }
 | b_expr '!=' b_expr { BinOp (Comp NEq) $1 $3 }
-| b_expr qual_Op b_expr				%prec Op { BinOp $2 $1 $3 } 
+| b_expr qual_Op b_expr				%prec Op { BinOp $2 $1 $3 }
 -- FIXME exclude user-defined operators, or give up on Syntax allowing only correct operator arity?
 -- TODO 			| qual_Op b_expr					%prec Op
 -- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $1, NULL, $2, @1); }
@@ -1644,7 +1722,7 @@ AexprConst :: { Literal }
 -- TODO 					/* generic syntax with a type modifier */
 -- TODO 					TypeName *t = makeTypeNameFromNameList($1);
 -- TODO 					ListCell *lc;
--- TODO 
+-- TODO
 -- TODO 					/*
 -- TODO 					 * We must use func_arg_list and opt_sort_clause in the
 -- TODO 					 * production to avoid reduce/reduce conflicts, but we
@@ -1654,7 +1732,7 @@ AexprConst :: { Literal }
 -- TODO 					foreach(lc, $3)
 -- TODO 					{
 -- TODO 						NamedArgExpr *arg = (NamedArgExpr *) lfirst(lc);
--- TODO 
+-- TODO
 -- TODO 						if (IsA(arg, NamedArgExpr))
 -- TODO 							ereport(ERROR,
 -- TODO 									(errcode(ERRCODE_SYNTAX_ERROR),
@@ -1666,7 +1744,7 @@ AexprConst :: { Literal }
 -- TODO 									(errcode(ERRCODE_SYNTAX_ERROR),
 -- TODO 									 errmsg("type modifier cannot have ORDER BY"),
 -- TODO 									 parser_errposition(@4)));
--- TODO 
+-- TODO
 -- TODO 					t->typmods = $3;
 -- TODO 					t->location = @1;
 -- TODO 					$$ = makeStringConstCast($6, @6, t);
@@ -1701,7 +1779,7 @@ Sconst : STRING { $1 }
 -- TODO     : Iconst								{ $1 }
 -- TODO     | '+' Iconst							{ + $2 }
 -- TODO     | '-' Iconst							{ - $2 }
--- TODO 
+-- TODO
 
 -- * Name classification hierarchy.
 -- *

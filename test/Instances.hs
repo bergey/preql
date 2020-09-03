@@ -54,6 +54,7 @@ instance Arbitrary SelectOptions where arbitrary = genericArbitraryU
 instance Arbitrary TableRef where arbitrary = genericArbitraryU
 instance Arbitrary Alias where arbitrary = genericArbitraryU
 instance Arbitrary DistinctClause where arbitrary = genericArbitraryU
+instance Arbitrary SetOp where arbitrary = genericArbitraryU
 instance Arbitrary AllOrDistinct where arbitrary = genericArbitraryU
 instance Arbitrary ResTarget where arbitrary = genericArbitraryU
 -- instance Arbitrary ColumnRef where arbitrary = genericArbitraryU

@@ -56,6 +56,10 @@ printer = testGroup "printer" [
     , testPrint "SELECT * FROM foobar LIMIT 5.0"
         (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
              selectOptions { limit = Just (Lit (F 5)) }))
+    , testPrint "SELECT foo FROM bar UNION SELECT baz FROM quux"
+      (QS (Set Union Distinct
+              (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] })))
     ]
 
 testPrint :: TestName -> Query -> TestTree

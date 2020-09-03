@@ -147,6 +147,24 @@ parser = testGroup "parser"
           selectOptions { offset = Just (Lit (I 25)) }))
     , testParse "TABLE foo"
       (QS (Simple select { from = [TableRef "foo" Nothing ], targetList = [Star] }))
+    , testParse "SELECT foo FROM bar"
+        (QS (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] }))
+    , testParse "SELECT baz FROM quux"
+        (QS (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] }))
+    , testLex "SELECT foo FROM bar UNION SELECT baz FROM quux"
+      [ L.SELECT, L.Name "foo", L.FROM, L.Name "bar", L.UNION, L.SELECT, L.Name "baz", L.FROM, L.Name "quux" ]
+    , testParse "SELECT foo FROM bar union SELECT baz FROM quux"
+      (QS (Set Union Distinct
+              (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] })))
+    , testParse "SELECT foo FROM bar Intersect ALL SELECT baz FROM quux"
+      (QS (Set Intersect All
+              (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] })))
+    , testParse "SELECT foo FROM bar EXCEPT SELECT baz FROM quux"
+      (QS (Set Except Distinct
+              (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] })))
     ]
   ]
 

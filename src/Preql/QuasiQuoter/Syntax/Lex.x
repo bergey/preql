@@ -60,6 +60,7 @@ tokens :-
     $f $r $o $m { lex FROM }
     $i $l $i $k $e { lex ILIKE }
     $i $n $s $e $r $t { lex INSERT }
+    $i $n $t $e $r $s $e $c $t  { lex INTERSECT }
     $i $n $t $o { lex INTO }
     $i $s $n $u $l $l { lex ISNULL }
     $i $s { lex IS }

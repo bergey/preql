@@ -102,7 +102,7 @@ import qualified Data.List.NonEmpty as NE
     ON { LocToken _ L.ON }
     AS { LocToken _ L.AS }
 
-    UNION { LocToken _ L.BY }
+    UNION { LocToken _ L.UNION }
     EXCEPT { LocToken _ L.EXCEPT }
 
     FROM { LocToken _ L.FROM }
@@ -746,19 +746,9 @@ simple_select :: { SelectStmt }
             | values_clause { SelectValues $1 }
             | TABLE relation_expr { Simple select { targetList = [ Star ], from = [ TableRef $2 Nothing ] } }
             -- * same as SELECT * FROM relation_expr
--- TODO TODO UNION in AST
--- TODO            | select_clause UNION all_or_distinct select_clause
--- TODO                {
--- TODO                    $$ = makeSetOp(SETOP_UNION, $3, $1, $4);
--- TODO                }
--- TODO            | select_clause INTERSECT all_or_distinct select_clause
--- TODO                {
--- TODO                    $$ = makeSetOp(SETOP_INTERSECT, $3, $1, $4);
--- TODO                }
--- TODO            | select_clause EXCEPT all_or_distinct select_clause
--- TODO                {
--- TODO                    $$ = makeSetOp(SETOP_EXCEPT, $3, $1, $4);
--- TODO                }
+            | select_clause UNION all_or_distinct select_clause { Set Union $3 $1 $4 }
+            | select_clause INTERSECT all_or_distinct select_clause { Set Intersect $3 $1 $4 }
+            | select_clause EXCEPT all_or_distinct select_clause { Set Except $3 $1 $4 }
 
 into_clause:
 			-- TODO INTO OptTempTableName

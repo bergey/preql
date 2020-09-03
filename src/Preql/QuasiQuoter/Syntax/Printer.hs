@@ -146,6 +146,10 @@ instance FormatSql SelectStmt where
     fmt (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
     fmt (Simple un) = fmt un
     fmt (S ss so) = fmt ss <> fmt so
+    fmt (Set op distinct l r) = fmt l <> " " <> fmt op <> d <> fmt r
+      where d = case distinct of
+                All -> " ALL "
+                Distinct -> " "
 
 instance FormatSql Select where
     fmt Select{targetList, from, whereClause, groupBy, having, window}
@@ -204,6 +208,11 @@ instance FormatSql LockWait where
     fmt LockWaitError = "NOWAIT"
     fmt LockWaitSkip = "SKIP LOCKED"
     fmt LockWaitBlock = ""
+
+instance FormatSql SetOp where
+    fmt Union = "UNION"
+    fmt Intersect = "INTERSECT"
+    fmt Except = "EXCEPT"
 
 instance FormatSql ResTarget where
     fmt Star = "*"

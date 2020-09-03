@@ -54,6 +54,7 @@ data SelectStmt
     = SelectValues (NonEmpty (NonEmpty Expr))
     | Simple Select
     | S SelectStmt SelectOptions
+    | Set SetOp AllOrDistinct SelectStmt SelectStmt
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Select = Select
@@ -106,6 +107,9 @@ data Alias = Alias
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data SetOp = Union | Intersect | Except
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data AllOrDistinct = All | Distinct

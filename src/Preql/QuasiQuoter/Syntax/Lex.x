@@ -51,6 +51,7 @@ tokens :-
     $a $s $c { lex ASC }
     $a $s { lex AS }
     $b $y { lex BY }
+    $c $r $o $s $s  { lex CROSS }
     $d $e $l $e $t $e { lex DELETE_P }
     $d $e $s $c { lex DESC }
     $d $i $s $t $i $n $c $t { lex DISTINCT }
@@ -59,14 +60,18 @@ tokens :-
     $f $i $r $s $t { lex First }
     $f $r $o $m { lex FROM }
     $i $l $i $k $e { lex ILIKE }
+    $i $n $n $e $r { lex INNER_P }
     $i $n $s $e $r $t { lex INSERT }
     $i $n $t $e $r $s $e $c $t  { lex INTERSECT }
     $i $n $t $o { lex INTO }
     $i $s $n $u $l $l { lex ISNULL }
     $i $s { lex IS }
+    $j $o $i $n { lex JOIN }
     $l $a $s $t { lex Last }
+    $l $e $f $t { lex LEFT }
     $l $i $k $e { lex LIKE }
     $l $i $m $i $t { lex LIMIT }
+    $n $a $t $u $r $a $l { lex NATURAL }
     $n $o $t $n $u $l $l { lex NOTNULL }
     $n $o $t { lex NOT }
     $n $u $l $l $s { lex Nulls }
@@ -76,6 +81,7 @@ tokens :-
     $o $p $e $r $a $t $o $r { lex OPERATOR }
     $o $r $d $e $r { lex ORDER }
     $o $r { lex OR }
+    $r $i $g $h $t { lex RIGHT }
     $s $e $l $e $c $t { lex SELECT }
     $s $e $t { lex SET }
     $t $a $b $l $e { lex TABLE }

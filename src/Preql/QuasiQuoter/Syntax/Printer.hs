@@ -9,10 +9,8 @@ module Preql.QuasiQuoter.Syntax.Printer where
 
 import Preql.Imports
 import Preql.QuasiQuoter.Syntax.Name
-import Preql.QuasiQuoter.Syntax.Syntax
+import Preql.QuasiQuoter.Syntax.Syntax as Syn
 
-import Data.ByteString (ByteString)
-import Data.Foldable (toList)
 import Data.List
 import Prelude hiding (GT, LT, lex)
 
@@ -55,6 +53,7 @@ instance FormatSql Literal where
     fmt (T t)     = quote (B.fromText t)
     fmt (B True)  = "true"
     fmt (B False) = "false"
+    fmt Null = "null"
 
 instance FormatSql Query where
     fmt (QI insert) = fmt insert
@@ -114,10 +113,14 @@ instance FormatSql Expr where
         NegateBool -> "NOT " <> parens (fmt expr)
         IsNull     -> parens (fmt expr) <> " IS NULL"
         NotNull    -> parens (fmt expr) <> " IS NOT NULL"
+    fmt (Indirection e names) = parens (fmt e) <> foldMap (("." <>) . fmt) names
     fmt (SelectExpr stmt indirects) = parens (fmt stmt) <> fmtIndirections indirects
     fmt (And l r) = fmt l <> " AND " <> fmt r
     fmt (Or l r) = fmt l <> " OR " <> fmt r
     fmt (Not expr) = "NOT " <> fmt expr
+
+instance FormatSql ColumnRef where
+    fmt (ColumnRef name is) = fmt name <> fmtIndirections is
 
 fmtIndirections :: [Indirection] -> TLB.Builder
 fmtIndirections = mconcat . map (("." <>) . fmt)
@@ -130,6 +133,9 @@ instance FormatSql BinOp where
         Sub      -> "-"
         Exponent -> "^"
         Comp c   -> fmt c
+        Mod -> "%"
+        IsDistinctFrom -> "IS DISTINCT FROM"
+        IsNotDistinctFrom -> "IS NOT DISTINCT FROM"
 
 instance FormatSql Compare where
     fmt op = case op of
@@ -168,19 +174,28 @@ instance FormatSql SelectOptions where
         <> opt " OFFSET " offset
 
 instance FormatSql TableRef where
-    fmt TableRef {relation, alias} = fmt relation <> m_alias where
-      m_alias = case alias of
-          Nothing -> ""
-          Just (Alias name columns) -> " AS " <> fmt name <> case columns of
-              [] -> ""
-              _ -> " " <> parens (commas (fmt <$> columns))
+    fmt (Table name) = fmt name
+    fmt (Aliased ref (Alias alias columns)) = fmt ref <> " AS " <> fmt alias <> cs where
+      cs = case columns of
+               [] -> ""
+               _ -> " " <> parens (commas (fmt <$> columns))
+    fmt (CrossJoin l r) = fmt l <> " CROSS JOIN " <> fmt r
+    fmt (Join ty Natural l r) = fmt l <> " NATURAL" <> fmt ty <> fmt r
+    fmt (Join ty (Using cols) l r) = fmt l <> fmt ty <> fmt r <> " USING " <> commas cols
+    fmt (Join ty (On expr) l r) = fmt l <> fmt ty <> fmt r <> " ON " <> fmt expr
+
+instance FormatSql JoinType where
+    fmt Inner = " INNER "
+    fmt LeftJoin = " LEFT "
+    fmt RightJoin = " RIGHT "
+    fmt Full = " FULL "
 
 instance FormatSql SortBy where
     fmt (SortBy expr order nulls) = fmt expr <> fmt order <> fmt nulls
 
 instance FormatSql SortOrderOrUsing where
     fmt (SortOrder order) = fmt order
-    fmt (Using op) = "USING " <> fmt op
+    fmt (SortUsing op) = "USING " <> fmt op
 
 instance FormatSql SortOrder where
     -- leading space

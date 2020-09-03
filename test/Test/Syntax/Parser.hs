@@ -67,23 +67,23 @@ parser = testGroup "parser"
   , testGroup "Select"
     [ testParse "SELECT name FROM users"
       (QS (Simple select
-       { from = [ TableRef "users" Nothing ]
+       { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing ]
        }))
     , testParse "SELECT name, email FROM users"
       (QS (Simple select
-       { from = [ TableRef "users" Nothing ]
+       { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
        }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel'"
       (QS (Simple select
-       { from = [ TableRef "users" Nothing ]
+       { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel")))
        }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
       (QS (Simple select
-       { from = [ TableRef "users" Nothing ]
+       { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
        , whereClause = Just (Or (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel"))) (BinOp (Comp Eq) (CRef "name") (Lit (T "Bergey"))))
        }))
@@ -91,80 +91,89 @@ parser = testGroup "parser"
         -- We currently parse integers & decimals all to Double
         -- Just test that both parser rules work
       (QS (Simple select
-       { from = [ TableRef "users" Nothing ]
+       { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (CRef "age") (Lit (I 35)))
        }))
     , testParse "SELECT name FROM users WHERE age = 35.5"
       (QS (Simple select
-       { from = [ TableRef "users" Nothing ]
+       { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (CRef "age") (Lit (F 35.5)))
        }))
     , testParse "SELECT foo FROM bar WHERE baz > -2"
       (QS (Simple select
-       { from = [ TableRef "bar" Nothing ]
+       { from = [ Table "bar" ]
        , targetList = [ Column (CRef "foo") Nothing ]
        , whereClause = Just (BinOp (Comp GT) (CRef "baz") (Lit (I (-2))))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
       (QS (Simple select
-       { from = [ TableRef "bar" Nothing ]
+       { from = [ Table "bar" ]
        , targetList = [ Column (CRef "foo") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (CRef "baz") (Lit (F 0.02)))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2"
       (QS (Simple select
-       { from = [ TableRef "bar" Nothing ]
+       { from = [ Table "bar" ]
        , targetList = [ Column (CRef "foo") Nothing ]
        , whereClause = Just (BinOp (Comp Eq) (CRef "baz") (Lit (F 0.02)))
        }))
     , testParse "SELECT * FROM foobar"
       (QS (Simple select
-       { from = [ TableRef "foobar" Nothing ]
+       { from = [ Table "foobar" ]
        , targetList = [ Star ]
        }))
     , testParse "SELECT * FROM foo ORDER BY bar"
-      (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
+      (QS (S (Simple select { from = [Table "foo" ], targetList = [Star] })
           selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder DefaultSortOrder) NullsOrderDefault ] }))
     , testParse "SELECT * FROM foo ORDER BY bar DESC"
-      (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
+      (QS (S (Simple select { from = [Table "foo" ], targetList = [Star] })
           selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder Descending) NullsOrderDefault ] }))
     , testParse "SELECT * FROM foo ORDER BY bar NULLS FIRST"
-      (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
+      (QS (S (Simple select { from = [Table "foo" ], targetList = [Star] })
           selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder DefaultSortOrder) NullsFirst ] }))
     , testParse "SELECT * FROM foo ORDER BY bar ASC NULLS LAST"
-      (QS (S (Simple select { from = [TableRef "foo" Nothing], targetList = [Star] })
+      (QS (S (Simple select { from = [Table "foo" ], targetList = [Star] })
           selectOptions { sortBy = [ SortBy (CRef "bar") (SortOrder Ascending) NullsLast ] }))
     , testParse "SELECT * FROM foobar LIMIT 5"
-      (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
+      (QS (S (Simple select { from = [Table "foobar" ], targetList = [Star] })
           selectOptions { limit = Just (Lit (I 5)) }))
     , testParse "SELECT * FROM foobar LIMIT 5 OFFSET 5"
-      (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
+      (QS (S (Simple select { from = [Table "foobar" ], targetList = [Star] })
           selectOptions { limit = Just (Lit (I 5)), offset = Just (Lit (I 5)) }))
     , testParse "SELECT * FROM foobar OFFSET 25"
-      (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
+      (QS (S (Simple select { from = [Table "foobar" ], targetList = [Star] })
           selectOptions { offset = Just (Lit (I 25)) }))
     , testParse "TABLE foo"
-      (QS (Simple select { from = [TableRef "foo" Nothing ], targetList = [Star] }))
-    , testParse "SELECT foo FROM bar"
-        (QS (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] }))
-    , testParse "SELECT baz FROM quux"
-        (QS (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] }))
-    , testLex "SELECT foo FROM bar UNION SELECT baz FROM quux"
-      [ L.SELECT, L.Name "foo", L.FROM, L.Name "bar", L.UNION, L.SELECT, L.Name "baz", L.FROM, L.Name "quux" ]
+      (QS (Simple select { from = [Table "foo" ], targetList = [Star] }))
     , testParse "SELECT foo FROM bar union SELECT baz FROM quux"
       (QS (Set Union Distinct
-              (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] })
-              (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] })))
+              (Simple select { from = [ Table "bar" ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ Table "quux" ], targetList = [ Column (CRef "baz") Nothing ] })))
     , testParse "SELECT foo FROM bar Intersect ALL SELECT baz FROM quux"
       (QS (Set Intersect All
-              (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] })
-              (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] })))
+              (Simple select { from = [ Table "bar" ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ Table "quux" ], targetList = [ Column (CRef "baz") Nothing ] })))
     , testParse "SELECT foo FROM bar EXCEPT SELECT baz FROM quux"
       (QS (Set Except Distinct
-              (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] })
-              (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] })))
+              (Simple select { from = [ Table "bar" ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ Table "quux" ], targetList = [ Column (CRef "baz") Nothing ] })))
+    , testParse "SELECT * FROM foo CROSS JOIN bar"
+      (QS (Simple select { from = [ CrossJoin (Table "foo") (Table "bar")]
+                         , targetList = [Star] }))
+    , testParse "SELECT * FROM foo JOIN bar ON foo.f = bar.b"
+      (QS (Simple select { from = [ Join Inner (On (BinOp (Comp Eq) (CRef "foo.f") (CRef "bar.b"))) (Table "foo") (Table "bar")]
+                         , targetList = [Star]}))
+    , testParse "SELECT * FROM foo JOIN bar USING (f, b)"
+      (QS (Simple select { from = [ Join Inner (Using ["f", "b"]) (Table "foo") (Table "bar")]
+                         , targetList = [Star]}))
+    , testParse "SELECT * FROM foo LEFT JOIN bar ON bar.foo = f.id"
+      (QS (Simple select { from = [ Join LeftJoin (On (BinOp (Comp Eq) (CRef "bar.foo") (CRef "f.id"))) (Table "foo") (Table "bar")]
+                         , targetList = [Star]}))
+    , testParse "SELECT * FROM foo NATURAL JOIN bar"
+      (QS (Simple select { from = [ Join Inner Natural (Table "foo") (Table "bar")]
+                         , targetList = [Star]}))
     ]
   ]
 

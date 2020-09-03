@@ -49,17 +49,17 @@ printer = testGroup "printer" [
         -- Extra parens until the printer is clever about Expr precedence
         "SELECT name, email FROM users WHERE (name) = ($1)"
         (fmt (QS (Simple select
-                  { from = [ TableRef "users" Nothing ]
+                  { from = [ Table "users" ]
                   , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
                   , whereClause = Just (BinOp (Comp Eq) (CRef "name") (NumberedParam 1 []))
                   })))
     , testPrint "SELECT * FROM foobar LIMIT 5.0"
-        (QS (S (Simple select { from = [TableRef "foobar" Nothing], targetList = [Star] })
+        (QS (S (Simple select { from = [Table "foobar" ], targetList = [Star] })
              selectOptions { limit = Just (Lit (F 5)) }))
     , testPrint "SELECT foo FROM bar UNION SELECT baz FROM quux"
       (QS (Set Union Distinct
-              (Simple select { from = [ TableRef "bar" Nothing ], targetList = [ Column (CRef "foo") Nothing ] })
-              (Simple select { from = [ TableRef "quux" Nothing ], targetList = [ Column (CRef "baz") Nothing ] })))
+              (Simple select { from = [ Table "bar" ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ Table "quux" ], targetList = [ Column (CRef "baz") Nothing ] })))
     ]
 
 testPrint :: TestName -> Query -> TestTree

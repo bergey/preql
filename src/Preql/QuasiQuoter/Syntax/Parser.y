@@ -744,7 +744,7 @@ simple_select :: { SelectStmt }
 -- TODO                    $$ = (Node *)n;
 -- TODO                }
             | values_clause { SelectValues $1 }
-            | TABLE relation_expr { Simple select { targetList = [ Star ], from = [ TableRef $2 Nothing ] } }
+            | TABLE relation_expr { Simple select { targetList = [ Star ], from = [ Table $2 ] } }
             -- * same as SELECT * FROM relation_expr
             | select_clause UNION all_or_distinct select_clause { Set Union $3 $1 $4 }
             | select_clause INTERSECT all_or_distinct select_clause { Set Intersect $3 $1 $4 }
@@ -794,8 +794,8 @@ sort_clause :: { [SortBy] }
 
 sortby_list : list(sortby) { $1 }
 
-sortby
-    : a_expr USING qual_all_Op opt_nulls_order { SortBy $1 (Using $3) $4 }
+sortby :: { SortBy }
+    : a_expr USING qual_all_Op opt_nulls_order { SortBy $1 (SortUsing $3) $4 }
     | a_expr opt_asc_desc opt_nulls_order { SortBy $1 (SortOrder $2) $3 }
 
 select_limit :: { (Maybe Expr, Maybe Expr) }
@@ -955,17 +955,15 @@ values_clause :: { NE.NonEmpty (NE.NonEmpty Expr) }
 
 from_clause :: { [TableRef] }
     : FROM from_list { reverse $2 }
-	| 							{ [] }
+    | { [] }
 
 from_list : list(table_ref) { $1 }
 
 -- * table_ref is where an alias clause can be attached.
 table_ref :: { TableRef }
-    :	relation_expr opt_alias_clause { TableRef $1 $2 }
--- TODO				{
--- TODO					$1->alias = $2;
--- TODO					$$ = (Node *) $1;
--- TODO				}
+    : relation_expr opt_alias_clause { case $2 of
+        Nothing -> Table $1
+        Just a -> Aliased (Table $1) a }
 -- TODO			| relation_expr opt_alias_clause tablesample_clause
 -- TODO				{
 -- TODO					RangeTableSample *n = (RangeTableSample *) $3;
@@ -1062,31 +1060,63 @@ table_ref :: { TableRef }
 -- TODO					}
 -- TODO					$$ = (Node *) n;
 -- TODO				}
--- TODO			| joined_table
--- TODO				{
--- TODO					$$ = (Node *) $1;
--- TODO				}
--- TODO			| '(' joined_table ')' alias_clause
--- TODO				{
--- TODO					$2->alias = $4;
--- TODO					$$ = (Node *) $2;
--- TODO }
+    | joined_table { $1 }
+    | '(' joined_table ')' alias_clause { Aliased $2 $4 }
 
--- TODO joined_table:
+-- * It may seem silly to separate joined_table from table_ref, but there is
+-- * method in SQL's madness: if you don't do it this way you get reduce-
+-- * reduce conflicts, because it's not clear to the parser generator whether
+-- * to expect alias_clause after ')' or not.  For the same reason we must
+-- * treat 'JOIN' and 'join_type JOIN' separately, rather than allowing
+-- * join_type to expand to empty; if we try it, the parser generator can't
+-- * figure out when to reduce an empty join_type right after table_ref.
+-- *
+-- * Note that a CROSS JOIN is the same as an unqualified
+-- * INNER JOIN, and an INNER JOIN/ON has the same shape
+-- * but a qualification expression to limit membership.
+-- * A NATURAL JOIN implicitly matches column names between
+-- * tables and the shape is determined by which columns are
+-- * in common. We'll collect columns during the later transformations.
+
+joined_table :: { TableRef }
+    : '(' joined_table ')' { $2 }
+    -- * CROSS JOIN is same as unqualified inner join
+    | table_ref CROSS JOIN table_ref { CrossJoin $1 $4 }
+    | table_ref join_type JOIN table_ref join_qual { Join $2 $5 $1 $4 }
+    | table_ref JOIN table_ref join_qual { Join Inner $4 $1 $3 }
+    | table_ref NATURAL join_type JOIN table_ref { Join $3 Natural $1 $5 }
+    | table_ref NATURAL JOIN table_ref { Join Inner Natural $1 $4 }
 
 alias_clause :: { Alias }
-			: AS ColId '(' name_list ')' { Alias $2 (reverse $4) }
-			| AS ColId { Alias $2 [] }
-			| ColId '(' name_list ')' { Alias $1 (reverse $3) }
-			| ColId { Alias $1 [] }
+    : AS ColId '(' name_list ')' { Alias $2 (reverse $4) }
+    | AS ColId { Alias $2 [] }
+    | ColId '(' name_list ')' { Alias $1 (reverse $3) }
+    | ColId { Alias $1 [] }
 
 opt_alias_clause :: { Maybe Alias }
     : alias_clause { Just $1 }
     | { Nothing }
+
 -- TODO func_alias_clause:
--- TODO join_type:
--- TODO join_outer:
--- TODO join_qual:
+
+join_type :: { JoinType }
+    : FULL join_outer { Full }
+    | LEFT join_outer { LeftJoin }
+    | RIGHT join_outer { RightJoin }
+    | INNER_P { Inner }
+
+join_outer :: { () } -- * OUTER is just noise...
+    : OUTER_P { () }
+    | { () }
+
+-- * JOIN qualification clauses
+-- * Possibilities are:
+-- * USING ( column list ) allows only unqualified column names,
+-- *   which must match between tables.
+-- * ON expr allows more general qualifications.
+join_qual :: { JoinQual }
+    : USING '(' name_list ')' { Using (reverse $3) }
+    | ON a_expr { On $2 }
 
 relation_expr :: { Name } -- TODO FIXME
     : qualified_name { $1 } -- * inheritance query, implicitly
@@ -1507,7 +1537,7 @@ Name : IDENT { mkName $1 }
 
 Expr :: { Expr }
     : AexprConst { Lit $1 }
-    | Name { CRef $1 }
+    | columnref { CRef $1 }
     | c_expr { $1 }
     | '(' Expr ')' { $2 }
     | Expr '^' Expr { BinOp Exponent $1 $3 }
@@ -1533,9 +1563,9 @@ Null
         | IS NOT NULL { NotNull }
         | NOTNULL { NotNull }
 
-columnref :: { Name }
-    : ColId { $1 }
-    -- TODO | ColId indirection { ColumnRef $1 (Just $2) }
+columnref :: { ColumnRef }
+    : ColId { ColumnRef $1 [] }
+    | ColId indirection { ColumnRef $1 (reverse $2) }
 
 indirection_el :: { Name } -- TODO bigger type
     : '.' attr_name { $2 }

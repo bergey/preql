@@ -53,6 +53,8 @@ instance Arbitrary Select where arbitrary = genericArbitraryU
 instance Arbitrary SelectOptions where arbitrary = genericArbitraryU
 instance Arbitrary TableRef where arbitrary = genericArbitraryU
 instance Arbitrary Alias where arbitrary = genericArbitraryU
+instance Arbitrary JoinType where arbitrary = genericArbitraryU
+instance Arbitrary JoinQual where arbitrary = genericArbitraryU
 instance Arbitrary DistinctClause where arbitrary = genericArbitraryU
 instance Arbitrary SetOp where arbitrary = genericArbitraryU
 instance Arbitrary AllOrDistinct where arbitrary = genericArbitraryU
@@ -93,6 +95,7 @@ instance Arbitrary Expr where
         Unary op e -> e : (Unary op <$> shrink e)
         _ -> [] -- remaning terms can't be shrunk
 
+instance Arbitrary ColumnRef where arbitrary = genericArbitraryU
 instance Arbitrary BinOp where arbitrary = genericArbitraryU
 instance Arbitrary UnaryOp where arbitrary = genericArbitraryU
 instance Arbitrary Compare where arbitrary = genericArbitraryU

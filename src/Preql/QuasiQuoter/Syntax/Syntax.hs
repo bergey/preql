@@ -7,14 +7,16 @@
 
 module Preql.QuasiQuoter.Syntax.Syntax where
 
-import           Preql.QuasiQuoter.Syntax.Name
+import Preql.QuasiQuoter.Syntax.Name
 
-import           Data.Data
-import           Data.List.NonEmpty         (NonEmpty)
-import           Data.Text                  (Text)
-import           GHC.Generics
-import           Instances.TH.Lift ()
-import           Language.Haskell.TH.Syntax (Lift (..))
+import Data.Data
+import Data.List.NonEmpty (NonEmpty)
+import Data.String (IsString(..))
+import Data.Text (Text)
+import GHC.Generics
+import Instances.TH.Lift ()
+import Language.Haskell.TH.Syntax (Lift(..))
+import qualified Data.Text as T
 
 -- FIXME rename to Constant?
 data Literal = I !Int | F !Double | T !Text | B !Bool | Null
@@ -95,16 +97,23 @@ selectOptions = SelectOptions
     , locking = []
     }
 
--- TODO joins
-data TableRef = TableRef
-    { relation :: Name -- TODO
-    , alias :: Maybe Alias
-    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+data TableRef
+    = Table Name
+    | Aliased TableRef Alias
+    | Join JoinType JoinQual TableRef TableRef
+    | CrossJoin TableRef TableRef
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Alias = Alias
     { aliasName :: Name
     , columnNames :: [ Name ]
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data JoinType = Inner | LeftJoin | RightJoin | Full
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data JoinQual = Using [Name] | On Expr | Natural
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
@@ -117,11 +126,6 @@ data AllOrDistinct = All | Distinct
 
 data ResTarget = Star | Column Expr (Maybe Name)
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
--- data ColumnRef = ColumnRef
---     { value :: Name
---     , indirection :: Maybe Name -- TODO bigger type
---     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Window = Window
     { name :: Maybe Name
@@ -137,7 +141,7 @@ data SortBy = SortBy
     , nulls :: NullsOrder
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data SortOrderOrUsing = SortOrder SortOrder | Using BinOp
+data SortOrderOrUsing = SortOrder SortOrder | SortUsing BinOp
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SortOrder = Ascending | Descending | DefaultSortOrder
@@ -159,7 +163,7 @@ data LockingStrength
 data LockWait = LockWaitError | LockWaitSkip | LockWaitBlock
     deriving (Show, Eq, Enum, Bounded, Data, Lift, Generic)
 
-data Expr = Lit !Literal | CRef Name
+data Expr = Lit !Literal | CRef ColumnRef
     | NumberedParam !Word [Indirection]
     | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
@@ -170,6 +174,14 @@ data Expr = Lit !Literal | CRef Name
     | Or Expr Expr
     | Not Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data ColumnRef = ColumnRef Name [Indirection]
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+instance IsString ColumnRef where
+    fromString s = case map Name (T.split (== '.') (T.pack s)) of
+        (n : indirections) -> ColumnRef n indirections
+        [] -> error ("impossible: split returned empty list s=" ++ s)
 
 type Indirection = Name -- FIXME
 

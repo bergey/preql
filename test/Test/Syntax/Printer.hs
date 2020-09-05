@@ -60,6 +60,9 @@ printer = testGroup "printer" [
       (QS (Set Union Distinct
               (Simple select { from = [ Table "bar" ], targetList = [ Column (CRef "foo") Nothing ] })
               (Simple select { from = [ Table "quux" ], targetList = [ Column (CRef "baz") Nothing ] })))
+    , testPrint "SELECT * FROM (SELECT foo FROM bar) AS baz"
+      (QS (Simple select { targetList = [Star]
+                         , from = [ SubSelect (Simple select { targetList = [ Column (CRef "foo") Nothing ], from = [ Table "bar" ] }) (Alias "baz" []) ] } ))
     ]
 
 testPrint :: TestName -> Query -> TestTree

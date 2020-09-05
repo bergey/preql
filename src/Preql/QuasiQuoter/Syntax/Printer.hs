@@ -178,14 +178,16 @@ instance FormatSql SelectOptions where
 
 instance FormatSql TableRef where
     fmt (Table name) = fmt name
-    fmt (Aliased ref (Alias alias columns)) = fmt ref <> " AS " <> fmt alias <> cs where
-      cs = case columns of
-               [] -> ""
-               _ -> " " <> parens (commas (fmt <$> columns))
+    fmt (Aliased ref alias) = fmt ref <> " AS " <> fmt alias
     fmt (CrossJoin l r) = fmt l <> " CROSS JOIN " <> fmt r
     fmt (Join ty Natural l r) = fmt l <> " NATURAL" <> fmt ty <> fmt r
     fmt (Join ty (Using cols) l r) = fmt l <> fmt ty <> fmt r <> " USING " <> commas cols
     fmt (Join ty (On expr) l r) = fmt l <> fmt ty <> fmt r <> " ON " <> fmt expr
+    fmt (SubSelect stmt alias) = parens (fmt stmt) <> " AS " <> fmt alias
+
+instance FormatSql Alias where
+    fmt (Alias name []) = fmt name
+    fmt (Alias name columns) = fmt name <> parens (commas (fmt <$> columns))
 
 instance FormatSql JoinType where
     fmt Inner = " INNER "

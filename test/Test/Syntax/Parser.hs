@@ -6,6 +6,7 @@ module Test.Syntax.Parser where
 import Preql.QuasiQuoter.Syntax.Name
 import Preql.QuasiQuoter.Syntax.Parser
 import Preql.QuasiQuoter.Syntax.Syntax
+
 import qualified Preql.QuasiQuoter.Syntax.Lex as L
 
 import Data.List.NonEmpty (NonEmpty(..))
@@ -192,6 +193,15 @@ parser = testGroup "parser"
                        , from = [Table "foo"]
                        , groupBy = [ CRef "bar" ]
                        , having = Just (BinOp (Comp GT) (CRef "count") (Lit (I 1))) } ))
+  , testParse "SELECT * FROM foo WHERE bar LIKE '%'"
+    (QS (Simple select { targetList = [Star], from = [Table "foo"]
+                       , whereClause = Just (L (like Like (CRef "bar") (Lit (T "%")))) }))
+  , testParse "SELECT * FROM foo WHERE bar NOT LIKE '%'"
+    (QS (Simple select { targetList = [Star], from = [Table "foo"]
+                       , whereClause = Just (L (like Like (CRef "bar") (Lit (T "%"))) { invert = True }) }))
+  , testParse "SELECT * FROM foo WHERE bar SIMILAR TO '%'"
+    (QS (Simple select { targetList = [Star], from = [Table "foo"]
+                       , whereClause = Just (L (like Similar (CRef "bar") (Lit (T "%")))) }))
     ]
   ]
 

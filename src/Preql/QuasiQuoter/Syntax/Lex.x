@@ -51,7 +51,6 @@ tokens :-
     $a $s $c { lex ASC }
     $a $s { lex AS }
     $b $y { lex BY }
-    $g $r $o $u $p { lex GROUP_P }
     $c $r $o $s $s  { lex CROSS }
     $d $e $l $e $t $e { lex DELETE_P }
     $d $e $s $c { lex DESC }
@@ -60,6 +59,8 @@ tokens :-
     $f $a $l $s $e { lex FALSE_P }
     $f $i $r $s $t { lex First }
     $f $r $o $m { lex FROM }
+    $g $r $o $u $p { lex GROUP_P }
+    $h $a $v $i $n $g { lex HAVING }
     $i $l $i $k $e { lex ILIKE }
     $i $n $n $e $r { lex INNER_P }
     $i $n $s $e $r $t { lex INSERT }
@@ -85,14 +86,15 @@ tokens :-
     $r $i $g $h $t { lex RIGHT }
     $s $e $l $e $c $t { lex SELECT }
     $s $e $t { lex SET }
+    $s $i $m $i $l $a $r { lex SIMILAR }
     $t $a $b $l $e { lex TABLE }
+    $t $o { lex TO }
     $t $r $u $e { lex TRUE_P }
     $u $n $i $o $n { lex UNION }
     $u $p $d $a $t $e { lex UPDATE }
     $u $s $i $n $g { lex USING }
     $v $a $l $u $e $s { lex VALUES }
     $w $h $e $r $e { lex WHERE }
-    $h $a $v $i $n $g { lex HAVING }
 
     "(" { lex LParen }
     "," { lex Comma }

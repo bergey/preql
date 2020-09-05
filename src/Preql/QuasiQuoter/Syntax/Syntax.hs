@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveLift            #-}
@@ -174,6 +175,7 @@ data Expr = Lit !Literal | CRef ColumnRef
     | And Expr Expr
     | Or Expr Expr
     | Not Expr
+    | L LikeE
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data ColumnRef = ColumnRef Name [Indirection]
@@ -194,5 +196,20 @@ data BinOp = Mul | Div | Add | Sub | Exponent | Mod | Comp !Compare
 data UnaryOp = NegateNum | NegateBool | IsNull | NotNull
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Compare = Eq | LT | LTE | GT | GTE | NEq |  Like | ILike
+data Compare = Eq | LT | LTE | GT | GTE | NEq
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data LikeOp = Like | ILike | Similar -- TODO add ~ !~ ~* !~*
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data LikeE = LikeE
+    { op :: LikeOp
+    , string :: Expr
+    , likePattern :: Expr
+    , escape :: Maybe Expr
+    , invert :: Bool
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+like :: LikeOp -> Expr -> Expr -> LikeE
+like op string likePattern =
+    LikeE { op, string, likePattern, escape = Nothing, invert = False }

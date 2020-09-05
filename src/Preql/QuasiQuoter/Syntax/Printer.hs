@@ -121,6 +121,7 @@ instance FormatSql Expr where
     fmt (And l r) = fmt l <> " AND " <> fmt r
     fmt (Or l r) = fmt l <> " OR " <> fmt r
     fmt (Not expr) = "NOT " <> fmt expr
+    fmt (L likeE) = fmt likeE
 
 instance FormatSql ColumnRef where
     fmt (ColumnRef name is) = fmt name <> fmtIndirections is
@@ -148,8 +149,15 @@ instance FormatSql Compare where
         GT    -> ">"
         GTE   -> ">="
         NEq   -> "!="
-        Like  -> "LIKE"
-        ILike -> "ILIKE"
+
+instance FormatSql LikeE where
+    fmt LikeE{op, string, likePattern, escape, invert} =
+        fmt string <> if invert then " NOT" else ""
+        <> op' <> fmt likePattern <> opt " ESCAPE" escape
+      where op' = case op of
+              Like -> " LIKE "
+              ILike -> " ILIKE "
+              Similar -> " SIMILAR TO "
 
 instance FormatSql SelectStmt where
     fmt (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)

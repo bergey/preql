@@ -1239,133 +1239,38 @@ a_expr :: { Expr }
     | a_expr AND a_expr { And $1 $3 }
 	  | a_expr OR a_expr { Or $1 $3 }
     | NOT a_expr { Not $2 }
--- TODO 			| NOT_LA a_expr						%prec NOT
+-- TODO 			| NOT a_expr						%prec NOT
 -- TODO 				{ $$ = makeNotExpr($2, @1); }
--- TODO | a_expr LIKE a_expr
--- TODO {
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_LIKE, "~~",
--- TODO $1, $3, @2);
--- TODO }
--- TODO | a_expr LIKE a_expr ESCAPE a_expr					%prec LIKE
--- TODO {
--- TODO FuncCall *n = makeFuncCall(SystemFuncName("like_escape"),
--- TODO list_make2($3, $5),
--- TODO @2);
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_LIKE, "~~",
--- TODO $1, (Node *) n, @2);
--- TODO }
--- TODO | a_expr NOT_LA LIKE a_expr							%prec NOT_LA
--- TODO {
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_LIKE, "!~~",
--- TODO $1, $4, @2);
--- TODO }
--- TODO | a_expr NOT_LA LIKE a_expr ESCAPE a_expr			%prec NOT_LA
--- TODO {
--- TODO FuncCall *n = makeFuncCall(SystemFuncName("like_escape"),
--- TODO list_make2($4, $6),
--- TODO @2);
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_LIKE, "!~~",
--- TODO $1, (Node *) n, @2);
--- TODO }
--- TODO | a_expr ILIKE a_expr
--- TODO {
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_ILIKE, "~~*",
--- TODO $1, $3, @2);
--- TODO }
--- TODO | a_expr ILIKE a_expr ESCAPE a_expr					%prec ILIKE
--- TODO {
--- TODO FuncCall *n = makeFuncCall(SystemFuncName("like_escape"),
--- TODO list_make2($3, $5),
--- TODO @2);
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_ILIKE, "~~*",
--- TODO $1, (Node *) n, @2);
--- TODO }
--- TODO | a_expr NOT_LA ILIKE a_expr						%prec NOT_LA
--- TODO {
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_ILIKE, "!~~*",
--- TODO $1, $4, @2);
--- TODO }
--- TODO | a_expr NOT_LA ILIKE a_expr ESCAPE a_expr			%prec NOT_LA
--- TODO {
--- TODO FuncCall *n = makeFuncCall(SystemFuncName("like_escape"),
--- TODO list_make2($4, $6),
--- TODO @2);
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_ILIKE, "!~~*",
--- TODO $1, (Node *) n, @2);
--- TODO }
--- TODO | a_expr SIMILAR TO a_expr							%prec SIMILAR
--- TODO {
--- TODO FuncCall *n = makeFuncCall(SystemFuncName("similar_to_escape"),
--- TODO list_make1($4),
--- TODO @2);
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_SIMILAR, "~",
--- TODO $1, (Node *) n, @2);
--- TODO }
--- TODO | a_expr SIMILAR TO a_expr ESCAPE a_expr			%prec SIMILAR
--- TODO {
--- TODO FuncCall *n = makeFuncCall(SystemFuncName("similar_to_escape"),
--- TODO list_make2($4, $6),
--- TODO @2);
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_SIMILAR, "~",
--- TODO $1, (Node *) n, @2);
--- TODO }
--- TODO | a_expr NOT_LA SIMILAR TO a_expr					%prec NOT_LA
--- TODO {
--- TODO FuncCall *n = makeFuncCall(SystemFuncName("similar_to_escape"),
--- TODO list_make1($5),
--- TODO @2);
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_SIMILAR, "!~",
--- TODO $1, (Node *) n, @2);
--- TODO }
--- TODO | a_expr NOT_LA SIMILAR TO a_expr ESCAPE a_expr		%prec NOT_LA
--- TODO {
--- TODO FuncCall *n = makeFuncCall(SystemFuncName("similar_to_escape"),
--- TODO list_make2($5, $7),
--- TODO @2);
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_SIMILAR, "!~",
--- TODO $1, (Node *) n, @2);
--- TODO }
--- TODO /* NullTest clause
--- TODO * Define SQL-style Null test clause.
--- TODO * Allow two forms described in the standard:
--- TODO *	a IS NULL
--- TODO *	a IS NOT NULL
--- TODO * Allow two SQL extensions
--- TODO *	a ISNULL
--- TODO *	a NOTNULL
--- TODO */
--- TODO | a_expr IS NULL_P							%prec IS
--- TODO {
--- TODO NullTest *n = makeNode(NullTest);
--- TODO n->arg = (Expr *) $1;
--- TODO n->nulltesttype = IS_NULL;
--- TODO n->location = @2;
--- TODO $$ = (Node *)n;
--- TODO }
--- TODO | a_expr ISNULL
--- TODO {
--- TODO NullTest *n = makeNode(NullTest);
--- TODO n->arg = (Expr *) $1;
--- TODO n->nulltesttype = IS_NULL;
--- TODO n->location = @2;
--- TODO $$ = (Node *)n;
--- TODO }
--- TODO | a_expr IS NOT NULL_P						%prec IS
--- TODO {
--- TODO NullTest *n = makeNode(NullTest);
--- TODO n->arg = (Expr *) $1;
--- TODO n->nulltesttype = IS_NOT_NULL;
--- TODO n->location = @2;
--- TODO $$ = (Node *)n;
--- TODO }
--- TODO | a_expr NOTNULL
--- TODO {
--- TODO NullTest *n = makeNode(NullTest);
--- TODO n->arg = (Expr *) $1;
--- TODO n->nulltesttype = IS_NOT_NULL;
--- TODO n->location = @2;
--- TODO $$ = (Node *)n;
--- TODO }
+   | a_expr LIKE a_expr { L (LikeE Like $1 $3 Nothing False) }
+   | a_expr LIKE a_expr ESCAPE a_expr %prec LIKE { L (LikeE Like $1 $3 (Just $5) False) }
+   | a_expr NOT LIKE a_expr %prec NOT { L (LikeE Like $1 $4 Nothing True) }
+   | a_expr NOT LIKE a_expr ESCAPE a_expr %prec NOT
+        { L (LikeE Like $1 $4 (Just $6) True) }
+    | a_expr ILIKE a_expr { L (LikeE ILike $1 $3 Nothing False) }
+    | a_expr ILIKE a_expr ESCAPE a_expr %prec ILIKE { L (LikeE ILike $1 $3 (Just $5) False) }
+    | a_expr NOT ILIKE a_expr %prec NOT { L (LikeE ILike $1 $4 Nothing True) }
+    | a_expr NOT ILIKE a_expr ESCAPE a_expr %prec NOT
+        { L (LikeE ILike $1 $4 (Just $6) True) }
+    | a_expr SIMILAR TO a_expr %prec SIMILAR
+        { L (LikeE Similar $1 $4 Nothing False) }
+    | a_expr SIMILAR TO a_expr ESCAPE a_expr %prec SIMILAR
+        { L (LikeE Similar $1 $4 (Just $6) False) }
+    | a_expr NOT SIMILAR TO a_expr %prec NOT
+        { L (LikeE Similar $1 $5 Nothing True) }
+    | a_expr NOT SIMILAR TO a_expr ESCAPE a_expr %prec NOT
+        { L (LikeE Similar $1 $5 (Just $7) True) }
+-- * NullTest clause
+-- * Define SQL-style Null test clause.
+-- * Allow two forms described in the standard:
+-- *	a IS NULL
+-- *	a IS NOT NULL
+-- * Allow two SQL extensions
+-- *	a ISNULL
+-- *	a NOTNULL
+    | a_expr IS NULL_P %prec IS { Unary IsNull $1 }
+    | a_expr ISNULL { Unary IsNull $1 }
+    | a_expr IS NOT NULL_P %prec IS { Unary NotNull $1 }
+    | a_expr NOTNULL { Unary NotNull $1 }
 -- TODO | row OVERLAPS row
 -- TODO {
 -- TODO if (list_length($1) != 2)
@@ -1430,14 +1335,8 @@ a_expr :: { Expr }
 -- TODO b->location = @2;
 -- TODO $$ = (Node *)b;
 -- TODO }
--- TODO | a_expr IS DISTINCT FROM a_expr			%prec IS
--- TODO {
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_DISTINCT, "=", $1, $5, @2);
--- TODO }
--- TODO | a_expr IS NOT DISTINCT FROM a_expr		%prec IS
--- TODO {
--- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_NOT_DISTINCT, "=", $1, $6, @2);
--- TODO }
+    | a_expr IS DISTINCT FROM a_expr %prec IS { BinOp IsDistinctFrom $1 $5 }
+    | a_expr IS NOT DISTINCT FROM a_expr %prec IS { BinOp IsNotDistinctFrom $1 $6 }
 -- TODO | a_expr IS OF '(' type_list ')'			%prec IS
 -- TODO {
 -- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_OF, "=", $1, (Node *) $5, @2);
@@ -1454,7 +1353,7 @@ a_expr :: { Expr }
 -- TODO (Node *) list_make2($4, $6),
 -- TODO @2);
 -- TODO }
--- TODO | a_expr NOT_LA BETWEEN opt_asymmetric b_expr AND a_expr %prec NOT_LA
+-- TODO | a_expr NOT BETWEEN opt_asymmetric b_expr AND a_expr %prec NOT
 -- TODO {
 -- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_NOT_BETWEEN,
 -- TODO "NOT BETWEEN",
@@ -1470,7 +1369,7 @@ a_expr :: { Expr }
 -- TODO (Node *) list_make2($4, $6),
 -- TODO @2);
 -- TODO }
--- TODO | a_expr NOT_LA BETWEEN SYMMETRIC b_expr AND a_expr		%prec NOT_LA
+-- TODO | a_expr NOT BETWEEN SYMMETRIC b_expr AND a_expr		%prec NOT
 -- TODO {
 -- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_NOT_BETWEEN_SYM,
 -- TODO "NOT BETWEEN SYMMETRIC",
@@ -1498,7 +1397,7 @@ a_expr :: { Expr }
 -- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_IN, "=", $1, $3, @2);
 -- TODO }
 -- TODO }
--- TODO | a_expr NOT_LA IN_P in_expr						%prec NOT_LA
+-- TODO | a_expr NOT IN_P in_expr						%prec NOT
 -- TODO {
 -- TODO /* in_expr returns a SubLink or a list of a_exprs */
 -- TODO if (IsA($4, SubLink))
@@ -1592,29 +1491,29 @@ b_expr :: { Expr }
     : c_expr { $1 }
 -- TODO | b_expr TYPECAST Typename
 -- TODO 				{ $$ = makeTypeCast($1, $3, @2); }
-| '+' b_expr					%prec UMINUS { $2 } -- TODO keep + for round-trip?
+    | '+' b_expr					%prec UMINUS { $2 } -- TODO keep + for round-trip?
 -- TODO 				{ $$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "+", NULL, $2, @1); }
-| '-' b_expr					%prec UMINUS { Unary NegateNum $2 }
-| b_expr '+' b_expr { BinOp Add $1 $3 }
-| b_expr '-' b_expr { BinOp Sub $1 $3 }
-| b_expr '*' b_expr { BinOp Mul $1 $3 }
-| b_expr '/' b_expr { BinOp Div $1 $3 }
-| b_expr '%' b_expr { BinOp Mod $1 $3 }
-| b_expr '^' b_expr { BinOp Exponent $1 $3 }
-| b_expr '<' b_expr { BinOp (Comp LT) $1 $3 }
-| b_expr '>' b_expr { BinOp (Comp GT) $1 $3 }
-| b_expr '=' b_expr { BinOp (Comp Eq) $1 $3 }
-| b_expr '<=' b_expr { BinOp (Comp LTE) $1 $3 }
-| b_expr '>=' b_expr { BinOp (Comp GTE) $1 $3 }
-| b_expr '!=' b_expr { BinOp (Comp NEq) $1 $3 }
-| b_expr qual_Op b_expr				%prec Op { BinOp $2 $1 $3 }
+    | '-' b_expr					%prec UMINUS { Unary NegateNum $2 }
+    | b_expr '+' b_expr { BinOp Add $1 $3 }
+    | b_expr '-' b_expr { BinOp Sub $1 $3 }
+    | b_expr '*' b_expr { BinOp Mul $1 $3 }
+    | b_expr '/' b_expr { BinOp Div $1 $3 }
+    | b_expr '%' b_expr { BinOp Mod $1 $3 }
+    | b_expr '^' b_expr { BinOp Exponent $1 $3 }
+    | b_expr '<' b_expr { BinOp (Comp LT) $1 $3 }
+    | b_expr '>' b_expr { BinOp (Comp GT) $1 $3 }
+    | b_expr '=' b_expr { BinOp (Comp Eq) $1 $3 }
+    | b_expr '<=' b_expr { BinOp (Comp LTE) $1 $3 }
+    | b_expr '>=' b_expr { BinOp (Comp GTE) $1 $3 }
+    | b_expr '!=' b_expr { BinOp (Comp NEq) $1 $3 }
+    | b_expr qual_Op b_expr				%prec Op { BinOp $2 $1 $3 }
 -- FIXME exclude user-defined operators, or give up on Syntax allowing only correct operator arity?
 -- TODO 			| qual_Op b_expr					%prec Op
 -- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $1, NULL, $2, @1); }
 -- TODO 			| b_expr qual_Op					%prec POSTFIXOP
 -- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $2, $1, NULL, @2); }
-| b_expr IS DISTINCT FROM b_expr		%prec IS { BinOp IsDistinctFrom $1 $5 }
-| b_expr IS NOT DISTINCT FROM b_expr	%prec IS { BinOp IsNotDistinctFrom $1 $6 }
+    | b_expr IS DISTINCT FROM b_expr		%prec IS { BinOp IsDistinctFrom $1 $5 }
+    | b_expr IS NOT DISTINCT FROM b_expr	%prec IS { BinOp IsNotDistinctFrom $1 $6 }
 -- TODO 			| b_expr IS OF '(' type_list ')'		%prec IS
 -- TODO 				{
 -- TODO 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OF, "=", $1, (Node *) $5, @2);
@@ -1882,8 +1781,6 @@ Compare :: { Compare }
     | '>' { GT }
     | '<=' { LTE }
     | '>=' { GTE }
-    | LIKE { Like }
-    | ILIKE { ILike }
 
 Setting :: { Setting }
     : Name '=' a_expr { Setting $1 $3 }

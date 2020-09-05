@@ -51,6 +51,7 @@ tokens :-
     $a $s $c { lex ASC }
     $a $s { lex AS }
     $b $y { lex BY }
+    $g $r $o $u $p { lex GROUP_P }
     $c $r $o $s $s  { lex CROSS }
     $d $e $l $e $t $e { lex DELETE_P }
     $d $e $s $c { lex DESC }
@@ -91,6 +92,7 @@ tokens :-
     $u $s $i $n $g { lex USING }
     $v $a $l $u $e $s { lex VALUES }
     $w $h $e $r $e { lex WHERE }
+    $h $a $v $i $n $g { lex HAVING }
 
     "(" { lex LParen }
     "," { lex Comma }

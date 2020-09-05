@@ -183,6 +183,15 @@ parser = testGroup "parser"
     , testParse "SELECT * FROM (SELECT foo FROM bar) AS baz"
       (QS (Simple select { targetList = [Star]
                          , from = [ SubSelect (Simple select { targetList = [ Column (CRef "foo") Nothing ], from = [ Table "bar" ] }) (Alias "baz" []) ] } ))
+  , testParse "SELECT * FROM foo GROUP BY bar"
+    (QS (Simple select { targetList = [Star], from = [Table "foo"]
+                       , groupBy = [ CRef "bar" ] } ))
+  -- TODO add count(*) or something, once we can parse functions
+  , testParse "SELECT bar FROM foo GROUP BY bar HAVING count > 1"
+    (QS (Simple select { targetList = [ Column (CRef "bar") Nothing ]
+                       , from = [Table "foo"]
+                       , groupBy = [ CRef "bar" ]
+                       , having = Just (BinOp (Comp GT) (CRef "count") (Lit (I 1))) } ))
     ]
   ]
 

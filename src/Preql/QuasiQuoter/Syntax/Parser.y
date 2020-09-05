@@ -577,7 +577,7 @@ Query1 :: { Query }
     | Update { QU $1 }
 
 Delete
-    : DELETE FROM Name WHERE Expr { Delete $3 (Just $5) }
+    : DELETE FROM Name WHERE a_expr { Delete $3 (Just $5) }
     | DELETE FROM Name { Delete $3 Nothing }
 
 -- * A complete SELECT statement looks like this.
@@ -1467,7 +1467,7 @@ Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
 
 Update :: { Update }
-    : UPDATE Name SET SettingList WHERE Expr { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
+    : UPDATE Name SET SettingList WHERE a_expr { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
     | UPDATE Name SET SettingList { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Nothing } }
 
 {- These lists are non-empty by construction, but not by type. List head is the right-most element. -}
@@ -1476,7 +1476,7 @@ list(el)
     : el { [$1] }
     | list(el) COMMA el { $3 : $1 }
 
-expr_list : list(Expr) { $1 }
+expr_list : list(a_expr) { $1 }
 
 SettingList : list(Setting) { $1 }
 
@@ -1531,31 +1531,9 @@ Compare :: { Compare }
     | ILIKE { ILike }
 
 Setting :: { Setting }
-    : Name '=' Expr { Setting $1 $3 }
+    : Name '=' a_expr { Setting $1 $3 }
 
 Name : IDENT { mkName $1 }
-
-Expr :: { Expr }
-    : AexprConst { Lit $1 }
-    | columnref { CRef $1 }
-    | c_expr { $1 }
-    | '(' Expr ')' { $2 }
-    | Expr '^' Expr { BinOp Exponent $1 $3 }
-    | Expr '*' Expr { BinOp Mul $1 $3 }
-    | Expr '/' Expr { BinOp Div $1 $3 }
-    | Expr '+' Expr { BinOp Add $1 $3 }
-    | Expr '-' Expr { BinOp Sub $1 $3 }
-    | Expr '=' Expr { BinOp (Comp  Eq) $1 $3 }
-    | Expr '!=' Expr { BinOp (Comp  NEq) $1 $3 }
-    | Expr '<' Expr { BinOp (Comp  LT) $1 $3 }
-    | Expr '>' Expr { BinOp (Comp  GT) $1 $3 }
-    | Expr '<=' Expr { BinOp (Comp  LTE) $1 $3 }
-    | Expr '>=' Expr { BinOp (Comp  GTE) $1 $3 }
-    | Expr LIKE Expr { BinOp (Comp  Like) $1 $3 }
-    | Expr ILIKE Expr { BinOp (Comp  ILike) $1 $3 }
-    | NOT Expr { Unary NegateBool $2 }
-    | '-' Expr { Unary NegateNum $2 }
-    | Expr Null { Unary $2 $1 }
 
 Null
         : IS NULL { IsNull }

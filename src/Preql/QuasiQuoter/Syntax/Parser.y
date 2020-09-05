@@ -81,6 +81,15 @@ import qualified Data.List.NonEmpty as NE
 %left		'(' ')'
 %left		TYPECAST
 %left		'.'
+-- * These might seem to be low-precedence, but actually they are not part
+-- * of the arithmetic hierarchy at all in their use as JOIN operators.
+-- * We make them high-precedence to support their use as function names.
+-- * They wouldn't be given a precedence at all, were it not that we need
+-- * left-associativity among the JOIN rules themselves.
+%left JOIN CROSS LEFT FULL RIGHT INNER_P NATURAL
+-- * kluge to keep xml_whitespace_option from causing shift/reduce conflicts
+%right		PRESERVE STRIP_P
+
 
 %token
     DELETE { LocToken _ L.DELETE_P }
@@ -566,6 +575,8 @@ import qualified Data.List.NonEmpty as NE
 
 %%
 
+-- Unlike gram.y, we only parse a single statement, and only DML.
+
 Query :: { Query }
     : Query1 { $1 }
     | Query1 SEMICOLON { $1 }
@@ -618,8 +629,8 @@ Delete
 -- * with or without outer parentheses.
 
 SelectStmt :: { SelectStmt }
-    : select_no_parens { $1 }
-    | select_with_parens { $1 }
+    : select_no_parens %prec UMINUS { $1 }
+    | select_with_parens %prec UMINUS { $1 }
 
 select_with_parens :: { SelectStmt }
     : '(' select_no_parens ')' { $2 }
@@ -735,6 +746,20 @@ simple_select :: { SelectStmt }
             | select_clause UNION all_or_distinct select_clause { Set Union $3 $1 $4 }
             | select_clause INTERSECT all_or_distinct select_clause { Set Intersect $3 $1 $4 }
             | select_clause EXCEPT all_or_distinct select_clause { Set Except $3 $1 $4 }
+
+-- * SQL standard WITH clause looks like:
+-- *
+-- * WITH [ RECURSIVE ] <query name> [ (<column>,...) ]
+-- *		AS (query) [ SEARCH or CYCLE clause ]
+-- *
+-- * We don't currently support the SEARCH or CYCLE clause.
+-- *
+-- * Recognizing WITH_LA here allows a CTE to be named TIME or ORDINALITY.
+-- TODO with_clause:
+-- TODO cte_list:
+-- TODO common_table_expr:  name opt_name_list AS opt_materialized '(' PreparableStmt ')'
+-- TODO opt_materialized:
+-- TODO opt_with_clause:
 
 into_clause:
 			-- TODO INTO OptTempTableName
@@ -1130,6 +1155,25 @@ where_clause :: { Maybe Expr }
     : WHERE a_expr { Just $2 }
     | { Nothing }
 
+-- TODO where_or_current_clause ::
+-- TODO OptTableFuncElementList ::
+-- TODO TableFuncElementList ::
+-- TODO TableFuncElement ::
+-- TODO xmltable ::
+-- TODO xmltable_column_list ::
+-- TODO xmltable_column_el ::
+-- TODO xmltable_column_option_list ::
+-- TODO xmltable_column_option_el ::
+-- TODO xml_namespace_list ::
+-- TODO xml_namespace_el ::
+-- TODO Typename ::
+-- TODO opt_array_bounds ::
+-- TODO SimpleTypename ::
+-- TODO ConstTypename ::
+-- TODO GenericType ::
+-- TODO opt_type_modifiers ::
+-- TODO Numeric ::
+
 -- *	expression grammar
 
 -- * General expressions
@@ -1185,12 +1229,357 @@ a_expr :: { Expr }
     | a_expr '<=' a_expr { BinOp (Comp LTE) $1 $3 }
     | a_expr '>=' a_expr { BinOp (Comp GTE) $1 $3 }
     | a_expr '!=' a_expr { BinOp (Comp NEq) $1 $3 }
-    | a_expr qual_Op a_expr				%prec Op { BinOp $2 $1 $3 }
+-- TODO 			| a_expr qual_Op a_expr				%prec Op
+-- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $2, $1, $3, @2); }
+-- TODO 			| qual_Op a_expr					%prec Op
+-- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $1, NULL, $2, @1); }
+-- TODO 			| a_expr qual_Op					%prec POSTFIXOP
+-- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $2, $1, NULL, @2); }
+-- TODO     | a_expr qual_Op a_expr				%prec Op { BinOp $2 $1 $3 }
     | a_expr AND a_expr { And $1 $3 }
 	  | a_expr OR a_expr { Or $1 $3 }
     | NOT a_expr { Not $2 }
 -- TODO 			| NOT_LA a_expr						%prec NOT
 -- TODO 				{ $$ = makeNotExpr($2, @1); }
+-- TODO | a_expr LIKE a_expr
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_LIKE, "~~",
+-- TODO $1, $3, @2);
+-- TODO }
+-- TODO | a_expr LIKE a_expr ESCAPE a_expr					%prec LIKE
+-- TODO {
+-- TODO FuncCall *n = makeFuncCall(SystemFuncName("like_escape"),
+-- TODO list_make2($3, $5),
+-- TODO @2);
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_LIKE, "~~",
+-- TODO $1, (Node *) n, @2);
+-- TODO }
+-- TODO | a_expr NOT_LA LIKE a_expr							%prec NOT_LA
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_LIKE, "!~~",
+-- TODO $1, $4, @2);
+-- TODO }
+-- TODO | a_expr NOT_LA LIKE a_expr ESCAPE a_expr			%prec NOT_LA
+-- TODO {
+-- TODO FuncCall *n = makeFuncCall(SystemFuncName("like_escape"),
+-- TODO list_make2($4, $6),
+-- TODO @2);
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_LIKE, "!~~",
+-- TODO $1, (Node *) n, @2);
+-- TODO }
+-- TODO | a_expr ILIKE a_expr
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_ILIKE, "~~*",
+-- TODO $1, $3, @2);
+-- TODO }
+-- TODO | a_expr ILIKE a_expr ESCAPE a_expr					%prec ILIKE
+-- TODO {
+-- TODO FuncCall *n = makeFuncCall(SystemFuncName("like_escape"),
+-- TODO list_make2($3, $5),
+-- TODO @2);
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_ILIKE, "~~*",
+-- TODO $1, (Node *) n, @2);
+-- TODO }
+-- TODO | a_expr NOT_LA ILIKE a_expr						%prec NOT_LA
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_ILIKE, "!~~*",
+-- TODO $1, $4, @2);
+-- TODO }
+-- TODO | a_expr NOT_LA ILIKE a_expr ESCAPE a_expr			%prec NOT_LA
+-- TODO {
+-- TODO FuncCall *n = makeFuncCall(SystemFuncName("like_escape"),
+-- TODO list_make2($4, $6),
+-- TODO @2);
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_ILIKE, "!~~*",
+-- TODO $1, (Node *) n, @2);
+-- TODO }
+-- TODO | a_expr SIMILAR TO a_expr							%prec SIMILAR
+-- TODO {
+-- TODO FuncCall *n = makeFuncCall(SystemFuncName("similar_to_escape"),
+-- TODO list_make1($4),
+-- TODO @2);
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_SIMILAR, "~",
+-- TODO $1, (Node *) n, @2);
+-- TODO }
+-- TODO | a_expr SIMILAR TO a_expr ESCAPE a_expr			%prec SIMILAR
+-- TODO {
+-- TODO FuncCall *n = makeFuncCall(SystemFuncName("similar_to_escape"),
+-- TODO list_make2($4, $6),
+-- TODO @2);
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_SIMILAR, "~",
+-- TODO $1, (Node *) n, @2);
+-- TODO }
+-- TODO | a_expr NOT_LA SIMILAR TO a_expr					%prec NOT_LA
+-- TODO {
+-- TODO FuncCall *n = makeFuncCall(SystemFuncName("similar_to_escape"),
+-- TODO list_make1($5),
+-- TODO @2);
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_SIMILAR, "!~",
+-- TODO $1, (Node *) n, @2);
+-- TODO }
+-- TODO | a_expr NOT_LA SIMILAR TO a_expr ESCAPE a_expr		%prec NOT_LA
+-- TODO {
+-- TODO FuncCall *n = makeFuncCall(SystemFuncName("similar_to_escape"),
+-- TODO list_make2($5, $7),
+-- TODO @2);
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_SIMILAR, "!~",
+-- TODO $1, (Node *) n, @2);
+-- TODO }
+-- TODO /* NullTest clause
+-- TODO * Define SQL-style Null test clause.
+-- TODO * Allow two forms described in the standard:
+-- TODO *	a IS NULL
+-- TODO *	a IS NOT NULL
+-- TODO * Allow two SQL extensions
+-- TODO *	a ISNULL
+-- TODO *	a NOTNULL
+-- TODO */
+-- TODO | a_expr IS NULL_P							%prec IS
+-- TODO {
+-- TODO NullTest *n = makeNode(NullTest);
+-- TODO n->arg = (Expr *) $1;
+-- TODO n->nulltesttype = IS_NULL;
+-- TODO n->location = @2;
+-- TODO $$ = (Node *)n;
+-- TODO }
+-- TODO | a_expr ISNULL
+-- TODO {
+-- TODO NullTest *n = makeNode(NullTest);
+-- TODO n->arg = (Expr *) $1;
+-- TODO n->nulltesttype = IS_NULL;
+-- TODO n->location = @2;
+-- TODO $$ = (Node *)n;
+-- TODO }
+-- TODO | a_expr IS NOT NULL_P						%prec IS
+-- TODO {
+-- TODO NullTest *n = makeNode(NullTest);
+-- TODO n->arg = (Expr *) $1;
+-- TODO n->nulltesttype = IS_NOT_NULL;
+-- TODO n->location = @2;
+-- TODO $$ = (Node *)n;
+-- TODO }
+-- TODO | a_expr NOTNULL
+-- TODO {
+-- TODO NullTest *n = makeNode(NullTest);
+-- TODO n->arg = (Expr *) $1;
+-- TODO n->nulltesttype = IS_NOT_NULL;
+-- TODO n->location = @2;
+-- TODO $$ = (Node *)n;
+-- TODO }
+-- TODO | row OVERLAPS row
+-- TODO {
+-- TODO if (list_length($1) != 2)
+-- TODO ereport(ERROR,
+-- TODO (errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO errmsg("wrong number of parameters on left side of OVERLAPS expression"),
+-- TODO parser_errposition(@1)));
+-- TODO if (list_length($3) != 2)
+-- TODO ereport(ERROR,
+-- TODO (errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO errmsg("wrong number of parameters on right side of OVERLAPS expression"),
+-- TODO parser_errposition(@3)));
+-- TODO $$ = (Node *) makeFuncCall(SystemFuncName("overlaps"),
+-- TODO list_concat($1, $3),
+-- TODO @2);
+-- TODO }
+-- TODO | a_expr IS TRUE_P							%prec IS
+-- TODO {
+-- TODO BooleanTest *b = makeNode(BooleanTest);
+-- TODO b->arg = (Expr *) $1;
+-- TODO b->booltesttype = IS_TRUE;
+-- TODO b->location = @2;
+-- TODO $$ = (Node *)b;
+-- TODO }
+-- TODO | a_expr IS NOT TRUE_P						%prec IS
+-- TODO {
+-- TODO BooleanTest *b = makeNode(BooleanTest);
+-- TODO b->arg = (Expr *) $1;
+-- TODO b->booltesttype = IS_NOT_TRUE;
+-- TODO b->location = @2;
+-- TODO $$ = (Node *)b;
+-- TODO }
+-- TODO | a_expr IS FALSE_P							%prec IS
+-- TODO {
+-- TODO BooleanTest *b = makeNode(BooleanTest);
+-- TODO b->arg = (Expr *) $1;
+-- TODO b->booltesttype = IS_FALSE;
+-- TODO b->location = @2;
+-- TODO $$ = (Node *)b;
+-- TODO }
+-- TODO | a_expr IS NOT FALSE_P						%prec IS
+-- TODO {
+-- TODO BooleanTest *b = makeNode(BooleanTest);
+-- TODO b->arg = (Expr *) $1;
+-- TODO b->booltesttype = IS_NOT_FALSE;
+-- TODO b->location = @2;
+-- TODO $$ = (Node *)b;
+-- TODO }
+-- TODO | a_expr IS UNKNOWN							%prec IS
+-- TODO {
+-- TODO BooleanTest *b = makeNode(BooleanTest);
+-- TODO b->arg = (Expr *) $1;
+-- TODO b->booltesttype = IS_UNKNOWN;
+-- TODO b->location = @2;
+-- TODO $$ = (Node *)b;
+-- TODO }
+-- TODO | a_expr IS NOT UNKNOWN						%prec IS
+-- TODO {
+-- TODO BooleanTest *b = makeNode(BooleanTest);
+-- TODO b->arg = (Expr *) $1;
+-- TODO b->booltesttype = IS_NOT_UNKNOWN;
+-- TODO b->location = @2;
+-- TODO $$ = (Node *)b;
+-- TODO }
+-- TODO | a_expr IS DISTINCT FROM a_expr			%prec IS
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_DISTINCT, "=", $1, $5, @2);
+-- TODO }
+-- TODO | a_expr IS NOT DISTINCT FROM a_expr		%prec IS
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_NOT_DISTINCT, "=", $1, $6, @2);
+-- TODO }
+-- TODO | a_expr IS OF '(' type_list ')'			%prec IS
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_OF, "=", $1, (Node *) $5, @2);
+-- TODO }
+-- TODO | a_expr IS NOT OF '(' type_list ')'		%prec IS
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_OF, "<>", $1, (Node *) $6, @2);
+-- TODO }
+-- TODO | a_expr BETWEEN opt_asymmetric b_expr AND a_expr		%prec BETWEEN
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_BETWEEN,
+-- TODO "BETWEEN",
+-- TODO $1,
+-- TODO (Node *) list_make2($4, $6),
+-- TODO @2);
+-- TODO }
+-- TODO | a_expr NOT_LA BETWEEN opt_asymmetric b_expr AND a_expr %prec NOT_LA
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_NOT_BETWEEN,
+-- TODO "NOT BETWEEN",
+-- TODO $1,
+-- TODO (Node *) list_make2($5, $7),
+-- TODO @2);
+-- TODO }
+-- TODO | a_expr BETWEEN SYMMETRIC b_expr AND a_expr			%prec BETWEEN
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_BETWEEN_SYM,
+-- TODO "BETWEEN SYMMETRIC",
+-- TODO $1,
+-- TODO (Node *) list_make2($4, $6),
+-- TODO @2);
+-- TODO }
+-- TODO | a_expr NOT_LA BETWEEN SYMMETRIC b_expr AND a_expr		%prec NOT_LA
+-- TODO {
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_NOT_BETWEEN_SYM,
+-- TODO "NOT BETWEEN SYMMETRIC",
+-- TODO $1,
+-- TODO (Node *) list_make2($5, $7),
+-- TODO @2);
+-- TODO }
+-- TODO | a_expr IN_P in_expr
+-- TODO {
+-- TODO /* in_expr returns a SubLink or a list of a_exprs */
+-- TODO if (IsA($3, SubLink))
+-- TODO {
+-- TODO /* generate foo = ANY (subquery) */
+-- TODO SubLink *n = (SubLink *) $3;
+-- TODO n->subLinkType = ANY_SUBLINK;
+-- TODO n->subLinkId = 0;
+-- TODO n->testexpr = $1;
+-- TODO n->operName = NIL;		/* show it's IN not = ANY */
+-- TODO n->location = @2;
+-- TODO $$ = (Node *)n;
+-- TODO }
+-- TODO else
+-- TODO {
+-- TODO /* generate scalar IN expression */
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_IN, "=", $1, $3, @2);
+-- TODO }
+-- TODO }
+-- TODO | a_expr NOT_LA IN_P in_expr						%prec NOT_LA
+-- TODO {
+-- TODO /* in_expr returns a SubLink or a list of a_exprs */
+-- TODO if (IsA($4, SubLink))
+-- TODO {
+-- TODO /* generate NOT (foo = ANY (subquery)) */
+-- TODO /* Make an = ANY node */
+-- TODO SubLink *n = (SubLink *) $4;
+-- TODO n->subLinkType = ANY_SUBLINK;
+-- TODO n->subLinkId = 0;
+-- TODO n->testexpr = $1;
+-- TODO n->operName = NIL;		/* show it's IN not = ANY */
+-- TODO n->location = @2;
+-- TODO /* Stick a NOT on top; must have same parse location */
+-- TODO $$ = makeNotExpr((Node *) n, @2);
+-- TODO }
+-- TODO else
+-- TODO {
+-- TODO /* generate scalar NOT IN expression */
+-- TODO $$ = (Node *) makeSimpleA_Expr(AEXPR_IN, "<>", $1, $4, @2);
+-- TODO }
+-- TODO }
+-- TODO | a_expr subquery_Op sub_type select_with_parens	%prec Op
+-- TODO {
+-- TODO SubLink *n = makeNode(SubLink);
+-- TODO n->subLinkType = $3;
+-- TODO n->subLinkId = 0;
+-- TODO n->testexpr = $1;
+-- TODO n->operName = $2;
+-- TODO n->subselect = $4;
+-- TODO n->location = @2;
+-- TODO $$ = (Node *)n;
+-- TODO }
+-- TODO | a_expr subquery_Op sub_type '(' a_expr ')'		%prec Op
+-- TODO {
+-- TODO if ($3 == ANY_SUBLINK)
+-- TODO $$ = (Node *) makeA_Expr(AEXPR_OP_ANY, $2, $1, $5, @2);
+-- TODO else
+-- TODO $$ = (Node *) makeA_Expr(AEXPR_OP_ALL, $2, $1, $5, @2);
+-- TODO }
+-- TODO | UNIQUE select_with_parens
+-- TODO {
+-- TODO /* Not sure how to get rid of the parentheses
+-- TODO * but there are lots of shift/reduce errors without them.
+-- TODO *
+-- TODO * Should be able to implement this by plopping the entire
+-- TODO * select into a node, then transforming the target expressions
+-- TODO * from whatever they are into count(*), and testing the
+-- TODO * entire result equal to one.
+-- TODO * But, will probably implement a separate node in the executor.
+-- TODO */
+-- TODO ereport(ERROR,
+-- TODO (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+-- TODO errmsg("UNIQUE predicate is not yet implemented"),
+-- TODO parser_errposition(@1)));
+-- TODO }
+-- TODO | a_expr IS DOCUMENT_P					%prec IS
+-- TODO {
+-- TODO $$ = makeXmlExpr(IS_DOCUMENT, NULL, NIL,
+-- TODO list_make1($1), @2);
+-- TODO }
+-- TODO | a_expr IS NOT DOCUMENT_P				%prec IS
+-- TODO {
+-- TODO $$ = makeNotExpr(makeXmlExpr(IS_DOCUMENT, NULL, NIL,
+-- TODO list_make1($1), @2),
+-- TODO @2);
+-- TODO }
+-- TODO | DEFAULT
+-- TODO {
+-- TODO /*
+-- TODO * The SQL spec only allows DEFAULT in "contextually typed
+-- TODO * expressions", but for us, it's easier to allow it in
+-- TODO * any a_expr and then throw error during parse analysis
+-- TODO * if it's in an inappropriate context.  This way also
+-- TODO * lets us say something smarter than "syntax error".
+-- TODO */
+-- TODO SetToDefault *n = makeNode(SetToDefault);
+-- TODO /* parse analysis will fill in the rest */
+-- TODO n->location = @1;
+-- TODO $$ = (Node *)n;
+-- TODO }
+-- TODO ;
 
 -- * Restricted expressions
 -- *
@@ -1259,39 +1648,7 @@ c_expr :: { Expr }
     | PARAM opt_indirection { NumberedParam $1 (reverse $2) }
     | HASKELL_PARAM { HaskellParam $1 }
     | '(' a_expr ')' opt_indirection { Indirection $2 (reverse $4) }
--- TODO 				{
--- TODO 					if ($4)
--- TODO 					{
--- TODO 						A_Indirection *n = makeNode(A_Indirection);
--- TODO 						n->arg = $2;
--- TODO 						n->indirection = check_indirection($4, yyscanner);
--- TODO 						$$ = (Node *)n;
--- TODO 					}
--- TODO 					else if (operator_precedence_warning)
--- TODO 					{
--- TODO 						/*
--- TODO 						 * If precedence warnings are enabled, insert
--- TODO 						 * AEXPR_PAREN nodes wrapping all explicitly
--- TODO 						 * parenthesized subexpressions; this prevents bogus
--- TODO 						 * warnings from being issued when the ordering has
--- TODO 						 * been forced by parentheses.  Take care that an
--- TODO 						 * AEXPR_PAREN node has the same exprLocation as its
--- TODO 						 * child, so as not to cause surprising changes in
--- TODO 						 * error cursor positioning.
--- TODO 						 *
--- TODO 						 * In principle we should not be relying on a GUC to
--- TODO 						 * decide whether to insert AEXPR_PAREN nodes.
--- TODO 						 * However, since they have no effect except to
--- TODO 						 * suppress warnings, it's probably safe enough; and
--- TODO 						 * we'd just as soon not waste cycles on dummy parse
--- TODO 						 * nodes if we don't have to.
--- TODO 						 */
--- TODO 						$$ = (Node *) makeA_Expr(AEXPR_PAREN, NIL, $2, NULL,
--- TODO 												 exprLocation($2));
--- TODO 					}
--- TODO 					else
--- TODO 						$$ = $2;
--- TODO 				}
+    -- gram.y optionally warns about operator precedence
 -- TODO 			| case_expr
 -- TODO 				{ $$ = $1; }
 -- TODO 			| func_expr
@@ -1364,6 +1721,22 @@ c_expr :: { Expr }
 -- TODO 			  }
 -- TODO 		;
 
+-- TODO func_application ::
+-- TODO func_expr ::
+-- TODO func_expr_windowless ::
+-- TODO func_expr_common_subexpr ::
+-- TODO xml_root_version ::
+-- TODO opt_xml_root_standalone ::
+-- TODO xml_attributes ::
+-- TODO xml_attribute_list ::
+-- TODO xml_attribute_el ::
+-- TODO document_or_content ::
+-- TODO xml_whitespace_option ::
+-- TODO xmlexists_argument ::
+-- TODO xml_passing_mech ::
+-- TODO within_group_clause ::
+-- TODO filter_clause ::
+
 -- * Window Definitions
 window_clause
 : WINDOW window_definition_list { reverse $2 }
@@ -1434,38 +1807,13 @@ opt_frame_clause : { () }
 -- TODO 				}
 -- TODO 		;
 
-
--- FIXME handwritten
-Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
-       { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
-
-Update :: { Update }
-    : UPDATE Name SET SettingList WHERE a_expr { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
-    | UPDATE Name SET SettingList { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Nothing } }
-
-{- These lists are non-empty by construction, but not by type. List head is the right-most element. -}
-
-list(el)
-    : el { [$1] }
-    | list(el) ',' el { $3 : $1 }
-
-expr_list : list(a_expr) { $1 }
-
-SettingList : list(Setting) { $1 }
-
-
-opt_asc_desc
-    : ASC { Ascending }
-    | DESC { Descending }
-    | {- EMPTY -} { DefaultSortOrder }
-
-opt_nulls_order
-    : NULLS FIRST			{ NullsFirst }
-	| NULLS LAST				{ NullsLast }
-	|  { NullsOrderDefault }
-
-any_operator: all_Op { $1 }
--- We don't yet support schema-qualified operators (they're more useful if user-defined)
+-- TODO frame_extent ::
+-- TODO frame_bound ::
+-- TODO opt_window_exclusion_clause ::
+-- TODO row ::
+-- TODO explicit_row ::
+-- TODO implicit_row ::
+-- TODO sub_type ::
 
 all_Op : MathOp { $1 }
 -- We don't (yet?) support user-defined operators
@@ -1492,6 +1840,40 @@ qual_Op
 qual_all_Op
     : all_Op { $1 }
     | OPERATOR '(' any_operator ')' { $3 }
+
+-- TODO subquery_Op ::
+
+expr_list : list(a_expr) { $1 }
+
+-- FIXME handwritten
+Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
+       { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
+
+Update :: { Update }
+    : UPDATE Name SET SettingList WHERE a_expr { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
+    | UPDATE Name SET SettingList { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Nothing } }
+
+{- These lists are non-empty by construction, but not by type. List head is the right-most element. -}
+
+list(el)
+    : el { [$1] }
+    | list(el) ',' el { $3 : $1 }
+
+SettingList : list(Setting) { $1 }
+
+
+opt_asc_desc
+    : ASC { Ascending }
+    | DESC { Descending }
+    | {- EMPTY -} { DefaultSortOrder }
+
+opt_nulls_order
+    : NULLS FIRST			{ NullsFirst }
+	| NULLS LAST				{ NullsLast }
+	|  { NullsOrderDefault }
+
+any_operator: all_Op { $1 }
+-- We don't yet support schema-qualified operators (they're more useful if user-defined)
 
 Compare :: { Compare }
     : '=' { Eq }

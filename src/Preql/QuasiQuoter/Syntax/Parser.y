@@ -111,7 +111,7 @@ import qualified Data.List.NonEmpty as NE
     VALUES { LocToken _ L.VALUES }
     SET { LocToken _ L.SET }
     '(' { LocToken _ L.LParen }
-    COMMA { LocToken _ L.Comma }
+    ',' { LocToken _ L.Comma }
     ')' { LocToken _ L.RParen }
     '.' { LocToken _ L.Dot }
 
@@ -797,15 +797,16 @@ opt_select_limit :: { (Maybe Expr, Maybe Expr) }
 limit_clause :: { Expr }
     : LIMIT select_limit_value { $2 }
         -- * Disabled because it was too confusing, bjm 2002-02-18 */
-        -- | LIMIT select_limit_value ',' select_offset_value
+    | LIMIT select_limit_value ',' select_offset_value
+        {% fail "LIMIT #,# syntax is not supported.  Use separate LIMIT and OFFSET clauses." } -- error message to match Postgres
         -- * SQL:2008 syntax */
         -- * to avoid shift/reduce conflicts, handle the optional value with
         -- * a separate production rather than an opt_ expression.  The fact
         -- * that ONLY is fully reserved means that this way, we defer any
         -- * decision about what rule reduces ROW or ROWS to the point where
         -- * we can see the ONLY token in the lookahead slot.
-        | FETCH first_or_next select_fetch_first_value row_or_rows ONLY { $3 }
-        | FETCH first_or_next row_or_rows ONLY { Lit (I 1) }
+    | FETCH first_or_next select_fetch_first_value row_or_rows ONLY { $3 }
+    | FETCH first_or_next row_or_rows ONLY { Lit (I 1) }
 
 offset_clause :: { Expr }
     : OFFSET select_offset_value { $2 }
@@ -933,7 +934,7 @@ opt_nowait_or_skip :: { LockWait }
 -- * than allowing the noise-word is worth.
 values_clause :: { NE.NonEmpty (NE.NonEmpty Expr) }
     : VALUES '(' expr_list ')' { NE.fromList (reverse $3) :| [] }
-    | values_clause COMMA '(' expr_list ')' { NE.cons (NE.fromList (reverse $4)) $1 }
+    | values_clause ',' '(' expr_list ')' { NE.cons (NE.fromList (reverse $4)) $1 }
 
  -- *	clauses common to all Optimizable Stmts:
  -- *		from_clause		- allow list of both JOIN expressions and table names
@@ -1446,7 +1447,7 @@ Update :: { Update }
 
 list(el)
     : el { [$1] }
-    | list(el) COMMA el { $3 : $1 }
+    | list(el) ',' el { $3 : $1 }
 
 expr_list : list(a_expr) { $1 }
 

@@ -293,6 +293,9 @@ alexErrorPosn (AlexPn _ l c) msg = do
   fp <- getFilePath
   alexError (fp ++ ":" ++ show l ++ ":" ++ show c ++ ": " ++ msg)
 
+instance MonadFail Alex where
+    fail = alexError
+
 -- A variant of runAlex, keeping track of the path of the file we are lexing.
 runAlexWithFilepath :: Alex a -> FilePath -> String -> Either String a
 runAlexWithFilepath a fp input = runAlex input (setFilePath fp >> a)

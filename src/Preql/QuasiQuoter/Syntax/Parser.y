@@ -986,39 +986,25 @@ table_ref :: { TableRef }
 -- TODO					n->alias = $3;
 -- TODO					$$ = (Node *) n;
 -- TODO				}
--- TODO			| select_with_parens opt_alias_clause
--- TODO				{
--- TODO					RangeSubselect *n = makeNode(RangeSubselect);
--- TODO					n->lateral = false;
--- TODO					n->subquery = $1;
--- TODO					n->alias = $2;
--- TODO					/*
--- TODO					 * The SQL spec does not permit a subselect
--- TODO					 * (<derived_table>) without an alias clause,
--- TODO					 * so we don't either.  This avoids the problem
--- TODO					 * of needing to invent a unique refname for it.
--- TODO					 * That could be surmounted if there's sufficient
--- TODO					 * popular demand, but for now let's just implement
--- TODO					 * the spec and see if anyone complains.
--- TODO					 * However, it does seem like a good idea to emit
--- TODO					 * an error message that's better than "syntax error".
--- TODO					 */
--- TODO					if ($2 == NULL)
--- TODO					{
--- TODO						if (IsA($1, SelectStmt) &&
--- TODO							((SelectStmt *) $1)->valuesLists)
--- TODO							ereport(ERROR,
--- TODO									(errcode(ERRCODE_SYNTAX_ERROR),
--- TODO									 errmsg("VALUES in FROM must have an alias"),
--- TODO									 errhint("For example, FROM (VALUES ...) [AS] foo."),
--- TODO									 parser_errposition(@1)));
--- TODO						else
--- TODO							ereport(ERROR,
--- TODO									(errcode(ERRCODE_SYNTAX_ERROR),
--- TODO									 errmsg("subquery in FROM must have an alias"),
--- TODO									 errhint("For example, FROM (SELECT ...) [AS] foo."),
--- TODO									 parser_errposition(@1)));
--- TODO					}
+-- * The SQL spec does not permit a subselect
+-- * (<derived_table>) without an alias clause,
+-- * so we don't either.  This avoids the problem
+-- * of needing to invent a unique refname for it.
+-- * That could be surmounted if there's sufficient
+-- * popular demand, but for now let's just implement
+-- * the spec and see if anyone complains.
+-- * However, it does seem like a good idea to emit
+-- * an error message that's better than "syntax error".
+
+-- The comment above and the error messages below are straight from Postgres
+    | select_with_parens opt_alias_clause {%
+        case $2 of
+            Just alias -> return (SubSelect $1 alias)
+            Nothing -> case $1 of
+                SelectValues _ -> fail "VALUES in FROM must have an alias"
+
+                _ -> fail "subquery in FROM must have an alias"
+    }
 -- TODO					$$ = (Node *) n;
 -- TODO				}
 -- TODO			| LATERAL_P select_with_parens opt_alias_clause

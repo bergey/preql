@@ -102,6 +102,7 @@ data TableRef
     | Aliased TableRef Alias
     | Join JoinType JoinQual TableRef TableRef
     | CrossJoin TableRef TableRef
+    | SubSelect SelectStmt Alias
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Alias = Alias

@@ -180,6 +180,9 @@ parser = testGroup "parser"
       (QS (Simple select { from = [ Table "bar" ], targetList = [ Star ], distinct = Just (DistinctOn (CRef "foo" :| [] )) } ))
     , testParse "SELECT DISTINCT ON (foo, baz) * FROM bar"
       (QS (Simple select { from = [ Table "bar" ], targetList = [ Star ], distinct = Just (DistinctOn (CRef "foo" :| [CRef "baz" ] )) } ))
+    , testParse "SELECT * FROM (SELECT foo FROM bar) AS baz"
+      (QS (Simple select { targetList = [Star]
+                         , from = [ SubSelect (Simple select { targetList = [ Column (CRef "foo") Nothing ], from = [ Table "bar" ] }) (Alias "baz" []) ] } ))
     ]
   ]
 

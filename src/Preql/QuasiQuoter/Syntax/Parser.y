@@ -704,7 +704,7 @@ select_clause :: { SelectStmt }
 
 -- TODO include into_clause
 simple_select :: { SelectStmt }
-           : SELECT opt_all_clause opt_target_list
+    : SELECT opt_all_clause opt_target_list
            into_clause from_clause where_clause
            group_clause having_clause window_clause { Simple (Select
                 { distinct = Nothing
@@ -716,33 +716,19 @@ simple_select :: { SelectStmt }
                 , window = $9
                 })
            }
--- TODO WIP
--- TODO                {
--- TODO                    SelectStmt *n = makeNode(SelectStmt);
--- TODO                    n->targetList = $3;
--- TODO                    n->intoClause = $4;
--- TODO                    n->fromClause = $5;
--- TODO                    n->whereClause = $6;
--- TODO                    n->groupClause = $7;
--- TODO                    n->havingClause = $8;
--- TODO                    n->windowClause = $9;
--- TODO                    $$ = (Node *)n;
--- TODO                }
--- TODO            | SELECT distinct_clause target_list
--- TODO            into_clause from_clause where_clause
--- TODO            group_clause having_clause window_clause
--- TODO                {
--- TODO                    SelectStmt *n = makeNode(SelectStmt);
--- TODO                    n->distinctClause = $2;
--- TODO                    n->targetList = $3;
--- TODO                    n->intoClause = $4;
--- TODO                    n->fromClause = $5;
--- TODO                    n->whereClause = $6;
--- TODO                    n->groupClause = $7;
--- TODO                    n->havingClause = $8;
--- TODO                    n->windowClause = $9;
--- TODO                    $$ = (Node *)n;
--- TODO                }
+    | SELECT distinct_clause target_list
+        into_clause from_clause where_clause
+        group_clause having_clause window_clause
+      { Simple (Select
+        { distinct = Just $2
+        , targetList = $3
+        -- TODO into
+        , from = $5
+        , whereClause = $6
+        , groupBy = $7
+        , having = $8
+        , window = $9
+        }) }
             | values_clause { SelectValues $1 }
             | TABLE relation_expr { Simple select { targetList = [ Star ], from = [ Table $2 ] } }
             -- * same as SELECT * FROM relation_expr
@@ -1590,10 +1576,10 @@ opt_indirection :: { [Name] }
 -- *	target list for SELECT
 
 opt_target_list :: { [ResTarget] }
-    : target_list { NE.toList $1 }
+    : target_list { $1 }
     | { [] }
 
-target_list : list(target_el) { NE.fromList (reverse $1) }
+target_list : list(target_el) { reverse $1 }
 
 target_el :: { ResTarget }
     : a_expr AS ColLabel { Column $1 (Just $3) }

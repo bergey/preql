@@ -174,6 +174,12 @@ parser = testGroup "parser"
     , testParse "SELECT * FROM foo NATURAL JOIN bar"
       (QS (Simple select { from = [ Join Inner Natural (Table "foo") (Table "bar")]
                          , targetList = [Star]}))
+    , testParse "SELECT DISTINCT foo FROM bar"
+      (QS (Simple select { from = [ Table "bar" ], targetList = [ Column (CRef "foo") Nothing ], distinct = Just DistinctAll }))
+    , testParse "SELECT DISTINCT ON (foo) * FROM bar"
+      (QS (Simple select { from = [ Table "bar" ], targetList = [ Star ], distinct = Just (DistinctOn (CRef "foo" :| [] )) } ))
+    , testParse "SELECT DISTINCT ON (foo, baz) * FROM bar"
+      (QS (Simple select { from = [ Table "bar" ], targetList = [ Star ], distinct = Just (DistinctOn (CRef "foo" :| [CRef "baz" ] )) } ))
     ]
   ]
 

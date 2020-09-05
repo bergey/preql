@@ -31,6 +31,9 @@ doubleQuote s = "\"" <> s <> "\""
 parens :: B.Builder -> B.Builder
 parens s = "(" <> s <> ")"
 
+spaceAfter :: B.Builder -> B.Builder
+spaceAfter = (<> " ")
+
 class FormatSql a where
     fmt :: a -> B.Builder
 
@@ -158,14 +161,14 @@ instance FormatSql SelectStmt where
                 Distinct -> " "
 
 instance FormatSql Select where
-    fmt Select{targetList, from, whereClause, groupBy, having, window}
+    fmt Select{targetList, from, distinct, whereClause, groupBy, having, window}
         = "SELECT " <> m_distinct <> commas (fmt <$> targetList) <> " FROM " <> commas from
           <> opt " WHERE " whereClause
           <> optList " GROUP BY " groupBy
           <> opt " HAVING " having
           <> optList " WINDOW " window
         where
-          m_distinct = "" -- TODO
+          m_distinct = maybe "" (spaceAfter . fmt) distinct
 
 instance FormatSql SelectOptions where
     fmt SelectOptions{sortBy, offset, limit, locking} = spaces locking -- no commas
@@ -189,6 +192,10 @@ instance FormatSql JoinType where
     fmt LeftJoin = " LEFT "
     fmt RightJoin = " RIGHT "
     fmt Full = " FULL "
+
+instance FormatSql DistinctClause where
+    fmt DistinctAll = "DISTINCT"
+    fmt (DistinctOn expr) = "DISTINCT ON " <> parens (commas expr)
 
 instance FormatSql SortBy where
     fmt (SortBy expr order nulls) = fmt expr <> fmt order <> fmt nulls

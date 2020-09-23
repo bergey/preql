@@ -51,6 +51,7 @@ tokens :-
     $a $s $c { lex ASC }
     $a $s { lex AS }
     $b $y { lex BY }
+    $c $o $a $l $e $s $c $e { lex COALESCE }
     $c $r $o $s $s  { lex CROSS }
     $d $e $l $e $t $e { lex DELETE_P }
     $d $e $s $c { lex DESC }
@@ -59,6 +60,7 @@ tokens :-
     $f $a $l $s $e { lex FALSE_P }
     $f $i $r $s $t { lex First }
     $f $r $o $m { lex FROM }
+    $g $r $e $a $t $e $s $t { lex GREATEST }
     $g $r $o $u $p { lex GROUP_P }
     $h $a $v $i $n $g { lex HAVING }
     $i $l $i $k $e { lex ILIKE }
@@ -70,6 +72,7 @@ tokens :-
     $i $s { lex IS }
     $j $o $i $n { lex JOIN }
     $l $a $s $t { lex Last }
+    $l $e $a $s $t { lex LEAST }
     $l $e $f $t { lex LEFT }
     $l $i $k $e { lex LIKE }
     $l $i $m $i $t { lex LIMIT }
@@ -112,6 +115,8 @@ tokens :-
     ">" { lex GT }
     ">=" { lex GTE }
     "=" { lex Equals }
+    ":=" {lex COLON_EQUALS }
+    "=>" { lex EQUALS_GREATER }
 
     [\'] ("''" | $quoted)* [\'] { lex' (String . T.pack . unquoteString) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
@@ -147,6 +152,7 @@ data Token = -- Delete | Select | Insert | Update
     -- | Like | ILike
     -- | And | Or | Not
     | Dot | Semicolon | EOF
+    | COLON_EQUALS | EQUALS_GREATER
     -- all the keywords, from bison
     | ABORT_P | AUTHORIZATION | BETWEEN | ABSOLUTE_P | ACCESS | ACTION | ADD_P
     | ADMIN | AFTER | AGGREGATE | ALL | ALSO | ALTER | ALWAYS | ANALYSE | ANALYZE | AND

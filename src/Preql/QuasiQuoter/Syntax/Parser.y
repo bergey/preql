@@ -1,5 +1,6 @@
 {
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Preql.QuasiQuoter.Syntax.Parser where
 
@@ -8,6 +9,7 @@ import Preql.QuasiQuoter.Syntax.Name
 import Preql.QuasiQuoter.Syntax.Lex (Alex, LocToken(..), Token)
 
 import           Prelude hiding (LT, GT, lex)
+import           Control.Monad (when)
 import           Data.List.NonEmpty        (NonEmpty (..))
 
 import qualified Preql.QuasiQuoter.Syntax.Lex as L
@@ -157,6 +159,13 @@ import qualified Data.List.NonEmpty as NE
     OR { LocToken _ L.OR }
 
     SEMICOLON { LocToken _ L.Semicolon }
+
+-- Non-keyword token types.  These are separate in the bison parser
+-- for technical reasons, and here to make coordination with the bison
+-- parser easier.
+    COLON_EQUALS { L.LocToken _ L.COLON_EQUALS }
+    EQUALS_GREATER { L.LocToken _ L.EQUALS_GREATER }
+
     -- all the keywords not mentioned above, from bison
     ABORT_P { L.LocToken _ L.ABORT_P }
     AUTHORIZATION { L.LocToken _ L.AUTHORIZATION }
@@ -790,7 +799,7 @@ all_or_distinct :: { AllOrDistinct }
 -- * should be placed in the DISTINCT list during parsetree analysis.
 distinct_clause :: { DistinctClause }
     : DISTINCT { DistinctAll }
-    | DISTINCT ON '(' expr_list ')' { DistinctOn (NE.fromList (reverse $4)) }
+    | DISTINCT ON '(' expr_list ')' { DistinctOn (NE.fromList $4) }
 
 opt_all_clause
     : ALL { () }
@@ -958,8 +967,8 @@ opt_nowait_or_skip :: { LockWait }
 -- * making VALUES a fully reserved word, which will probably break more apps
 -- * than allowing the noise-word is worth.
 values_clause :: { NE.NonEmpty (NE.NonEmpty Expr) }
-    : VALUES '(' expr_list ')' { NE.fromList (reverse $3) :| [] }
-    | values_clause ',' '(' expr_list ')' { NE.cons (NE.fromList (reverse $4)) $1 }
+    : VALUES '(' expr_list ')' { NE.fromList $3 :| [] }
+    | values_clause ',' '(' expr_list ')' { NE.cons (NE.fromList $4) $1 }
 
  -- *	clauses common to all Optimizable Stmts:
  -- *		from_clause		- allow list of both JOIN expressions and table names
@@ -1550,8 +1559,7 @@ c_expr :: { Expr }
     -- gram.y optionally warns about operator precedence
 -- TODO 			| case_expr
 -- TODO 				{ $$ = $1; }
--- TODO 			| func_expr
--- TODO 				{ $$ = $1; }
+    | func_expr { Fun $1 }
     | select_with_parens			%prec UMINUS { SelectExpr $1 [] }
     | select_with_parens indirection { SelectExpr $1 $2 }
 -- * Because the select_with_parens nonterminal is designed
@@ -1620,10 +1628,222 @@ c_expr :: { Expr }
 -- TODO 			  }
 -- TODO 		;
 
--- TODO func_application ::
--- TODO func_expr ::
--- TODO func_expr_windowless ::
--- TODO func_expr_common_subexpr ::
+func_application :: { FunctionApplication }
+    : func_name '(' ')' { fapp $1 [] }
+	  | func_name '(' func_arg_list opt_sort_clause ')' { (fapp $1 $3) { sortBy = $4 } }
+-- TODO     | func_name '(' VARIADIC func_arg_expr opt_sort_clause ')'
+-- TODO 				{
+-- TODO 					FuncCall *n = makeFuncCall($1, list_make1($4), @1);
+-- TODO 					n->func_variadic = true;
+-- TODO n->agg_order = $5;
+-- TODO 					$$ = (Node *)n;
+-- TODO }
+-- TODO 			| func_name '(' func_arg_list ',' VARIADIC func_arg_expr opt_sort_clause ')'
+-- TODO 				{
+-- TODO 					FuncCall *n = makeFuncCall($1, lappend($3, $6), @1);
+-- TODO 					n->func_variadic = true;
+-- TODO n->agg_order = $7;
+-- TODO 					$$ = (Node *)n;
+-- TODO 				}
+	  | func_name '(' ALL func_arg_list opt_sort_clause ')' { (fapp $1 $4) { sortBy = $5 } }
+        -- * Ideally we'd mark the FuncCall node to indicate
+        -- * "must be an aggregate", but there's no provision
+        -- * for that in FuncCall at the moment.
+        -- *
+    | func_name '(' DISTINCT func_arg_list opt_sort_clause ')'
+        { (fapp $1 $4) { sortBy = $5, distinct = True } }
+    | func_name '(' '*' ')' { (fapp $1 []) { arguments = StarArg } }
+
+--  * func_expr and its cousin func_expr_windowless are split out from c_expr just
+--  * so that we have classifications for "everything that is a function call or
+--  * looks like one".  This isn't very important, but it saves us having to
+--  * document which variants are legal in places like "FROM function()" or the
+--  * backwards-compatible functional-index syntax for CREATE INDEX.
+--  * (Note that many of the special SQL functions wouldn't actually make any
+--  * sense as functional index entries, but we ignore that consideration here.)
+
+func_expr :: { FunctionApplication }
+    : func_application within_group_clause filter_clause over_clause
+-- * The order clause for WITHIN GROUP and the one for
+-- * plain-aggregate ORDER BY share a field, so we have to
+-- * check here that at most one is present.  We also check
+-- * for DISTINCT and VARIADIC here to give a better error
+-- * location.  Other consistency checks are deferred to
+-- * parse analysis.
+{% do
+    result <- case ($1, $2) of
+        (_, []) -> return $1
+        (FApp{distinct, sortBy}, _) -> do
+            when (not (null sortBy)) (fail "cannot use multiple ORDER BY clauses with WITHIN GROUP")
+            when distinct (fail "cannot use DISTINCT with WITHIN GROUP")
+            return $1 { sortBy = $2, withinGroup = True }
+    return result { filterClause = $3 , over = $4 }
+}
+-- TODO 						if (n->func_variadic)
+-- TODO 							ereport(ERROR,
+-- TODO 									(errcode(ERRCODE_SYNTAX_ERROR),
+-- TODO 									 errmsg("cannot use VARIADIC with WITHIN GROUP"),
+-- TODO 									 parser_errposition(@2)));
+-- TODO 						n->agg_order = $2;
+-- TODO 						n->agg_within_group = true;
+-- TODO 					}
+    | func_expr_common_subexpr { $1 }
+
+--  * as func_expr but does not accept window functions directly
+--  * (but they can still be contained in arguments for functions etc).
+--  * use this when window expressions are not allowed, where needed to
+--  * disambiguate the grammar (e.g. in CREATE INDEX).
+
+func_expr_windowless :: { FunctionApplication }
+    : func_application { $1 }
+    | func_expr_common_subexpr { $1 }
+
+-- * Special expressions that are considered to be functions.
+
+func_expr_common_subexpr :: { FunctionApplication }
+    : COLLATION FOR '(' a_expr ')' { fapp1 "pg_collation_for" [$4] }
+    | CURRENT_DATE { fapp1 "CURRENT_DATE" [] }
+    | CURRENT_TIME { fapp1 "CURRENT_TIME" [] }
+    | CURRENT_TIME '(' Iconst ')' { fapp1 "CURRENT_TIME" [Lit (I $3)] }
+    | CURRENT_TIMESTAMP { fapp1 "CURRENT_TIMESTAMP" [] }
+    | CURRENT_TIMESTAMP '(' Iconst ')' { fapp1 "CURRENT_TIMESTAMP" [Lit (I $3)] }
+    | LOCALTIME { fapp1 "LOCALTIME" [] }
+    | LOCALTIME '(' Iconst ')' { fapp1 "LOCALTIME" [Lit (I $3)] }
+    | LOCALTIMESTAMP { fapp1 "LOCALTIMESTAMP" [] }
+    | LOCALTIMESTAMP '(' Iconst ')' { fapp1 "LOCALTIMESTAMP" [Lit (I $3)] }
+    | CURRENT_ROLE { fapp1 "CURRENT_ROLE" [] }
+    | CURRENT_USER { fapp1 "CURRENT_USER" [] }
+    | SESSION_USER { fapp1 "SESSION_USER" [] }
+    | USER { fapp1 "USER" [] }
+    | CURRENT_CATALOG { fapp1 "CURRENT_CATALOG" [] }
+    | CURRENT_SCHEMA { fapp1 "CURRENT_SCHEMA" [] }
+-- TODO | CAST '(' a_expr AS Typename ')' { $$ = makeTypeCast($3, $5, @1); }
+-- TODO | EXTRACT '(' extract_list ')' { fapp1 "date_part" [$3] }
+-- TODO 			| OVERLAY '(' overlay_list ')'
+-- TODO 				{
+-- TODO 					/* overlay(A PLACING B FROM C FOR D) is converted to
+-- TODO 					 * overlay(A, B, C, D)
+-- TODO 					 * overlay(A PLACING B FROM C) is converted to
+-- TODO 					 * overlay(A, B, C)
+-- TODO 					 */
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("overlay"), $3, @1);
+-- TODO 				}
+-- TODO 			| POSITION '(' position_list ')'
+-- TODO 				{
+-- TODO 					/* position(A in B) is converted to position(B, A) */
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("position"), $3, @1);
+-- TODO 				}
+-- TODO 			| SUBSTRING '(' substr_list ')'
+-- TODO 				{
+-- TODO 					/* substring(A from B for C) is converted to
+-- TODO 					 * substring(A, B, C) - thomas 2000-11-28
+-- TODO 					 */
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("substring"), $3, @1);
+-- TODO 				}
+-- TODO 			| TREAT '(' a_expr AS Typename ')'
+-- TODO 				{
+-- TODO 					/* TREAT(expr AS target) converts expr of a particular type to target,
+-- TODO 					 * which is defined to be a subtype of the original expression.
+-- TODO 					 * In SQL99, this is intended for use with structured UDTs,
+-- TODO 					 * but let's make this a generally useful form allowing stronger
+-- TODO 					 * coercions than are handled by implicit casting.
+-- TODO 					 *
+-- TODO 					 * Convert SystemTypeName() to SystemFuncName() even though
+-- TODO 					 * at the moment they result in the same thing.
+-- TODO 					 */
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName(((Value *)llast($5->names))->val.str),
+-- TODO 												list_make1($3),
+-- TODO 												@1);
+-- TODO 				}
+-- TODO 			| TRIM '(' BOTH trim_list ')'
+-- TODO 				{
+-- TODO 					/* various trim expressions are defined in SQL
+-- TODO 					 * - thomas 1997-07-19
+-- TODO 					 */
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("btrim"), $4, @1);
+-- TODO 				}
+-- TODO 			| TRIM '(' LEADING trim_list ')'
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("ltrim"), $4, @1);
+-- TODO 				}
+-- TODO 			| TRIM '(' TRAILING trim_list ')'
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("rtrim"), $4, @1);
+-- TODO 				}
+-- TODO 			| TRIM '(' trim_list ')'
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("btrim"), $3, @1);
+-- TODO 				}
+-- TODO 			| NULLIF '(' a_expr ',' a_expr ')'
+-- TODO 				{
+-- TODO 					$$ = (Node *) makeSimpleA_Expr(AEXPR_NULLIF, "=", $3, $5, @1);
+-- TODO 				}
+    | COALESCE '(' expr_list ')' { fapp1 "coalesce" $3 }
+    | GREATEST '(' expr_list ')' { fapp1 "greatest" $3 }
+    | LEAST '(' expr_list ')' { fapp1 "least" $3 }
+-- TODO 			| XMLCONCAT '(' expr_list ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLCONCAT, NULL, NIL, $3, @1);
+-- TODO 				}
+-- TODO 			| XMLELEMENT '(' NAME_P ColLabel ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLELEMENT, $4, NIL, NIL, @1);
+-- TODO 				}
+-- TODO 			| XMLELEMENT '(' NAME_P ColLabel ',' xml_attributes ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLELEMENT, $4, $6, NIL, @1);
+-- TODO 				}
+-- TODO 			| XMLELEMENT '(' NAME_P ColLabel ',' expr_list ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLELEMENT, $4, NIL, $6, @1);
+-- TODO 				}
+-- TODO 			| XMLELEMENT '(' NAME_P ColLabel ',' xml_attributes ',' expr_list ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLELEMENT, $4, $6, $8, @1);
+-- TODO 				}
+-- TODO 			| XMLEXISTS '(' c_expr xmlexists_argument ')'
+-- TODO 				{
+-- TODO 					/* xmlexists(A PASSING [BY REF] B [BY REF]) is
+-- TODO 					 * converted to xmlexists(A, B)*/
+-- TODO 					$$ = (Node *) makeFuncCall(SystemFuncName("xmlexists"), list_make2($3, $4), @1);
+-- TODO 				}
+-- TODO 			| XMLFOREST '(' xml_attribute_list ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLFOREST, NULL, $3, NIL, @1);
+-- TODO 				}
+-- TODO 			| XMLPARSE '(' document_or_content a_expr xml_whitespace_option ')'
+-- TODO 				{
+-- TODO 					XmlExpr *x = (XmlExpr *)
+-- TODO 						makeXmlExpr(IS_XMLPARSE, NULL, NIL,
+-- TODO 									list_make2($4, makeBoolAConst($5, -1)),
+-- TODO 									@1);
+-- TODO 					x->xmloption = $3;
+-- TODO 					$$ = (Node *)x;
+-- TODO 				}
+-- TODO 			| XMLPI '(' NAME_P ColLabel ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLPI, $4, NULL, NIL, @1);
+-- TODO 				}
+-- TODO 			| XMLPI '(' NAME_P ColLabel ',' a_expr ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLPI, $4, NULL, list_make1($6), @1);
+-- TODO 				}
+-- TODO 			| XMLROOT '(' a_expr ',' xml_root_version opt_xml_root_standalone ')'
+-- TODO 				{
+-- TODO 					$$ = makeXmlExpr(IS_XMLROOT, NULL, NIL,
+-- TODO 									 list_make3($3, $5, $6), @1);
+-- TODO 				}
+-- TODO 			| XMLSERIALIZE '(' document_or_content a_expr AS SimpleTypename ')'
+-- TODO 				{
+-- TODO 					XmlSerialize *n = makeNode(XmlSerialize);
+-- TODO 					n->xmloption = $3;
+-- TODO 					n->expr = $4;
+-- TODO 					n->typeName = $6;
+-- TODO 					n->location = @1;
+-- TODO 					$$ = (Node *)n;
+-- TODO 				}
+-- TODO 		;
+
 -- TODO xml_root_version ::
 -- TODO opt_xml_root_standalone ::
 -- TODO xml_attributes ::
@@ -1633,13 +1853,20 @@ c_expr :: { Expr }
 -- TODO xml_whitespace_option ::
 -- TODO xmlexists_argument ::
 -- TODO xml_passing_mech ::
--- TODO within_group_clause ::
--- TODO filter_clause ::
+
+-- * Aggregate decoration clauses
+within_group_clause :: { [SortBy] }
+    : WITHIN GROUP_P '(' sort_clause ')' { $4 }
+    | { [] }
+
+filter_clause :: { Maybe Expr }
+    : FILTER '(' WHERE a_expr ')' { Just $4 }
+    | { Nothing }
 
 -- * Window Definitions
 window_clause
-: WINDOW window_definition_list { reverse $2 }
-| { [] }
+    : WINDOW window_definition_list { reverse $2 }
+    | { [] }
 
 window_definition_list : list(window_definition) { $1 }
 
@@ -1668,7 +1895,7 @@ opt_existing_window_name :: { Maybe Name }
     | 	%prec Op		{ Nothing }
 
 opt_partition_clause :: { [Expr] }
-    : PARTITION BY expr_list		{ reverse $3 }
+    : PARTITION BY expr_list		{ $3 }
     | { [] }
 
 -- * For frame clauses, we return a WindowDef, but only some fields are used:
@@ -1742,11 +1969,23 @@ qual_all_Op
 
 -- TODO subquery_Op ::
 
-expr_list : list(a_expr) { $1 }
+expr_list : list(a_expr) { reverse $1 }
+
+-- * function arguments can have names
+func_arg_list : list(func_arg_expr) { reverse $1 }
+
+func_arg_expr :: { Argument }
+    :  a_expr { E $1 }
+	  | param_name COLON_EQUALS a_expr { Named $1 $3 }
+	  | param_name EQUALS_GREATER a_expr { Named $1 $3 }
+
+-- * Ideally param_name should be ColId, but that causes too many conflicts.
+param_name :: { Name }
+           :	type_function_name { $1 }
 
 -- FIXME handwritten
 Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
-       { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList (reverse $9) } }
+       { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList $9 } }
 
 Update :: { Update }
     : UPDATE Name SET SettingList WHERE a_expr { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
@@ -1902,7 +2141,7 @@ attr_name : ColLabel { $1 }
 
 index_name : ColId { $1 }
 
--- TODO file_name:	Sconst									{ $$ = $1; };
+file_name :	Sconst { $1 }
 
 -- * The production for a qualified func_name has to exactly match the
 -- * production for a qualified columnref, because we cannot tell which we
@@ -1910,15 +2149,9 @@ index_name : ColId { $1 }
 -- * anything else for a columnref).  Therefore we allow 'indirection' which
 -- * may contain subscripts, and reject that case in the C code.  (If we
 -- * ever implement SQL99-like methods, such syntax may actually become legal!)
--- TODO func_name
--- TODO :	type_function_name
--- TODO 					{ $$ = list_make1(makeString($1)); }
--- TODO 			| ColId indirection
--- TODO 					{
--- TODO 						$$ = check_func_name(lcons(makeString($1), $2),
--- TODO 											 yyscanner);
--- TODO 					}
--- TODO 		;
+func_name :: { (Name, [Indirection]) }
+    :	type_function_name { ($1, []) }
+	  | ColId indirection { ($1, $2) }
 
 -- * Constants
 

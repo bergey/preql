@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
 
@@ -202,6 +203,18 @@ parser = testGroup "parser"
   , testParse "SELECT * FROM foo WHERE bar SIMILAR TO '%'"
     (QS (Simple select { targetList = [Star], from = [Table "foo"]
                        , whereClause = Just (L (like Similar (CRef "bar") (Lit (T "%")))) }))
+  , testParse "SELECT coalesce(foo, bar) FROM baz"
+    ( QS (Simple select
+          { targetList = [ Column (Fun $ fapp1 "coalesce" [CRef "foo", CRef "bar"]) Nothing ]
+          , from = [Table "baz"] }))
+  , testParse "SELECT greatest(foo, bar) FROM baz"
+    ( QS (Simple select
+          { targetList = [ Column (Fun $ fapp1 "greatest" [CRef "foo", CRef "bar"]) Nothing ]
+          , from = [Table "baz"] }))
+  , testParse "SELECT least(foo, bar) FROM baz"
+    ( QS (Simple select
+          { targetList = [ Column (Fun $ fapp1 "least" [CRef "foo", CRef "bar"]) Nothing ]
+          , from = [Table "baz"] }))
     ]
   ]
 

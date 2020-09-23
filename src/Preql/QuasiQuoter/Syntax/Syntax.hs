@@ -176,6 +176,7 @@ data Expr = Lit !Literal | CRef ColumnRef
     | Or Expr Expr
     | Not Expr
     | L LikeE
+    | Fun FunctionApplication
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data ColumnRef = ColumnRef Name [Indirection]
@@ -213,3 +214,34 @@ data LikeE = LikeE
 like :: LikeOp -> Expr -> Expr -> LikeE
 like op string likePattern =
     LikeE { op, string, likePattern, escape = Nothing, invert = False }
+
+data FunctionApplication = FApp
+    { name :: Name
+    , indirection :: [Indirection]
+    , arguments :: FunctionArguments
+    , sortBy :: [SortBy]
+    , distinct :: Bool
+    , withinGroup :: Bool
+    , filterClause :: Maybe Expr
+    , over :: Maybe Window
+    } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+fapp :: (Name, [Indirection]) -> [Argument] -> FunctionApplication
+fapp (name, indirection) args = FApp
+    { name, indirection
+    , arguments = A args
+    , sortBy = []
+    , distinct = False
+    , withinGroup = False
+    , filterClause = Nothing
+    , over = Nothing
+    }
+
+fapp1 :: Name -> [Expr] -> FunctionApplication
+fapp1 fName args = fapp (fName, []) (map E args)
+
+data FunctionArguments = StarArg | A [Argument]
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data Argument = E Expr | Named Name Expr
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)

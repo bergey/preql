@@ -8,7 +8,11 @@ module Test.Wire where
 
 import Preql.Wire
 import Test.Wire.Enum
+import Preql.Wire.Internal (getNextValue, RowDecoder(..))
 
+import Control.Monad.IO.Class (liftIO)
+import Data.Text.Lazy.Builder.Int (hexadecimal)
+import qualified BinaryParser as BP
 import Control.Exception (Exception, bracket_, throwIO)
 import Control.Monad
 import Data.ByteString (ByteString)
@@ -29,10 +33,14 @@ import System.Environment (lookupEnv)
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.IO as TL
+import qualified Data.Text.Lazy.Builder as Builder
 import qualified Data.UUID as UUID
 import qualified Database.PostgreSQL.LibPQ as PQ
+import qualified PostgreSQL.Binary.Decoding as PGB
 import qualified Preql.Wire.Query as W
 
 wire :: TestTree
@@ -185,6 +193,16 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
                       Left (PgTypeMismatch
                              [TypeMismatch { expected = TypeName "my_enum", column = 0 }]) -> pure ()
                       _ -> assertFailure "did not get expected TypeMismatch error"
+          , inTransaction "composite types" $ do
+              query_ "drop type if exists complex" ()
+              query_ "create type complex as (r float, i float)" ()
+              result <- query "select row(-1,0)::complex as v" ()
+              assertEqual "" (Right [Complex (-1) 0]) result
+          , inTransaction "composite types" $ do
+              query_ "drop type if exists foo" ()
+              query_ "create type foo as (bar bool, baz int)" ()
+              result <- query "select row(true, 1)::foo as foo" ()
+              assertEqual "" (Right [Foo True 1]) result
           ]
         ]
 
@@ -236,3 +254,26 @@ instance ParseTime8601 TimeOfDay where
 instance ParseTime8601 TimeZone where
     iso8601ParseM = parseTimeM False defaultTimeLocale "%z"
 #endif
+
+data Complex = Complex { real :: !Double, imag :: !Double } deriving (Show, Eq)
+
+instance FromSql Complex where
+  fromSql = notNull (FieldDecoder (TypeName "complex") (PGB.composite (Complex <$> PGB.valueComposite PGB.float8 <*> PGB.valueComposite PGB.float8)))
+
+data Foo = Foo !Bool !Int deriving (Show, Eq)
+
+instance FromSql Foo where
+  fromSql = notNull (FieldDecoder (TypeName "foo") (PGB.composite (Foo <$> PGB.valueComposite PGB.bool <*> PGB.valueComposite PGB.int)))
+
+debugDecoder :: Text -> RowDecoder a
+debugDecoder typeName = RowDecoder [TypeName typeName] $ do
+    m_bs <- getNextValue
+    case m_bs of
+        Nothing -> throwLocated UnexpectedNull
+        Just bs -> do
+          let hex word = let digits = Builder.toLazyText (hexadecimal word)
+                in if TL.length digits == 1 then "0" <> digits else digits
+          throwLocated (ParseFailure (TL.toStrict . foldMap hex . BS.unpack $ bs))
+
+skipOid :: BP.BinaryParser ()
+skipOid = BP.unitOfSize 4

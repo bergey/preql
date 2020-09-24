@@ -1,4 +1,3 @@
-{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE TemplateHaskell          #-}
@@ -25,15 +24,16 @@ tupleType [v] = VarT v
 tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
     where n = length names
 
+-- TODO merge arity-qq branch so we can use any decoder of correct arity, not only tuples
 -- | Synthesize a TypedQuery tagged with tuples of the given size
 makeArityQuery :: String -> Query -> Word -> Maybe Int -> Q Exp
-makeArityQuery raw parsed p r =
-    [e|TypedQuery raw parsed :: TypedQuery params result |]
-    where
-        params = tupleType <$> cNames 'p' (fromIntegral p)
-        result = case r of
-            Just r' -> tupleType <$> cNames 'r' r'
-            Nothing -> VarT <$> newName "r" -- SELECT *
+makeArityQuery raw parsed p r = do
+  params <- tupleType <$> cNames 'p' (fromIntegral p)
+  result <- case r of
+              Just r' -> tupleType <$> cNames 'r' r'
+              Nothing -> VarT <$> newName "r" -- SELECT *
+  value <- [e|TypedQuery raw parsed |]
+  return $ SigE value (ConT ''TypedQuery `AppT` params `AppT` result)
 
 -- | Given a SQL query with ${} antiquotes, splice a pair @(TypedQuery
 -- p r, p)@ or a function @\p' -> (TypedQuery p r, p)@ if the SQL

@@ -177,6 +177,7 @@ data Expr = Lit !Literal | CRef ColumnRef
     | Not Expr
     | L LikeE
     | Fun FunctionApplication
+    | Cas Case
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data ColumnRef = ColumnRef Name [Indirection]
@@ -245,3 +246,9 @@ data FunctionArguments = StarArg | A [Argument]
 
 data Argument = E Expr | Named Name Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data Case = Case
+  { whenClause :: [(Expr, Expr)] -- (condition, then)
+  , implicitArg :: Maybe Expr
+  , elseClause :: Maybe Expr
+  } deriving (Show, Eq, Generic, Data, Lift)

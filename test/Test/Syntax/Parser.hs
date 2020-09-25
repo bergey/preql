@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
 
@@ -215,6 +216,61 @@ parser = testGroup "parser"
     ( QS (Simple select
           { targetList = [ Column (Fun $ fapp1 "least" [CRef "foo", CRef "bar"]) Nothing ]
           , from = [Table "baz"] }))
+  , testParse "SELECT 1 IS NULL"
+    ( QS
+  , testParse "SELECT CASE WHEN true THEN 1 ELSE 2 END"
+    ( QS (Simple select
+         { targetList =
+           [ Column (Cas (Case
+                           { whenClause = [(Lit (B True), Lit (I 1))]
+                           , elseClause = Just (Lit (I 2))
+                           , implicitArg = Nothing }))
+             Nothing ] } ))
+  , testParse "SELECT CASE WHEN foo is null THEN 1 WHEN foo > 0 THEN 2 END FROM bar"
+    ( QS (Simple select
+         { targetList =
+           [ Column (Cas (Case
+                          { whenClause =
+                            [ (Unary IsNull (CRef "foo"), Lit (I 1))
+                            , (BinOp (Comp GT) (CRef "foo") (Lit (I 0)), Lit (I 2))
+                            ]
+                          , implicitArg = Nothing
+                          , elseClause = Nothing }))
+             Nothing ]
+         , from = [ Table "bar" ] } ))
+  , testParse "SELECT CASE WHEN foo is null THEN 1 WHEN foo > 0 THEN 2 ELSE 3 END FROM bar"
+    ( QS (Simple select
+         { targetList =
+           [ Column (Cas (Case
+                          { whenClause =
+                            [ (Unary IsNull (CRef "foo"), Lit (I 1))
+                            , (BinOp (Comp GT) (CRef "foo") (Lit (I 0)), Lit (I 2))
+                            ]
+                          , implicitArg = Nothing
+                          , elseClause = Just (Lit (I 3))}))
+             Nothing ]
+         , from = [ Table "bar" ] } ))
+  , testParse "SELECT CASE foo WHEN 'bar' THEN 1 ELSE 0 END FROM quux"
+    ( QS (Simple select
+         { targetList =
+           [ Column (Cas (Case
+                          { implicitArg = Just (CRef "foo")
+                          , whenClause = [ (Lit (T "bar"), Lit (I 1)) ]
+                          , elseClause = Just (Lit (I 0))}))
+             Nothing ]
+         , from = [ Table "quux" ] } ))
+  , testParse "SELECT CASE foo WHEN 'bar' THEN 1 WHEN 'baz' THEN 2 ELSE 0 END FROM quux"
+    ( QS (Simple select
+          { targetList =
+           [ Column (Cas (Case
+                          { implicitArg = Just (CRef "foo")
+                          , whenClause =
+                            [ (Lit (T "bar"), Lit (I 1))
+                            , (Lit (T "baz"), Lit (I 2))
+                            ]
+                          , elseClause = Just (Lit (I 0))}))
+             Nothing ]
+         , from = [ Table "quux" ] } ))
     ]
   ]
 

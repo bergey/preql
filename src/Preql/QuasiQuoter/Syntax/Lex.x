@@ -51,11 +51,14 @@ tokens :-
     $a $s $c { lex ASC }
     $a $s { lex AS }
     $b $y { lex BY }
+    $c $a $s $e { lex CASE }
     $c $o $a $l $e $s $c $e { lex COALESCE }
     $c $r $o $s $s  { lex CROSS }
     $d $e $l $e $t $e { lex DELETE_P }
     $d $e $s $c { lex DESC }
     $d $i $s $t $i $n $c $t { lex DISTINCT }
+    $e $l $s $e { lex ELSE }
+    $e $n $d { lex END_P }
     $e $x $c $e $p $t { lex EXCEPT }
     $f $a $l $s $e { lex FALSE_P }
     $f $i $r $s $t { lex First }
@@ -91,12 +94,14 @@ tokens :-
     $s $e $t { lex SET }
     $s $i $m $i $l $a $r { lex SIMILAR }
     $t $a $b $l $e { lex TABLE }
+    $t $h $e $n { lex THEN }
     $t $o { lex TO }
     $t $r $u $e { lex TRUE_P }
     $u $n $i $o $n { lex UNION }
     $u $p $d $a $t $e { lex UPDATE }
     $u $s $i $n $g { lex USING }
     $v $a $l $u $e $s { lex VALUES }
+    $w $h $e $n { lex WHEN }
     $w $h $e $r $e { lex WHERE }
 
     "(" { lex LParen }

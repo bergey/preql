@@ -1557,8 +1557,7 @@ c_expr :: { Expr }
     | HASKELL_PARAM { HaskellParam $1 }
     | '(' a_expr ')' opt_indirection { Indirection $2 (reverse $4) }
     -- gram.y optionally warns about operator precedence
--- TODO 			| case_expr
--- TODO 				{ $$ = $1; }
+    | case_expr { Cas $1 }
     | func_expr { Fun $1 }
     | select_with_parens			%prec UMINUS { SelectExpr $1 [] }
     | select_with_parens indirection { SelectExpr $1 $2 }
@@ -1978,6 +1977,45 @@ func_arg_expr :: { Argument }
     :  a_expr { E $1 }
 	  | param_name COLON_EQUALS a_expr { Named $1 $3 }
 	  | param_name EQUALS_GREATER a_expr { Named $1 $3 }
+
+-- TODO type_list::
+-- TODO array_expr ::
+-- TODO array_expr_list ::
+-- TODO extract_list ::
+-- TODO extract_arg ::
+-- TODO overlay_list ::
+-- TODO overlay_placing ::
+-- TODO position_list ::
+-- TODO substr_list ::
+-- TODO substr_from ::
+-- TODO substr_for ::
+-- TODO trim_list ::
+-- TODO in_expr ::
+
+-- * Define SQL-style CASE clause.
+-- * - Full specification
+-- *	CASE WHEN a = b THEN c ... ELSE d END
+-- * - Implicit argument
+-- *	CASE a WHEN b THEN c ... ELSE d END
+case_expr :: { Case }
+    : CASE case_arg when_clause_list case_default END_P
+        { Case { implicitArg = $2, whenClause = reverse $3, elseClause = $4 } }
+
+when_clause_list :: { [(Expr, Expr)] }
+    : when_clause { [$1] }
+    | when_clause_list when_clause { $2 : $1 }
+
+when_clause :: { (Expr, Expr) }
+    : WHEN a_expr THEN a_expr { ($2, $4) }
+
+case_default :: { Maybe Expr }
+    : ELSE a_expr { Just $2 }
+    | { Nothing }
+
+case_arg :: { Maybe Expr }
+    : a_expr { Just $1 }
+    | { Nothing }
+
 
 -- * Ideally param_name should be ColId, but that causes too many conflicts.
 param_name :: { Name }

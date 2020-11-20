@@ -141,7 +141,6 @@ import qualified Data.List.NonEmpty as NE
     '^' { LocToken _ L.Exponent }
 
     IS { LocToken _ L.IS }
-    NULL { LocToken _ L.NULL_P }
     ISNULL { LocToken _ L.ISNULL }
     NOTNULL { LocToken _ L.NOTNULL }
 
@@ -2065,9 +2064,9 @@ Setting :: { Setting }
 Name : IDENT { mkName $1 }
 
 Null
-        : IS NULL { IsNull }
+        : IS NULL_P { IsNull }
         | ISNULL { IsNull }
-        | IS NOT NULL { NotNull }
+        | IS NOT NULL_P { NotNull }
         | NOTNULL { NotNull }
 
 columnref :: { ColumnRef }

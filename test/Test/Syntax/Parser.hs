@@ -1,6 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
 
 module Test.Syntax.Parser where
@@ -26,6 +24,8 @@ lexer = testGroup "lexer"
     , testLex "2.5e-1" [L.Fconst 0.25]
     , testLex "1 2.3" [ L.Iconst 1, L.Fconst 2.3 ]
     , testLex "1 ." [ L.Iconst 1, L.Dot ]
+    , testLex "SELECT 1 IS NULL" [ L.SELECT, L.Iconst 1, L.IS, L.NULL_P ]
+    , testLex "SELECT 1 ISNULL" [ L.SELECT, L.Iconst 1, L.ISNULL ]
     ]
 
 parser :: TestTree
@@ -217,7 +217,9 @@ parser = testGroup "parser"
           { targetList = [ Column (Fun $ fapp1 "least" [CRef "foo", CRef "bar"]) Nothing ]
           , from = [Table "baz"] }))
   , testParse "SELECT 1 IS NULL"
-    ( QS
+    ( QS (Simple select { targetList = [ Column (Unary IsNull (Lit (I 1))) Nothing ] } ))
+  , testParse "SELECT 1 ISNULL"
+    ( QS (Simple select { targetList = [ Column (Unary IsNull (Lit (I 1))) Nothing ] } ))
   , testParse "SELECT CASE WHEN true THEN 1 ELSE 2 END"
     ( QS (Simple select
          { targetList =

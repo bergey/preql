@@ -313,6 +313,33 @@ parser = testGroup "parser"
                                } ]
               }
             }))
+  , testParse "WITH RECURSIVE t(n) AS (\
+\    VALUES (1)\
+\  UNION ALL\
+\    SELECT n+1 FROM t WHERE n < 100\
+\ )\
+\ SELECT sum(n) FROM t;"
+  ( QS (S (Simple select
+          { targetList = [ Column (Fun $ fapp1 "sum" [ CRef "n" ]) Nothing ]
+          , from = [ Table "t" ]
+          })
+         selectOptions
+            { withClause = Just With
+              { recursive = Recursive
+              , commonTables = [ CommonTableExpr
+                               { name = "t"
+                               , aliases = [ "n" ]
+                               , materialized = MaterializeDefault
+                               , query = QS (Set Union All
+                                             (SelectValues ((Lit (I 1) :| []) :| []))
+                                             ( Simple select
+                                               { targetList = [ Column (BinOp Add (CRef "n") (Lit (I 1))) Nothing ]
+                                               , from = [ Table "t" ]
+                                               , whereClause = Just (BinOp (Comp LT) (CRef "n") (Lit (I 100)))
+                                               }))
+                               } ]
+              }
+            }))
     ]
   ]
 

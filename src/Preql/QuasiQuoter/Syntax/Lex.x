@@ -79,6 +79,7 @@ tokens :-
     $l $e $f $t { lex LEFT }
     $l $i $k $e { lex LIKE }
     $l $i $m $i $t { lex LIMIT }
+    $m $a $t $e $r $i $a $l $i $z $e $d { lex MATERIALIZED }
     $n $a $t $u $r $a $l { lex NATURAL }
     $n $o $t $n $u $l $l { lex NOTNULL }
     $n $o $t { lex NOT }
@@ -89,6 +90,7 @@ tokens :-
     $o $p $e $r $a $t $o $r { lex OPERATOR }
     $o $r $d $e $r { lex ORDER }
     $o $r { lex OR }
+    $r $e $c $u $r $s $i $v $e { lex RECURSIVE }
     $r $i $g $h $t { lex RIGHT }
     $s $e $l $e $c $t { lex SELECT }
     $s $e $t { lex SET }

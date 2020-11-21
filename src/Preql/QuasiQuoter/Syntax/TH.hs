@@ -33,10 +33,16 @@ makeArityQuery raw parsed p r = do
   value <- [e|TypedQuery raw parsed |]
   return $ SigE value (ConT ''TypedQuery `AppT` params `AppT` result)
 
--- | Given a SQL SELECT query with ${} antiquotes, splice a pair @(TypedQuery
--- p r, p)@ or a function @\p' -> (TypedQuery p r, p)@ if the SQL
--- string includes both antiquote and positional parameters.
--- This quasiquoter will accept most syntactically valid SELECT queries.
+-- | Given a SQL SELECT query with ${} antiquotes, splice a pair
+-- @(TypedQuery p r, p)@ or a function @\p' -> (TypedQuery p r, p)@ if
+-- the SQL string includes both antiquote and positional parameters.
+-- This quasiquoter will accept most syntactically valid SELECT
+-- queries.  Language features not yet implemented include type casts,
+-- lateral joins, EXTRACT, INTO, string & XML operators, and
+-- user-defined operators.  For now, please fall back to
+-- 'Preql.QuasiQuoter.Raw.TH.sql' for these less-frequently used SQL
+-- features, or file a bug report if a commonly used feature is not
+-- parsed correctly.
 select :: QuasiQuoter
 select = expressionOnly "select" (aritySql parseSelect QS)
 

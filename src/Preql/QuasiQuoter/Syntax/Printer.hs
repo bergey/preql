@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -73,6 +74,10 @@ spaces = fmtList " "
 fmtList :: (FormatSql a, Foldable f) => B.Builder -> f a -> B.Builder
 fmtList sep as = mconcat (intersperse sep (map fmt (toList as)))
 
+unlessEmpty :: (B.Builder -> B.Builder) -> B.Builder -> B.Builder
+unlessEmpty _ "" = ""
+unlessEmpty f x = f x
+
 optList :: FormatSql a => B.Builder -> [a] -> B.Builder
 optList _ [] = ""
 optList prepend as = prepend <> commas as
@@ -122,6 +127,8 @@ instance FormatSql Expr where
     fmt (Or l r) = fmt l <> " OR " <> fmt r
     fmt (Not expr) = "NOT " <> fmt expr
     fmt (L likeE) = fmt likeE
+    fmt (Fun f) = fmt f
+    fmt (Cas c) = fmt c
 
 instance FormatSql ColumnRef where
     fmt (ColumnRef name is) = fmt name <> fmtIndirections is
@@ -201,8 +208,6 @@ instance FormatSql CTE where
     fmt name <> unlessEmpty parens (commas aliases)
     <> unlessEmpty spacesAround (fmt materialized) <> parens (fmt query)
     where
-      unlessEmpty _ "" = ""
-      unlessEmpty f x = f x
       spacesAround s = " " <> s <> " "
 
 instance FormatSql TableRef where
@@ -290,3 +295,34 @@ instance FormatSql Window where
       m_order = case orderClause of
           [] -> ""
           _ -> " ORDER BY " <> commas (fmt <$> orderClause)
+
+instance FormatSql FunctionApplication where
+  fmt FApp {..} = fmt name <> fmtIndirections indirection
+    <> parens (distinct' <> fmt arguments <> sortBy') <> withinGroup'
+    <> maybe "" (\fc -> " FILTER " <> parens ("WHERE " <> fmt fc)) filterClause
+    <> over'
+    where
+      distinct' = if distinct then "DISTINCT " else ""
+      sortBy' = if withinGroup then "" else optList "ORDER BY " sortBy
+      withinGroup' = if withinGroup then optList "WITHIN GROUP " sortBy else ""
+      over' = case over of
+        Nothing -> ""
+        Just (Window (Just name) _ _ _ _) -> "OVER " <> fmt name
+        Just Window {..} -> "OVER " <> parens
+              (opt "" refName
+               <> optList " PARTITION BY " partitionClause
+               <> optList " ORDER BY " orderClause)
+
+instance FormatSql FunctionArguments where
+  fmt StarArg = "*"
+  fmt (A args) = commas args
+
+instance FormatSql Argument where
+  fmt (E e) = fmt e
+  fmt (Named name e) = fmt name <> " => " <> fmt e
+
+instance FormatSql Case where
+  fmt Case { whenClause, implicitArg, elseClause } =
+   "CASE" <> opt " " implicitArg <> whenClauses' <> opt " ELSE " elseClause
+    where whenClauses' = spaces [ "WHEN " <> fmt condition <> " THEN " <> fmt result
+                                | (condition, result) <- whenClause ]

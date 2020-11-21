@@ -8,7 +8,6 @@ import Preql.QuasiQuoter.Syntax.Syntax
 import Control.Monad.Trans.State
 import Data.Generics
 import Data.Text (Text)
-import Data.Vector (Vector, (!?))
 
 numberAntiquotes :: Word -> Query -> (Query, AntiquoteState)
 numberAntiquotes count q =
@@ -51,3 +50,8 @@ maxParamExpr expr = case expr of
     And l r -> max (maxParamExpr l) (maxParamExpr r)
     Or l r -> max (maxParamExpr l) (maxParamExpr r)
     Not e -> maxParamExpr e
+    L likeE -> everything max (mkQ 0 maxParamExpr) likeE
+    -- L LikeE {string, likePattern, escape} -> maybe id (max . maxParamExpr) escape
+    --   (max (maxParamExpr string) (maxParamExpr likePattern))
+    Fun f -> everything max (mkQ 0 maxParamExpr) f
+    Cas cas -> everything max (mkQ 0 maxParamExpr) cas

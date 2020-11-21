@@ -1,24 +1,16 @@
-{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE TemplateHaskell          #-}
 
 module Preql.QuasiQuoter.Raw.TH where
 
-import           Preql.QuasiQuoter.Raw.Lex (Token(..), unLex, parseQuery)
-import           Preql.Wire (Query(..))
+import Preql.QuasiQuoter.Common
+import Preql.QuasiQuoter.Raw.Lex (Token(..), parseQuery, unLex)
+import Preql.Wire (Query)
 
-import           Data.String (IsString (..))
-import           Data.Word (Word)
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Quote
-import           Language.Haskell.TH.Syntax (Lift (..))
-
-import qualified Data.Text as T
-
--- | A list of n Names beginning with the given character
-cNames :: Char -> Int -> Q [Name]
-cNames c n = traverse newName (replicate n (c : ""))
+import Data.String (IsString(..))
+import Language.Haskell.TH
+import Language.Haskell.TH.Quote
 
 -- | Convert a rewritten SQL string to a ByteString
 makeQuery :: String -> Q Exp
@@ -72,18 +64,6 @@ sql  = expressionOnly "aritySql " $ \raw -> do
                         (TupE [query, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
 
-tupleOrSingle :: [Name] -> Exp
-tupleOrSingle names = case names of
-    [name] -> VarE name
-    vs -> TupE $ map VarE vs
-
-expressionOnly :: String -> (String -> Q Exp) -> QuasiQuoter
-expressionOnly name qq = QuasiQuoter
-    { quoteExp = qq
-    , quotePat = \_ -> error $ "qq " ++ name ++ " cannot be used in pattern context"
-    , quoteType = \_ -> error $ "qq " ++ name ++ " cannot be used in type context"
-    , quoteDec = \_ -> error $ "qq " ++ name ++ " cannot be used in declaration context"
-    }
 
 maxParam :: [Token] -> Word
 maxParam = foldr nextParam 0 where

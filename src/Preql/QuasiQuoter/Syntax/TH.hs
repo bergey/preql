@@ -4,6 +4,7 @@
 module Preql.QuasiQuoter.Syntax.TH where
 
 import Preql.Imports
+import Preql.QuasiQuoter.Common
 import Preql.QuasiQuoter.Syntax.Params
 import Preql.QuasiQuoter.Syntax.Parser (parseQuery, parseSelect)
 import Preql.QuasiQuoter.Syntax.Syntax as Syntax hiding (select)
@@ -13,9 +14,6 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 
 import qualified Data.Text as T
-
-cNames :: Char -> Int -> Q [Name]
-cNames c n = traverse newName (replicate n (c : ""))
 
 tupleType :: [Name] -> Type
 tupleType [v] = VarT v
@@ -78,19 +76,6 @@ aritySql parse mkQuery raw = do
                         [TupP (map VarP patternNames)]
                         (TupE [typedQuery, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
-
-tupleOrSingle :: [Name] -> Exp
-tupleOrSingle names = case names of
-    [name] -> VarE name
-    vs -> TupE $ map VarE vs
-
-expressionOnly :: String -> (String -> Q Exp) -> QuasiQuoter
-expressionOnly name qq = QuasiQuoter
-    { quoteExp = qq
-    , quotePat = \_ -> error $ "qq " ++ name ++ " cannot be used in pattern context"
-    , quoteType = \_ -> error $ "qq " ++ name ++ " cannot be used in type context"
-    , quoteDec = \_ -> error $ "qq " ++ name ++ " cannot be used in declaration context"
-    }
 
 countColumnsReturned :: Syntax.Query -> Maybe Int
 countColumnsReturned (QS selectQ) = go selectQ where

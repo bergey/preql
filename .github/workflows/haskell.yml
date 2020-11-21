@@ -12,6 +12,7 @@ jobs:
   build:
     strategy:
       matrix:
+        os: [ubuntu-latest, macOS-latest]
         plan:
           - { build: stack, resolver: "" }
           - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6

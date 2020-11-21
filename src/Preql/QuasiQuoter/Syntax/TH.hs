@@ -5,14 +5,12 @@ module Preql.QuasiQuoter.Syntax.TH where
 
 import Preql.Imports
 import Preql.QuasiQuoter.Syntax.Params
-import Preql.QuasiQuoter.Syntax.Parser (parseQuery)
-import Preql.QuasiQuoter.Syntax.Syntax as Syntax
+import Preql.QuasiQuoter.Syntax.Parser (parseQuery, parseSelect)
+import Preql.QuasiQuoter.Syntax.Syntax as Syntax hiding (select)
 import Preql.QuasiQuoter.Syntax.TypedQuery
 
-import Data.String (IsString(..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax (Lift(..))
 
 import qualified Data.Text as T
 
@@ -35,13 +33,23 @@ makeArityQuery raw parsed p r = do
   value <- [e|TypedQuery raw parsed |]
   return $ SigE value (ConT ''TypedQuery `AppT` params `AppT` result)
 
--- | Given a SQL query with ${} antiquotes, splice a pair @(TypedQuery
+-- | Given a SQL SELECT query with ${} antiquotes, splice a pair @(TypedQuery
 -- p r, p)@ or a function @\p' -> (TypedQuery p r, p)@ if the SQL
 -- string includes both antiquote and positional parameters.
-aritySql  :: QuasiQuoter
-aritySql  = expressionOnly "aritySql " $ \raw -> do
+-- This quasiquoter will accept most syntactically valid SELECT queries.
+select :: QuasiQuoter
+select = expressionOnly "select" (aritySql parseSelect QS)
+
+-- | This quasiquoter will accept all queries accepted by 'select',
+-- and limited INSERT, UPDATE, and DELETE queries.  For details of
+-- what can be parsed, consult Parser.y
+validSql :: QuasiQuoter
+validSql = expressionOnly "validSql" (aritySql parseQuery id)
+
+aritySql  :: (String -> String -> Either String a) -> (a -> Syntax.Query) -> String -> Q Exp
+aritySql parse mkQuery raw = do
     loc <- location
-    let e_ast = parseQuery (show loc) raw
+    let e_ast = mkQuery <$> parse (show loc) raw
     case e_ast of
         Right parsed -> do
             let
@@ -79,7 +87,7 @@ expressionOnly name qq = QuasiQuoter
     }
 
 countColumnsReturned :: Syntax.Query -> Maybe Int
-countColumnsReturned (QS select) = go select where
+countColumnsReturned (QS selectQ) = go selectQ where
   go s = case s of
       SelectValues rows -> Just (foldl' max 0 (fmap length rows))
       Simple Select {targetList} -> if Star `elem` targetList

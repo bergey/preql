@@ -26,7 +26,7 @@ printer = testGroup "printer" [
             "DELETE FROM taffy WHERE (flavor) = ('blueberry')"
             (fmt (QD Delete
                   { table = mkName "taffy"
-                  , conditions = Just (BinOp (Comp Eq) (CRef "flavor") (Lit (T"blueberry")))
+                  , conditions = Just (BinOp Eq (CRef "flavor") (Lit (T"blueberry")))
                   }))
     , testCase "INSERT, one column" $
         assertEqual ""
@@ -51,7 +51,7 @@ printer = testGroup "printer" [
         (fmt (QS (Simple select
                   { from = [ Table "users" ]
                   , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
-                  , whereClause = Just (BinOp (Comp Eq) (CRef "name") (NumberedParam 1 []))
+                  , whereClause = Just (BinOp Eq (CRef "name") (NumberedParam 1 []))
                   })))
     , testPrint "SELECT * FROM foobar LIMIT 5.0"
         (QS (S (Simple select { from = [Table "foobar" ], targetList = [Star] })

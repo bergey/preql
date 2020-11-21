@@ -212,15 +212,12 @@ instance IsString ColumnRef where
 
 type Indirection = Name -- FIXME
 
--- TODO refactor BinOp & Compare to better match parser
-data BinOp = Mul | Div | Add | Sub | Exponent | Mod | Comp !Compare
+data BinOp = Mul | Div | Add | Sub | Exponent | Mod
+           | Eq | LT | LTE | GT | GTE | NEq
            | IsDistinctFrom | IsNotDistinctFrom
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data UnaryOp = NegateNum | NegateBool | IsNull | NotNull
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
-data Compare = Eq | LT | LTE | GT | GTE | NEq
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data LikeOp = Like | ILike | Similar -- TODO add ~ !~ ~* !~*

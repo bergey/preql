@@ -136,19 +136,15 @@ instance FormatSql BinOp where
         Add      -> "+"
         Sub      -> "-"
         Exponent -> "^"
-        Comp c   -> fmt c
         Mod -> "%"
-        IsDistinctFrom -> "IS DISTINCT FROM"
-        IsNotDistinctFrom -> "IS NOT DISTINCT FROM"
-
-instance FormatSql Compare where
-    fmt op = case op of
         Eq    -> "="
         LT    -> "<"
         LTE   -> "<="
         GT    -> ">"
         GTE   -> ">="
         NEq   -> "!="
+        IsDistinctFrom -> "IS DISTINCT FROM"
+        IsNotDistinctFrom -> "IS NOT DISTINCT FROM"
 
 instance FormatSql LikeE where
     fmt LikeE{op, string, likePattern, escape, invert} =

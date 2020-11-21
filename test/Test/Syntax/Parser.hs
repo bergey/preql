@@ -36,7 +36,7 @@ parser = testGroup "parser"
     , testParseExpr "1 + 2 * 3"
       (BinOp Add (Lit (I 1)) (BinOp Mul (Lit (I 2)) (Lit (I 3))) )
     , testParseExpr "name = 'Daniel'"
-      (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel")))
+      (BinOp Eq (CRef "name") (Lit (T "Daniel")))
     , testParseExpr "TRUE" (Lit (B True))
     , testParseExpr "true" (Lit (B True))
     , testParseExpr "false" (Lit (B False))
@@ -47,12 +47,12 @@ parser = testGroup "parser"
     , testParse "dEleTe FROM taffy WHERE flavor = 'blueberry'"
       (QD Delete
           { table = mkName "taffy"
-          , conditions = Just (BinOp (Comp Eq) (CRef "flavor") (Lit (T"blueberry")))
+          , conditions = Just (BinOp Eq (CRef "flavor") (Lit (T"blueberry")))
           })
     , testParse "DELETE FROM users WHERE email != 'bergey@teallabs.org'"
       (QD Delete
        { table = mkName "users"
-       , conditions = Just (BinOp (Comp NEq) (CRef "email") (Lit (T "bergey@teallabs.org")))
+       , conditions = Just (BinOp NEq (CRef "email") (Lit (T "bergey@teallabs.org")))
        })
     , testParse "INSERT INTO users (email) VALUES ('bergey@teallabs.org')"
         (QI Insert
@@ -82,13 +82,13 @@ parser = testGroup "parser"
       (QS (Simple select
        { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel")))
+       , whereClause = Just (BinOp Eq (CRef "name") (Lit (T "Daniel")))
        }))
     , testParse "SELECT name, email FROM users WHERE name = 'Daniel' OR name = 'Bergey'"
       (QS (Simple select
        { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
-       , whereClause = Just (Or (BinOp (Comp Eq) (CRef "name") (Lit (T "Daniel"))) (BinOp (Comp Eq) (CRef "name") (Lit (T "Bergey"))))
+       , whereClause = Just (Or (BinOp Eq (CRef "name") (Lit (T "Daniel"))) (BinOp Eq (CRef "name") (Lit (T "Bergey"))))
        }))
     , testParse "SELECT name FROM users WHERE age = 35"
         -- We currently parse integers & decimals all to Double
@@ -96,31 +96,31 @@ parser = testGroup "parser"
       (QS (Simple select
        { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (CRef "age") (Lit (I 35)))
+       , whereClause = Just (BinOp Eq (CRef "age") (Lit (I 35)))
        }))
     , testParse "SELECT name FROM users WHERE age = 35.5"
       (QS (Simple select
        { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (CRef "age") (Lit (F 35.5)))
+       , whereClause = Just (BinOp Eq (CRef "age") (Lit (F 35.5)))
        }))
     , testParse "SELECT foo FROM bar WHERE baz > -2"
       (QS (Simple select
        { from = [ Table "bar" ]
        , targetList = [ Column (CRef "foo") Nothing ]
-       , whereClause = Just (BinOp (Comp GT) (CRef "baz") (Lit (I (-2))))
+       , whereClause = Just (BinOp GT (CRef "baz") (Lit (I (-2))))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
       (QS (Simple select
        { from = [ Table "bar" ]
        , targetList = [ Column (CRef "foo") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (CRef "baz") (Lit (F 0.02)))
+       , whereClause = Just (BinOp Eq (CRef "baz") (Lit (F 0.02)))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2E-2"
       (QS (Simple select
        { from = [ Table "bar" ]
        , targetList = [ Column (CRef "foo") Nothing ]
-       , whereClause = Just (BinOp (Comp Eq) (CRef "baz") (Lit (F 0.02)))
+       , whereClause = Just (BinOp Eq (CRef "baz") (Lit (F 0.02)))
        }))
     , testParse "SELECT * FROM foobar"
       (QS (Simple select
@@ -166,13 +166,13 @@ parser = testGroup "parser"
       (QS (Simple select { from = [ CrossJoin (Table "foo") (Table "bar")]
                          , targetList = [Star] }))
     , testParse "SELECT * FROM foo JOIN bar ON foo.f = bar.b"
-      (QS (Simple select { from = [ Join Inner (On (BinOp (Comp Eq) (CRef "foo.f") (CRef "bar.b"))) (Table "foo") (Table "bar")]
+      (QS (Simple select { from = [ Join Inner (On (BinOp Eq (CRef "foo.f") (CRef "bar.b"))) (Table "foo") (Table "bar")]
                          , targetList = [Star]}))
     , testParse "SELECT * FROM foo JOIN bar USING (f, b)"
       (QS (Simple select { from = [ Join Inner (Using ["f", "b"]) (Table "foo") (Table "bar")]
                          , targetList = [Star]}))
     , testParse "SELECT * FROM foo LEFT JOIN bar ON bar.foo = f.id"
-      (QS (Simple select { from = [ Join LeftJoin (On (BinOp (Comp Eq) (CRef "bar.foo") (CRef "f.id"))) (Table "foo") (Table "bar")]
+      (QS (Simple select { from = [ Join LeftJoin (On (BinOp Eq (CRef "bar.foo") (CRef "f.id"))) (Table "foo") (Table "bar")]
                          , targetList = [Star]}))
     , testParse "SELECT * FROM foo NATURAL JOIN bar"
       (QS (Simple select { from = [ Join Inner Natural (Table "foo") (Table "bar")]
@@ -194,7 +194,7 @@ parser = testGroup "parser"
     (QS (Simple select { targetList = [ Column (CRef "bar") Nothing ]
                        , from = [Table "foo"]
                        , groupBy = [ CRef "bar" ]
-                       , having = Just (BinOp (Comp GT) (CRef "count") (Lit (I 1))) } ))
+                       , having = Just (BinOp GT (CRef "count") (Lit (I 1))) } ))
   , testParse "SELECT * FROM foo WHERE bar LIKE '%'"
     (QS (Simple select { targetList = [Star], from = [Table "foo"]
                        , whereClause = Just (L (like Like (CRef "bar") (Lit (T "%")))) }))
@@ -234,7 +234,7 @@ parser = testGroup "parser"
            [ Column (Cas (Case
                           { whenClause =
                             [ (Unary IsNull (CRef "foo"), Lit (I 1))
-                            , (BinOp (Comp GT) (CRef "foo") (Lit (I 0)), Lit (I 2))
+                            , (BinOp GT (CRef "foo") (Lit (I 0)), Lit (I 2))
                             ]
                           , implicitArg = Nothing
                           , elseClause = Nothing }))
@@ -246,7 +246,7 @@ parser = testGroup "parser"
            [ Column (Cas (Case
                           { whenClause =
                             [ (Unary IsNull (CRef "foo"), Lit (I 1))
-                            , (BinOp (Comp GT) (CRef "foo") (Lit (I 0)), Lit (I 2))
+                            , (BinOp GT (CRef "foo") (Lit (I 0)), Lit (I 2))
                             ]
                           , implicitArg = Nothing
                           , elseClause = Just (Lit (I 3))}))
@@ -292,7 +292,7 @@ parser = testGroup "parser"
                           , Column (Fun $ fapp1 "SUM" [ CRef "amount" ]) (Just "product_sales")
                           ]
            , from = [ Table "orders" ]
-           , whereClause = Just ( BinOp (Comp Eq) (CRef "region") (Lit (T "Lemuria")) )
+           , whereClause = Just ( BinOp Eq (CRef "region") (Lit (T "Lemuria")) )
            , groupBy = [ CRef "region", CRef "product" ]
            })
           selectOptions
@@ -335,7 +335,7 @@ parser = testGroup "parser"
                                              ( Simple select
                                                { targetList = [ Column (BinOp Add (CRef "n") (Lit (I 1))) Nothing ]
                                                , from = [ Table "t" ]
-                                               , whereClause = Just (BinOp (Comp LT) (CRef "n") (Lit (I 100)))
+                                               , whereClause = Just (BinOp LT (CRef "n") (Lit (I 100)))
                                                }))
                                } ]
               }

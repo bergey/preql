@@ -103,7 +103,6 @@ instance Arbitrary Expr where
 instance Arbitrary ColumnRef where arbitrary = genericArbitraryU
 instance Arbitrary BinOp where arbitrary = genericArbitraryU
 instance Arbitrary UnaryOp where arbitrary = genericArbitraryU
-instance Arbitrary Compare where arbitrary = genericArbitraryU
 
 #if !MIN_VERSION_time(1,9,0)
 class ParseTime8601 t where

@@ -1224,12 +1224,12 @@ a_expr :: { Expr }
     | a_expr '/' a_expr { BinOp Div $1 $3 }
     | a_expr '%' a_expr { BinOp Mod $1 $3 }
     | a_expr '^' a_expr { BinOp Exponent $1 $3 }
-    | a_expr '<' a_expr { BinOp (Comp LT) $1 $3 }
-    | a_expr '>' a_expr { BinOp (Comp GT) $1 $3 }
-    | a_expr '=' a_expr { BinOp (Comp Eq) $1 $3 }
-    | a_expr '<=' a_expr { BinOp (Comp LTE) $1 $3 }
-    | a_expr '>=' a_expr { BinOp (Comp GTE) $1 $3 }
-    | a_expr '!=' a_expr { BinOp (Comp NEq) $1 $3 }
+    | a_expr '<' a_expr { BinOp LT $1 $3 }
+    | a_expr '>' a_expr { BinOp GT $1 $3 }
+    | a_expr '=' a_expr { BinOp Eq $1 $3 }
+    | a_expr '<=' a_expr { BinOp LTE $1 $3 }
+    | a_expr '>=' a_expr { BinOp GTE $1 $3 }
+    | a_expr '!=' a_expr { BinOp NEq $1 $3 }
 -- TODO 			| a_expr qual_Op a_expr				%prec Op
 -- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $2, $1, $3, @2); }
 -- TODO 			| qual_Op a_expr					%prec Op
@@ -1501,12 +1501,12 @@ b_expr :: { Expr }
     | b_expr '/' b_expr { BinOp Div $1 $3 }
     | b_expr '%' b_expr { BinOp Mod $1 $3 }
     | b_expr '^' b_expr { BinOp Exponent $1 $3 }
-    | b_expr '<' b_expr { BinOp (Comp LT) $1 $3 }
-    | b_expr '>' b_expr { BinOp (Comp GT) $1 $3 }
-    | b_expr '=' b_expr { BinOp (Comp Eq) $1 $3 }
-    | b_expr '<=' b_expr { BinOp (Comp LTE) $1 $3 }
-    | b_expr '>=' b_expr { BinOp (Comp GTE) $1 $3 }
-    | b_expr '!=' b_expr { BinOp (Comp NEq) $1 $3 }
+    | b_expr '<' b_expr { BinOp LT $1 $3 }
+    | b_expr '>' b_expr { BinOp GT $1 $3 }
+    | b_expr '=' b_expr { BinOp Eq $1 $3 }
+    | b_expr '<=' b_expr { BinOp LTE $1 $3 }
+    | b_expr '>=' b_expr { BinOp GTE $1 $3 }
+    | b_expr '!=' b_expr { BinOp NEq $1 $3 }
     | b_expr qual_Op b_expr				%prec Op { BinOp $2 $1 $3 }
 -- FIXME exclude user-defined operators, or give up on Syntax allowing only correct operator arity?
 -- TODO 			| qual_Op b_expr					%prec Op
@@ -1942,12 +1942,12 @@ MathOp :: { BinOp }
     | '/'									{ Div }
     | '%'									{ Mod }
     | '^'									{ Exponent }
-    | '<'									{ Comp LT }
-    | '>'									{ Comp GT }
-    | '='									{ Comp Eq }
-    | '<='							{ Comp LTE }
-    | '>='						{ Comp GTE }
-    | '!='							{ Comp NEq }
+    | '<'									{ LT }
+    | '>'									{ GT }
+    | '='									{ Eq }
+    | '<='							{ LTE }
+    | '>='						{ GTE }
+    | '!='							{ NEq }
 
 qual_Op
     -- We don't (yet?) support user-defined operators
@@ -2042,14 +2042,6 @@ opt_nulls_order
 
 any_operator: all_Op { $1 }
 -- We don't yet support schema-qualified operators (they're more useful if user-defined)
-
-Compare :: { Compare }
-    : '=' { Eq }
-    | '!=' { NEq }
-    | '<' { LT }
-    | '>' { GT }
-    | '<=' { LTE }
-    | '>=' { GTE }
 
 Setting :: { Setting }
     : Name '=' a_expr { Setting $1 $3 }

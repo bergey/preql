@@ -68,6 +68,11 @@ instance Arbitrary NullsOrder where arbitrary = genericArbitraryU
 instance Arbitrary Locking where arbitrary = genericArbitraryU
 instance Arbitrary LockingStrength where arbitrary = genericArbitraryU
 instance Arbitrary LockWait where arbitrary = genericArbitraryU
+instance Arbitrary WithClause where arbitrary = genericArbitraryU
+instance Arbitrary Recursive where arbitrary = genericArbitraryU
+instance Arbitrary Materialized where arbitrary = genericArbitraryU
+instance Arbitrary CTE where arbitrary = genericArbitraryU
+
 
 -- Recursive types need more careful treatment to avoid infinite trees
 instance Arbitrary Expr where

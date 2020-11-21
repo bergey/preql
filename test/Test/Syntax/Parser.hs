@@ -273,6 +273,46 @@ parser = testGroup "parser"
                           , elseClause = Just (Lit (I 0))}))
              Nothing ]
          , from = [ Table "quux" ] } ))
+  , testParse "WITH regional_sales AS (\
+\    SELECT region, SUM(amount) AS total_sales\
+\    FROM orders\
+\    GROUP BY region\
+\)\
+\SELECT region,\
+\       product,\
+\       SUM(quantity) AS product_units,\
+\       SUM(amount) AS product_sales \
+\FROM orders \
+\WHERE region = 'Lemuria' \
+\GROUP BY region, product;"
+  ( QS (S (Simple select
+           { targetList = [ Column (CRef "region") Nothing
+                          , Column (CRef "product") Nothing
+                          , Column (Fun $ fapp1 "SUM" [ CRef "quantity" ]) (Just "product_units")
+                          , Column (Fun $ fapp1 "SUM" [ CRef "amount" ]) (Just "product_sales")
+                          ]
+           , from = [ Table "orders" ]
+           , whereClause = Just ( BinOp (Comp Eq) (CRef "region") (Lit (T "Lemuria")) )
+           , groupBy = [ CRef "region", CRef "product" ]
+           })
+          selectOptions
+            { withClause = Just With
+              { recursive = NotRecursive
+              , commonTables = [ CommonTableExpr
+                               { name = "regional_sales"
+                               , aliases = []
+                               , materialized = MaterializeDefault
+                               , query = QS (Simple select
+                                            { targetList =
+                                              [ Column (CRef "region") Nothing
+                                              , Column (Fun $ fapp1 "SUM" [ CRef "amount" ]) (Just "total_sales")
+                                              ]
+                                            , from = [ Table "orders" ]
+                                            , groupBy = [ CRef "region" ]
+                                            })
+                               } ]
+              }
+            }))
     ]
   ]
 

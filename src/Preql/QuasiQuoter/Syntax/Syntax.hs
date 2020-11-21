@@ -76,6 +76,7 @@ data SelectOptions = SelectOptions
     , offset :: Maybe Expr
     , limit :: Maybe Expr
     , locking :: [Locking]
+    , withClause :: Maybe WithClause
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 -- This is really for writing tests, but put it here for faster type check errors
@@ -96,6 +97,7 @@ selectOptions = SelectOptions
     , offset = Nothing
     , limit = Nothing
     , locking = []
+    , withClause = Nothing
     }
 
 data TableRef
@@ -164,6 +166,26 @@ data LockingStrength
 
 data LockWait = LockWaitError | LockWaitSkip | LockWaitBlock
     deriving (Show, Eq, Enum, Bounded, Data, Lift, Generic)
+
+data WithClause = With
+  { commonTables :: [ CTE ]
+  , recursive :: Recursive
+  }
+  deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data Recursive = Recursive | NotRecursive
+    deriving (Show, Eq, Enum, Bounded, Data, Lift, Generic)
+
+data Materialized = Materialized | NotMaterialized | MaterializeDefault
+    deriving (Show, Eq, Enum, Bounded, Data, Lift, Generic)
+
+data CTE = CommonTableExpr
+  { name :: Name
+  , aliases :: [Name]
+  , materialized :: Materialized
+  , query :: Query
+  }
+  deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Expr = Lit !Literal | CRef ColumnRef
     | NumberedParam !Word [Indirection]

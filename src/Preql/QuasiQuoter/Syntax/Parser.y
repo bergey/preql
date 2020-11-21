@@ -586,12 +586,12 @@ import qualified Data.List.NonEmpty as NE
 -- Unlike gram.y, we only parse a single statement, and only DML.
 
 Query :: { Query }
-    : Query1 { $1 }
-    | Query1 SEMICOLON { $1 }
+    : PreparableStmt { $1 }
+    | PreparableStmt SEMICOLON { $1 }
 
-Query1 :: { Query }
-    : Delete { QD $1 }
-    | SelectStmt { QS $1 }
+PreparableStmt :: { Query }
+    : SelectStmt { QS $1 }
+    | Delete { QD $1 }
     | Insert { QI $1 }
     | Update { QU $1 }
 
@@ -661,39 +661,12 @@ select_no_parens :: { SelectStmt }
         { S $1 selectOptions { sortBy = $2, locking = $3, offset = fst $4, limit = snd $4 } }
     | select_clause opt_sort_clause select_limit opt_for_locking_clause
         { S $1 selectOptions { sortBy = $2, offset = fst $3, limit = snd $3, locking = $4 } }
--- TODO            | with_clause select_clause
--- TODO                {
--- TODO                    insertSelectOptions((SelectStmt *) $2, NULL, NIL,
--- TODO                                        NULL, NULL,
--- TODO                                        $1,
--- TODO                                        yyscanner);
--- TODO                    $$ = $2;
--- TODO                }
--- TODO            | with_clause select_clause sort_clause
--- TODO                {
--- TODO                    insertSelectOptions((SelectStmt *) $2, $3, NIL,
--- TODO                                        NULL, NULL,
--- TODO                                        $1,
--- TODO                                        yyscanner);
--- TODO                    $$ = $2;
--- TODO                }
--- TODO            | with_clause select_clause opt_sort_clause for_locking_clause opt_select_limit
--- TODO                {
--- TODO                    insertSelectOptions((SelectStmt *) $2, $3, $4,
--- TODO                                        list_nth($5, 0), list_nth($5, 1),
--- TODO                                        $1,
--- TODO                                        yyscanner);
--- TODO                    $$ = $2;
--- TODO                }
--- TODO            | with_clause select_clause opt_sort_clause select_limit opt_for_locking_clause
--- TODO                {
--- TODO                    insertSelectOptions((SelectStmt *) $2, $3, $5,
--- TODO                                        list_nth($4, 0), list_nth($4, 1),
--- TODO                                        $1,
--- TODO                                        yyscanner);
--- TODO                    $$ = $2;
--- TODO                }
--- TODO        ;
+    | with_clause select_clause { S $2 selectOptions { withClause = Just $1 } }
+    | with_clause select_clause sort_clause { S $2 selectOptions { withClause = Just $1, sortBy = $3 } }
+    | with_clause select_clause opt_sort_clause for_locking_clause opt_select_limit
+        { S $2 selectOptions { withClause = Just $1, sortBy = $3, locking = $4, offset = fst $5, limit = snd $5 } }
+    | with_clause select_clause opt_sort_clause select_limit opt_for_locking_clause
+        { S $2 selectOptions { withClause = Just $1, sortBy = $3, offset = fst $4, limit = snd $4, locking = $5 } }
 
 select_clause :: { SelectStmt }
     : simple_select                            { $1 }
@@ -761,13 +734,33 @@ simple_select :: { SelectStmt }
 -- *		AS (query) [ SEARCH or CYCLE clause ]
 -- *
 -- * We don't currently support the SEARCH or CYCLE clause.
--- *
+
 -- * Recognizing WITH_LA here allows a CTE to be named TIME or ORDINALITY.
--- TODO with_clause:
--- TODO cte_list:
--- TODO common_table_expr:  name opt_name_list AS opt_materialized '(' PreparableStmt ')'
--- TODO opt_materialized:
--- TODO opt_with_clause:
+with_clause
+    : WITH cte_list { With $2 NotRecursive }
+    -- FIXME do we need WITH_LA ?
+    | WITH RECURSIVE cte_list { With $3 Recursive }
+
+cte_list : list(common_table_expr) { reverse $1 }
+
+common_table_expr
+  :  name opt_name_list AS opt_materialized '(' PreparableStmt ')'
+  { CommonTableExpr
+    { name = $1
+    , aliases = $2
+    , materialized = $4
+    , query = $6
+    }
+  }
+
+opt_materialized :: { Materialized }
+    : MATERIALIZED { Materialized }
+    | NOT MATERIALIZED { NotMaterialized }
+    | { MaterializeDefault }
+
+opt_with_clause :: { Maybe WithClause }
+    : with_clause { Just $1 }
+    | { Nothing }
 
 into_clause:
 			-- TODO INTO OptTempTableName
@@ -2167,6 +2160,10 @@ qualified_name :: { Name }
 -- TODO 				}
 
 name_list : list(name) { $1 }
+
+opt_name_list
+    : '(' name_list ')' { $2 }
+    | { [] }
 
 name : ColId { $1 }
 

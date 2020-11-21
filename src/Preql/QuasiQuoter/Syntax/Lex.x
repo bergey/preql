@@ -103,6 +103,7 @@ tokens :-
     $v $a $l $u $e $s { lex VALUES }
     $w $h $e $n { lex WHEN }
     $w $h $e $r $e { lex WHERE }
+    $w $i $t $h { lex WITH }
 
     "(" { lex LParen }
     "," { lex Comma }

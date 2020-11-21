@@ -17,6 +17,7 @@ import qualified Data.List.NonEmpty as NE
 }
 
 %name parseQuery_ Query
+%name parseSelect_ SelectStmt
 %name parseExpr_ a_expr
 %tokentype { L.LocToken }
 %monad { Alex }
@@ -2801,6 +2802,9 @@ happyError (L.LocToken p t) =
 
 parseQuery :: FilePath -> String -> Either String Query
 parseQuery = L.runAlexWithFilepath parseQuery_
+
+parseSelect :: FilePath -> String -> Either String SelectStmt
+parseSelect = L.runAlexWithFilepath parseSelect_
 
 parseExpr :: FilePath -> String -> Either String Expr
 parseExpr = L.runAlexWithFilepath parseExpr_

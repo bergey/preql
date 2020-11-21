@@ -68,11 +68,11 @@ parser = testGroup "parser"
        })
     ]
   , testGroup "Select"
-    [ testParse "SELECT name FROM users"
-      (QS (Simple select
+    [ testParseSelect "SELECT name FROM users"
+      (Simple select
        { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing ]
-       }))
+       })
     , testParse "SELECT name, email FROM users"
       (QS (Simple select
        { from = [ Table "users" ]
@@ -346,6 +346,10 @@ parser = testGroup "parser"
 testParse :: TestName -> Query -> TestTree
 testParse query expected = testCase query $
     assertEqual "testParse" (Right expected) (parseQuery "<testcase>" query)
+
+testParseSelect :: TestName -> SelectStmt -> TestTree
+testParseSelect query expected = testCase query $
+    assertEqual "testParseSelect" (Right expected) (parseSelect "<testcase>" query)
 
 testParseExpr :: TestName -> Expr -> TestTree
 testParseExpr query expected = testCase query $

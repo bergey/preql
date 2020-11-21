@@ -162,7 +162,10 @@ instance FormatSql LikeE where
 instance FormatSql SelectStmt where
     fmt (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
     fmt (Simple un) = fmt un
-    fmt (S ss so) = fmt ss <> fmt so
+    fmt (S ss so) = let topLevel = fmt ss <> fmt so in
+      case withClause so of
+        Nothing -> topLevel
+        Just ctes -> fmt ctes <> " " <> topLevel
     fmt (Set op distinct l r) = fmt l <> " " <> fmt op <> d <> fmt r
       where d = case distinct of
                 All -> " ALL "
@@ -179,10 +182,32 @@ instance FormatSql Select where
           m_distinct = maybe "" (spaceAfter . fmt) distinct
 
 instance FormatSql SelectOptions where
+  -- ignore WithClause here; handle it in SelectStmt so we can put it before the top query
     fmt SelectOptions{sortBy, offset, limit, locking} = spaces locking -- no commas
         <> optList " ORDER BY " sortBy
         <> opt " LIMIT " limit
         <> opt " OFFSET " offset
+
+instance FormatSql WithClause where
+  fmt With {commonTables, recursive} =
+    "WITH" <> recursive' <> commas commonTables
+    where recursive' = case recursive of
+            Recursive -> " RECURSIVE "
+            NotRecursive -> " "
+
+instance FormatSql Materialized where
+  fmt Materialized = "MATERIALIZED"
+  fmt NotMaterialized = "NOT MATERIALIZED"
+  fmt MaterializeDefault = ""
+
+instance FormatSql CTE where
+  fmt CommonTableExpr {name, aliases, materialized, query} =
+    fmt name <> unlessEmpty parens (commas aliases)
+    <> unlessEmpty spacesAround (fmt materialized) <> parens (fmt query)
+    where
+      unlessEmpty _ "" = ""
+      unlessEmpty f x = f x
+      spacesAround s = " " <> s <> " "
 
 instance FormatSql TableRef where
     fmt (Table name) = fmt name

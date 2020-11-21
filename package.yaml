@@ -33,7 +33,9 @@ tests:
     dependencies:
       - preql
       - bytestring
+      - generic-random
       - postgresql-libpq
+      - QuickCheck
       - tasty
       - tasty-hunit
       - text
@@ -57,9 +59,10 @@ dependencies:
     - postgresql-binary >= 0.12.1
     - postgresql-libpq >= 0.9.4
     - scientific >= 0.3.6
+    - syb
     - template-haskell >= 2.13.0
     - text >= 1.2.3
-    - th-lift-instances >= 0.1.11
+    - th-lift-instances >= 0.1.12 # NonEmpty
     - time >= 1.8.0
     - transformers >= 0.5.5
     - uuid >= 1.3.13

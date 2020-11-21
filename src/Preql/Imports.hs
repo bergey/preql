@@ -10,9 +10,10 @@ where
 
 import Control.Applicative as X
 import Control.Exception as X (Exception)
-import Control.Monad.IO.Class as X (liftIO, MonadIO)
+import Control.Monad.IO.Class as X (MonadIO, liftIO)
 import Data.Bifunctor as X
 import Data.ByteString (ByteString)
+import Data.Foldable as X
 import Data.Functor as X
 import Data.Maybe as X (catMaybes, fromMaybe)
 import Data.Text (Text)

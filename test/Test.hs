@@ -1,35 +1,30 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
-{-# LANGUAGE QuasiQuotes              #-}
 
-import Test.Wire (connectionString, wire)
+import Test.Wire (wire)
+import Test.Syntax.Printer
+import Test.Syntax.Parser
 
-import Preql.QuasiQuoter.Raw.TH
-import Preql.Wire
+import Preql.QuasiQuoter.Raw.TH as Raw
+import Preql.QuasiQuoter.Syntax.Params as Syntax (AntiquoteState(..), numberAntiquotes)
+import Preql.QuasiQuoter.Syntax.Syntax
 
-import Data.Either
-import Data.Int
 import Data.List.NonEmpty (NonEmpty(..))
-import Database.PostgreSQL.LibPQ (connectdb, finish)
 import Prelude hiding (Ordering(..), lex)
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import qualified Preql.QuasiQuoter.Raw.Lex as L
-import qualified Preql.Wire.Query as W
-
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Builder as TLB
+import qualified Preql.QuasiQuoter.Raw.Lex as Raw
 
 main :: IO ()
-main = defaultMain $ testGroup "crispy-broccoli"
+main = defaultMain $ testGroup "preql"
     [ antiquotes
     , wire
+    , printer
+    , lexer
+    , parser
     -- , integration
     ]
-
 
 -- integration :: TestTree
 -- integration = withResource (connectdb connectionString) finish $ \db -> testGroup "integration"
@@ -58,8 +53,20 @@ main = defaultMain $ testGroup "crispy-broccoli"
 
 antiquotes :: TestTree
 antiquotes = testGroup "antiquotes"
-    [ testCase "numberAntiquotes" $
+    [ testCase "numberAntiquotes, Syntax" $
+        assertEqual ""
+            (QS (Simple select
+                 { from =  [ Table "baz" ]
+                 , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
+                 , whereClause = Just (BinOp Eq (CRef "foo") (NumberedParam 1 []))
+                 }), AntiquoteState 1 ["foo0"])
+            (Syntax.numberAntiquotes 0 (QS (Simple select
+                 { from =  [ Table "baz" ]
+                 , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
+                 , whereClause = Just (BinOp Eq (CRef "foo") (HaskellParam "foo0"))
+                 })))
+    , testCase "numberAntiquotes, Raw" $
         assertEqual ""
             ("SELECT foo, bar FROM baz WHERE foo = $1", ["foo0"])
-            (numberAntiquotes 0 [ L.Sql "SELECT foo, bar FROM baz WHERE foo = ", L.HaskellParam "foo0" ])
+            (Raw.numberAntiquotes 0 [ Raw.Sql "SELECT foo, bar FROM baz WHERE foo = ", Raw.HaskellParam "foo0" ])
     ]

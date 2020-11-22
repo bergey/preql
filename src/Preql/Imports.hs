@@ -10,6 +10,7 @@ where
 
 import Control.Applicative as X
 import Control.Exception as X (Exception)
+import Control.Monad as X
 import Control.Monad.IO.Class as X (MonadIO, liftIO)
 import Data.Bifunctor as X
 import Data.ByteString (ByteString)

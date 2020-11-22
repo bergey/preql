@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-duplicate-exports #-}
 module Preql (
-    SQL(..), sql
+    SQL(..), SqlQuery(..), sql, select, validSql
     , Transaction, Query
     -- * functions for writing SQL instances
     , runTransactionIO
@@ -14,6 +14,7 @@ module Preql (
     , module Preql.Wire
     ) where
 
-import Preql.Wire
-import Preql.QuasiQuoter.Raw.TH (sql)
 import Preql.Effect
+import Preql.QuasiQuoter.Raw.TH (sql)
+import Preql.QuasiQuoter.Syntax.TH (select, validSql)
+import Preql.Wire

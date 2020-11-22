@@ -15,7 +15,7 @@ import Language.Haskell.TH.Syntax (Lift(..))
 
 import qualified Data.Text as T
 
--- | Convert a rewritten SQL string to a ByteString
+-- | Convert a rewritten SQL string to a ByteString, leaving width free
 makeQuery :: String -> Q Exp
 makeQuery string = [e|(fromString string :: Query $(VarT <$> (newName "n"))) |]
 

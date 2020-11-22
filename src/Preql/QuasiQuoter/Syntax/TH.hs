@@ -7,8 +7,9 @@ import Preql.Imports
 import Preql.QuasiQuoter.Common
 import Preql.QuasiQuoter.Syntax.Params
 import Preql.QuasiQuoter.Syntax.Parser (parseQuery, parseSelect)
+import Preql.QuasiQuoter.Syntax.Printer (formatAsByteString)
 import Preql.QuasiQuoter.Syntax.Syntax as Syntax hiding (select)
-import Preql.QuasiQuoter.Syntax.TypedQuery
+import Preql.Wire.Internal as Wire (Query(..))
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
@@ -20,16 +21,15 @@ tupleType [v] = VarT v
 tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
     where n = length names
 
--- TODO merge arity-qq branch so we can use any decoder of correct arity, not only tuples
--- | Synthesize a TypedQuery tagged with tuples of the given size
-makeArityQuery :: String -> Query -> Word -> Maybe Int -> Q Exp
-makeArityQuery raw parsed p r = do
-  params <- tupleType <$> cNames 'p' (fromIntegral p)
-  result <- case r of
-              Just r' -> tupleType <$> cNames 'r' r'
+-- | Synthesize a Query tagged with the number of returned columns.
+makeArityQuery :: Syntax.Query -> Q Exp
+makeArityQuery parsed = do
+  let
+    width = case countColumnsReturned parsed of
+              Just n -> pure (LitT (NumTyLit (fromIntegral n)))
               Nothing -> VarT <$> newName "r" -- SELECT *
-  value <- [e|TypedQuery raw parsed |]
-  return $ SigE value (ConT ''TypedQuery `AppT` params `AppT` result)
+    formatted = formatAsByteString parsed
+  [e| Wire.Query formatted :: Wire.Query $(width) |]
 
 -- | Given a SQL SELECT query with ${} antiquotes, splice a pair
 -- @(TypedQuery p r, p)@ or a function @\p' -> (TypedQuery p r, p)@ if
@@ -60,9 +60,7 @@ aritySql parse mkQuery raw = do
                 positionalCount = maxParam parsed
                 (rewritten, aqs) = numberAntiquotes positionalCount parsed
                 antiNames = map (mkName . T.unpack) (haskellExpressions aqs)
-            typedQuery <- makeArityQuery raw rewritten
-                (paramCount aqs)
-                (countColumnsReturned rewritten)
+            typedQuery <- makeArityQuery rewritten
             case positionalCount of
                 0 -> -- only antiquotes (or no params)
                     return $ TupE [typedQuery, tupleOrSingle antiNames]
@@ -89,3 +87,4 @@ countColumnsReturned (QS selectQ) = go selectQ where
         (Just m, Just n) | m == n -> Just n
         _ -> Nothing
 countColumnsReturned _                       = Just 0
+-- TODO INSERT ... RETURNING &c

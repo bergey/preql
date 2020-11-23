@@ -27,22 +27,26 @@ schema, are planned.
         -- your own application state, logging, error handling
         flip runReaderT conn $
             -- A simple query with no parameters
-            cats <- query [sql| SELECT name, age FROM cats |]
+            cats <- query [select| SELECT name, age FROM cats |]
             for_ cats \(cat :: (Text, Int)) -> print cat
 
             -- A query with parameters
             let minAge = 10
-            oldCats <- query [sql| SELECT name, age FROM cats where age > ${minAge}|]
+            oldCats <- query [select| SELECT name, age FROM cats where age > ${minAge}|]
             for_ oldCats \(cat :: (Text, Int)) -> print cat
 
             -- A query that doesn't return rows
-            query_ [sql| UPDATE cats SET age = 0 where age < 1 |]
+            query_ [select| UPDATE cats SET age = 0 where age < 1 |]
 
-            -- Two queries in a transaction
+            -- Multiple queries in a transaction
             moreOldCats <- runTransaction $ do
-                maxAge <- V.head <$> query [sql| SELECT max(age) FROM cats |]
-                query [sql| SELECT name FROM cats WHERE age = ${maxAge} |]
-                -- Just an example; you could make this one DB roundtrip
+                ages <- V.head <$> query [select| SELECT id, age FROM cats |]
+                  for_ ages \(id, age) -> do
+                      let newAge = age + 1
+                      -- Use `sql` for non-SELECT queries
+                      query_ [sql|UPDATE cats set age=${newAge} where id = ${id}|]
+                query [select| SELECT name FROM cats WHERE age = ${minAge} |]
+                -- Just an example; you could make this one query
             traverse_ putStrLn moreOldCats
 ```
 

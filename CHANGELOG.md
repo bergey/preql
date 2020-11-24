@@ -1,3 +1,9 @@
+# 0.4 (2020-11-23)
+
+- `select` quasiquoter that validates syntax
+- tag number of columns consumed in `RowDecoder` type
+- when decoder & number of returned columns are both known, ensure they match
+
 # 0.3 (2020-06-18)
 
 - lookup types by name when OID is not known statically

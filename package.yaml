@@ -32,42 +32,44 @@ tests:
     main: Test.hs
     dependencies:
       - preql
-      - bytestring
-      - generic-random
-      - postgresql-libpq
-      - QuickCheck
-      - tasty
-      - tasty-hunit
-      - text
-      - uuid
-      - vector
+      - bytestring >= 0.10.10.0 && < 0.10.11
+      - generic-random >= 1.3.0.1 && < 1.3.1
+      - postgresql-libpq >= 0.9.4.3 && < 0.9.5
+      - QuickCheck >= 2.13.2 && < 2.14.3
+      - scientific >= 0.3.6.2 && < 0.3.7
+      - syb >= 0.7.1 && < 0.7.2
+      - tasty >= 1.2.3 && < 1.4.1
+      - tasty-hunit >= 0.10.0 && < 0.10.1
+      - text >= 1.2.3.2 && < 1.2.5
+      - uuid >= 1.3.13 && < 1.3.14
+      - vector >= 0.12.1.2 && < 0.12.2
 
 build-tools:
   - alex
   - happy
       
 dependencies:
-    - aeson >= 1.3.1
-    - array >= 0.5.2
-    - base >= 4.11 # GHC 8.4; need CPP semigroup/monoid to go earlier
-    - binary-parser >= 0.5.5
-    - bytestring >= 0.10.8
-    - bytestring-strict-builder >= 0.4.5
-    - contravariant >= 1.4.1
-    - free >= 5.0.2
-    - mtl >= 2.2.2
-    - postgresql-binary >= 0.12.1
-    - postgresql-libpq >= 0.9.4
-    - scientific >= 0.3.6
-    - syb
-    - template-haskell >= 2.13.0
-    - text >= 1.2.3
-    - th-lift-instances >= 0.1.12 # NonEmpty
-    - time >= 1.8.0
-    - transformers >= 0.5.5
-    - uuid >= 1.3.13
-    - vector >= 0.12.0
-    - vector-sized
+  - aeson >= 1.4.7.1 && < 1.5.5
+  - array >= 0.5.4.0 && < 0.5.5
+  - base >= 4.13.0.0 && < 4.15
+  - binary-parser >= 0.5.6 && < 0.6
+  - bytestring >= 0.10.10.0 && < 0.10.11
+  - bytestring-strict-builder >= 0.4.5.3 && < 0.4.6
+  - contravariant >= 1.5.2 && < 1.5.3
+  - free >= 5.1.3 && < 5.1.5
+  - mtl >= 2.2.2 && < 2.2.3
+  - postgresql-binary >= 0.12.2 && < 0.12.4
+  - postgresql-libpq >= 0.9.4.3 && < 0.9.5
+  - scientific >= 0.3.6.2 && < 0.3.7
+  - syb >= 0.7.1 && < 0.7.2
+  - template-haskell >= 2.15.0.0 && < 2.17
+  - text >= 1.2.3.2 && < 1.2.5
+  - th-lift-instances >= 0.1.18 && < 0.1.19
+  - time >= 1.9.3 && < 1.9.4
+  - transformers >= 0.5.6.2 && < 0.5.7
+  - uuid >= 1.3.13 && < 1.3.14
+  - vector >= 0.12.1.2 && < 0.12.2
+  - vector-sized >= 1.4.2 && < 1.4.3
 
 default-extensions:
   - OverloadedStrings

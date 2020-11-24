@@ -62,16 +62,16 @@ aritySql parse mkStatement raw = do
             typedQuery <- makeArityQuery rewritten
             case positionalCount of
                 0 -> -- only antiquotes (or no params)
-                    return $ TupE [typedQuery, tupleOrSingle antiNames]
+                    return $ tupleE [typedQuery, tupleOrSingle antiNames]
                 1 -> do -- one positional param, doesn't take a tuple
                     patternName <- newName "c"
                     return $ LamE [VarP patternName]
-                        (TupE [typedQuery, tupleOrSingle (patternName : antiNames)])
+                        (tupleE [typedQuery, tupleOrSingle (patternName : antiNames)])
                 _ -> do -- at least two positional parameters
                     patternNames <- cNames 'q' (fromIntegral positionalCount)
                     return $ LamE
                         [TupP (map VarP patternNames)]
-                        (TupE [typedQuery, tupleOrSingle (patternNames ++ antiNames)])
+                        (tupleE [typedQuery, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
 
 countColumnsReturned :: Statement -> Maybe Int

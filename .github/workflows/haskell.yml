@@ -14,8 +14,7 @@ jobs:
         os: [ubuntu-latest, macOS-latest]
         plan:
           - { build: stack, resolver: "" }
-          # GHC 8.6 takes 40 minutes on the parser, more with haddocks
-          # - { build: stack, resolver: "--resolver lts-14" } # GHC 8.6
+          - { build: stack, resolver: "--resolver nightly" }
 
     runs-on: ubuntu-latest
 

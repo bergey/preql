@@ -55,16 +55,16 @@ sql  = expressionOnly "sql " $ \raw -> do
             query <- makeQuery rewritten
             case positionalCount of
                 0 -> -- only antiquotes (or no params)
-                    return $ TupE [query, tupleOrSingle antiNames]
+                    return $ tupleE [query, tupleOrSingle antiNames]
                 1 -> do -- one positional param, doesn't take a tuple
                     patternName <- newName "c"
                     return $ LamE [VarP patternName]
-                        (TupE [query, tupleOrSingle (patternName : antiNames)])
+                        (tupleE [query, tupleOrSingle (patternName : antiNames)])
                 _ -> do -- at least two positional parameters
                     patternNames <- cNames 'q' (fromIntegral positionalCount)
                     return $ LamE
                         [TupP (map VarP patternNames)]
-                        (TupE [query, tupleOrSingle (patternNames ++ antiNames)])
+                        (tupleE [query, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
 
 maxParam :: [Token] -> Word

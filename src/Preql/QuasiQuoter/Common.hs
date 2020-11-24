@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -- | Description: Functions for defining quasiquoters
 --  used in both the SQL-validating quasiquoter and the simple non-validating QQ.
 
@@ -13,7 +14,7 @@ cNames c n = traverse newName (replicate n (c : ""))
 tupleOrSingle :: [Name] -> Exp
 tupleOrSingle names = case names of
     [name] -> VarE name
-    vs -> TupE $ map VarE vs
+    vs -> tupleE $ map VarE vs
 
 expressionOnly :: String -> (String -> Q Exp) -> QuasiQuoter
 expressionOnly name qq = QuasiQuoter
@@ -25,3 +26,10 @@ expressionOnly name qq = QuasiQuoter
 
 alphabet :: [String]
 alphabet = cycle (map (:"") ['a'..'z'])
+
+tupleE :: [Exp] -> Exp
+#if MIN_VERSION_template_haskell(2,16,0)
+tupleE = TupE . map Just
+#else
+tupleE = TupE
+#endif

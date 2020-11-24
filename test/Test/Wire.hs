@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications    #-}
 module Test.Wire where
 
-import Instances -- class needed for older time
+import Instances ()
 import Preql.Effect
 import Preql.Wire
 import Test.Wire.Enum
@@ -27,9 +27,7 @@ import           System.Environment        (lookupEnv)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-#if MIN_VERSION_time(1,9,0)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
-#endif
 
 import qualified Data.Text                 as T
 import qualified Data.Text.Lazy            as TL

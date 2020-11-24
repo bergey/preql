@@ -11,10 +11,6 @@ import           Data.List.NonEmpty  (NonEmpty (..))
 import           Generic.Random
 import           Test.QuickCheck
 
-#if !MIN_VERSION_time(1,9,0)
-import Data.Time (Day, TimeOfDay, UTCTime, TimeZone)
-import Data.Time.Format (parseTimeM, defaultTimeLocale, iso8601DateFormat, ParseTime)
-#endif
 import qualified Data.Text           as T
 
 instance Arbitrary a => Arbitrary (NonEmpty a) where
@@ -103,17 +99,3 @@ instance Arbitrary Expr where
 instance Arbitrary ColumnRef where arbitrary = genericArbitraryU
 instance Arbitrary BinOp where arbitrary = genericArbitraryU
 instance Arbitrary UnaryOp where arbitrary = genericArbitraryU
-
-#if !MIN_VERSION_time(1,9,0)
-class ParseTime8601 t where
-    iso8601ParseM :: Monad m => String -> m t
-
-instance ParseTime8601 UTCTime where
-    iso8601ParseM = parseTimeM False defaultTimeLocale (iso8601DateFormat (Just "%H:%M:%SZ"))
-instance ParseTime8601 Day where
-    iso8601ParseM = parseTimeM False defaultTimeLocale (iso8601DateFormat Nothing)
-instance ParseTime8601 TimeOfDay where
-    iso8601ParseM = parseTimeM False defaultTimeLocale "%H:%M:%S"
-instance ParseTime8601 TimeZone where
-    iso8601ParseM = parseTimeM False defaultTimeLocale "%z"
-#endif

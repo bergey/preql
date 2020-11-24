@@ -65,6 +65,6 @@ printer = testGroup "printer" [
                          , from = [ SubSelect (Simple select { targetList = [ Column (CRef "foo") Nothing ], from = [ Table "bar" ] }) (Alias "baz" []) ] } ))
     ]
 
-testPrint :: TestName -> Query -> TestTree
-testPrint expected query = testCase expected $
-    assertEqual "testPrint" expected (formatAsString query)
+testPrint :: TestName -> Statement -> TestTree
+testPrint expected statement = testCase expected $
+    assertEqual "testPrint" expected (formatAsString statement)

@@ -41,7 +41,7 @@ parser = testGroup "parser"
     , testParseExpr "true" (Lit (B True))
     , testParseExpr "false" (Lit (B False))
     ]
-  , testGroup "Query"
+  , testGroup "Statement"
     [ testParse "DELETE FROM taffy"
         (QD (Delete (mkName "taffy") Nothing))
     , testParse "dEleTe FROM taffy WHERE flavor = 'blueberry'"
@@ -343,9 +343,9 @@ parser = testGroup "parser"
     ]
   ]
 
-testParse :: TestName -> Query -> TestTree
+testParse :: TestName -> Statement -> TestTree
 testParse query expected = testCase query $
-    assertEqual "testParse" (Right expected) (parseQuery "<testcase>" query)
+    assertEqual "testParse" (Right expected) (parseStatement "<testcase>" query)
 
 testParseSelect :: TestName -> SelectStmt -> TestTree
 testParseSelect query expected = testCase query $

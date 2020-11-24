@@ -59,7 +59,7 @@ instance FormatSql Literal where
     fmt (B False) = "false"
     fmt Null = "null"
 
-instance FormatSql Query where
+instance FormatSql Statement where
     fmt (QI insert) = fmt insert
     fmt (QD delete) = fmt delete
     fmt (QU update) = fmt update

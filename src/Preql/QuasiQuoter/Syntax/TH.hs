@@ -6,7 +6,7 @@ module Preql.QuasiQuoter.Syntax.TH where
 import Preql.Imports
 import Preql.QuasiQuoter.Common
 import Preql.QuasiQuoter.Syntax.Params
-import Preql.QuasiQuoter.Syntax.Parser (parseQuery, parseSelect)
+import Preql.QuasiQuoter.Syntax.Parser (parseStatement, parseSelect)
 import Preql.QuasiQuoter.Syntax.Printer (formatAsByteString)
 import Preql.QuasiQuoter.Syntax.Syntax as Syntax hiding (select)
 import Preql.Wire.Internal as Wire (Query(..))
@@ -22,7 +22,7 @@ tupleType names = foldl (\expr v -> AppT expr (VarT v)) (TupleT n) names
     where n = length names
 
 -- | Synthesize a Query tagged with the number of returned columns.
-makeArityQuery :: Syntax.Query -> Q Exp
+makeArityQuery :: Statement -> Q Exp
 makeArityQuery parsed = do
   let
     width = case countColumnsReturned parsed of
@@ -47,12 +47,12 @@ select = expressionOnly "select" (aritySql parseSelect QS)
 -- and limited INSERT, UPDATE, and DELETE queries.  For details of
 -- what can be parsed, consult Parser.y
 validSql :: QuasiQuoter
-validSql = expressionOnly "validSql" (aritySql parseQuery id)
+validSql = expressionOnly "validSql" (aritySql parseStatement id)
 
-aritySql  :: (String -> String -> Either String a) -> (a -> Syntax.Query) -> String -> Q Exp
-aritySql parse mkQuery raw = do
+aritySql  :: (String -> String -> Either String a) -> (a -> Statement) -> String -> Q Exp
+aritySql parse mkStatement raw = do
     loc <- location
-    let e_ast = mkQuery <$> parse (show loc) raw
+    let e_ast = mkStatement <$> parse (show loc) raw
     case e_ast of
         Right parsed -> do
             let
@@ -74,7 +74,7 @@ aritySql parse mkQuery raw = do
                         (TupE [typedQuery, tupleOrSingle (patternNames ++ antiNames)])
         Left err -> error err
 
-countColumnsReturned :: Syntax.Query -> Maybe Int
+countColumnsReturned :: Statement -> Maybe Int
 countColumnsReturned (QS selectQ) = go selectQ where
   go s = case s of
       SelectValues rows -> Just (foldl' max 0 (fmap length rows))

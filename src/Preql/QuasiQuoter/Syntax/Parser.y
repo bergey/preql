@@ -16,7 +16,7 @@ import qualified Preql.QuasiQuoter.Syntax.Lex as L
 import qualified Data.List.NonEmpty as NE
 }
 
-%name parseQuery_ Query
+%name parseStatement_ Statement
 %name parseSelect_ SelectStmt
 %name parseExpr_ a_expr
 %tokentype { L.LocToken }
@@ -586,11 +586,11 @@ import qualified Data.List.NonEmpty as NE
 
 -- Unlike gram.y, we only parse a single statement, and only DML.
 
-Query :: { Query }
+Statement :: { Statement }
     : PreparableStmt { $1 }
     | PreparableStmt SEMICOLON { $1 }
 
-PreparableStmt :: { Query }
+PreparableStmt :: { Statement }
     : SelectStmt { QS $1 }
     | Delete { QD $1 }
     | Insert { QI $1 }
@@ -2800,8 +2800,8 @@ happyError :: L.LocToken -> Alex a
 happyError (L.LocToken p t) =
   L.alexErrorPosn p ("parse error at token '" ++ L.unLex t ++ "'")
 
-parseQuery :: FilePath -> String -> Either String Query
-parseQuery = L.runAlexWithFilepath parseQuery_
+parseStatement :: FilePath -> String -> Either String Statement
+parseStatement = L.runAlexWithFilepath parseStatement_
 
 parseSelect :: FilePath -> String -> Either String SelectStmt
 parseSelect = L.runAlexWithFilepath parseSelect_

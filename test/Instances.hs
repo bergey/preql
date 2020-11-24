@@ -43,7 +43,7 @@ instance Arbitrary Literal where
         , pure Null
         ]
 
-instance Arbitrary Query where arbitrary = genericArbitraryU
+instance Arbitrary Statement where arbitrary = genericArbitraryU
 instance Arbitrary Insert where arbitrary = genericArbitraryU
 instance Arbitrary Delete where arbitrary = genericArbitraryU
 instance Arbitrary Setting where arbitrary = genericArbitraryU

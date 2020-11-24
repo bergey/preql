@@ -9,7 +9,7 @@ import Control.Monad.Trans.State
 import Data.Generics
 import Data.Text (Text)
 
-numberAntiquotes :: Word -> Query -> (Query, AntiquoteState)
+numberAntiquotes :: Word -> Statement -> (Statement, AntiquoteState)
 numberAntiquotes count q =
     let (rewritten, aqs) = runState
                    (everywhereM (mkM numberAntiquotesExpr) q)
@@ -34,7 +34,7 @@ initialAntiquoteState :: AntiquoteState
 initialAntiquoteState = AntiquoteState 0 []
 
 -- | Return the highest-numbered $1-style parameter.
-maxParam :: Query -> Word
+maxParam :: Statement -> Word
 maxParam = everything max (mkQ 0 maxParamExpr)
 
 maxParamExpr :: Expr -> Word

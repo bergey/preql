@@ -22,7 +22,6 @@ import Preql.Imports
 import qualified Data.Vector.Sized as VS
 import qualified Database.PostgreSQL.LibPQ as PQ
 
--- TODO less ambiguous name (or rename others)
 -- | The IsString instance does no validation; the limited instances
 -- discourage directly manipulating strings, with the high risk of SQL
 -- injection.  A @Query@ is tagged with a 'Nat' representing the width

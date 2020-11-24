@@ -23,7 +23,7 @@ import qualified Data.Text as T
 data Literal = I !Int | F !Double | T !Text | B !Bool | Null
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Query = QI !Insert | QD !Delete | QU !Update | QS !SelectStmt
+data Statement = QI !Insert | QD !Delete | QU !Update | QS !SelectStmt
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 -- | Queries of the form @INSERT INTO table (columns) VALUES (values);@
@@ -183,7 +183,7 @@ data CTE = CommonTableExpr
   { name :: Name
   , aliases :: [Name]
   , materialized :: Materialized
-  , query :: Query
+  , query :: Statement
   }
   deriving (Show, Eq, Generic, Typeable, Data, Lift)
 

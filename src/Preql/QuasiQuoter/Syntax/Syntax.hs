@@ -4,7 +4,7 @@
 {-# LANGUAGE DeriveLift            #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
--- | Data types reperesenting SQL query syntax.
+-- | Description: Syntax tree for SQL
 
 module Preql.QuasiQuoter.Syntax.Syntax where
 

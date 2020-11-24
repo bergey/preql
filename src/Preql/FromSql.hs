@@ -1,4 +1,4 @@
--- | Description: re-export Preql.FromSql.*
+-- | re-export Preql.FromSql.*
 
 module Preql.FromSql (module X) where
 

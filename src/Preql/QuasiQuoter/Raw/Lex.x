@@ -1,4 +1,5 @@
 {
+-- | Description: Parse antiquotes without validating SQL syntax
 module Preql.QuasiQuoter.Raw.Lex where
 
 import           Prelude hiding (LT, GT, lex)

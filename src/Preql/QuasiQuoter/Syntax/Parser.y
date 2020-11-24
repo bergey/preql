@@ -2,7 +2,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Preql.QuasiQuoter.Syntax.Parser where
+module Preql.QuasiQuoter.Syntax.Parser (parseStatement, parseSelect, parseExpr) where
 
 import Preql.QuasiQuoter.Syntax.Syntax
 import Preql.QuasiQuoter.Syntax.Name

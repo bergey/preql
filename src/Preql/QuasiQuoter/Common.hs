@@ -1,5 +1,5 @@
--- | Description: Functions for defining quasiquoters, used in both
--- the SQL-validating quasiquoter and the simple non-validating QQ.
+-- | Description: Functions for defining quasiquoters
+--  used in both the SQL-validating quasiquoter and the simple non-validating QQ.
 
 module Preql.QuasiQuoter.Common where
 

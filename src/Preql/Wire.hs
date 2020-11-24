@@ -1,12 +1,14 @@
 {-# OPTIONS_GHC -fno-warn-duplicate-exports #-}
 
--- | This module re-exports definitions from Wire.* that are expected to be useful
+-- | Description: Encode & Decode Postgres wire format
+--
+-- This module re-exports definitions from Wire.* that are expected to be useful
 
 module Preql.Wire (
     -- * Decoding rows
-    FromSql, FromSqlField
+    FromSql(..), FromSqlField
     -- * Encoding parameters
-    , ToSql, ToSqlField
+    , ToSql(..), ToSqlField
     -- * Errors
     , QueryError(..), FieldError(..), UnlocatedFieldError(..), TypeMismatch(..)
     , module X) where

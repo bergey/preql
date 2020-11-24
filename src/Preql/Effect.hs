@@ -6,7 +6,10 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | SQL Effect class, basically capturing some way of accessing a database.
+-- | Description: SQL & SqlQuery classes
+--
+-- Effect class, expressing that a database connection is available or
+-- can be acquired, and transactions run.
 
 module Preql.Effect
     ( module Preql.Effect, Transaction
@@ -75,7 +78,7 @@ runTransaction = runTransaction' Serializable
 -- implies a @SqlQuery@ instance.
 class Monad m => SqlQuery (m :: * -> *) where
     -- | Run a parameterized query that returns data.  The tuple argument is typically provided by
-    -- the 'sql' Quasiquoter.
+    -- one of the Quasiquoters: 'Preql.sql' or 'Preql.select'
     query :: (ToSql p, FromSql r, KnownNat (Width r)) => (Query (Width r), p) -> m (Vector r)
 
     -- | Run a parameterized query that does not return data.

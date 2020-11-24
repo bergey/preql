@@ -30,13 +30,14 @@ class FromSqlField a where
 -- The default (empty) instance works for any type with a
 -- 'FromSqlField' instance
 class FromSql a where
+    -- | The number of columns read in decoding this type.
     type Width a :: Nat
     type Width a = 1
-
     fromSql :: RowDecoder (Width a) a
     default fromSql :: (FromSqlField a, Width a ~ 1) => RowDecoder (Width a) a
     fromSql = notNull fromSqlField
 
+-- | Construct a decoder for a single non-nullable column.
 notNull :: FieldDecoder a -> RowDecoder 1 a
 notNull (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
     m_bs <- getNextValue
@@ -44,6 +45,7 @@ notNull (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
         Nothing -> throwLocated UnexpectedNull
         Just bs -> either (throwLocated . ParseFailure) pure (BP.run parser bs)
 
+-- | Construct a decoder for a single nullable column.
 nullable :: FieldDecoder a -> RowDecoder 1 (Maybe a)
 nullable (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
     m_bs <- getNextValue

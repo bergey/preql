@@ -10,9 +10,9 @@ module Preql.QuasiQuoter.Syntax.Printer where
 
 import Preql.Imports
 import Preql.QuasiQuoter.Syntax.Name
-import Preql.QuasiQuoter.Syntax.Syntax as Syn
+import Preql.QuasiQuoter.Syntax.Syntax as Syn hiding (select)
 
-import Data.List
+import Data.List (intersperse)
 import Prelude hiding (GT, LT, lex)
 
 import qualified Data.Text as T
@@ -98,7 +98,7 @@ instance FormatSql Delete where
     fmt Delete{table, conditions} = "DELETE FROM " <> fmt table <> wh where
       wh = case conditions of
           Nothing         -> ""
-          Just conditions -> " WHERE " <> fmt conditions
+          Just conditions' -> " WHERE " <> fmt conditions'
 
 instance FormatSql Setting where
     fmt (Setting column rhs) = fmt column <> "=" <> fmt rhs
@@ -108,7 +108,7 @@ instance FormatSql Update where
         "UPDATE " <> fmt table <> " SET " <> commas settings <> wh
       where wh = case conditions of
                 Nothing         -> ""
-                Just conditions -> " WHERE " <> fmt conditions
+                Just conditions' -> " WHERE " <> fmt conditions'
 
 instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit
@@ -307,8 +307,8 @@ instance FormatSql FunctionApplication where
       withinGroup' = if withinGroup then optList "WITHIN GROUP " sortBy else ""
       over' = case over of
         Nothing -> ""
-        Just (Window (Just name) _ _ _ _) -> "OVER " <> fmt name
-        Just Window {..} -> "OVER " <> parens
+        Just (Window (Just alias) _ _ _ _) -> "OVER " <> fmt alias
+        Just Window {refName, partitionClause, orderClause} -> "OVER " <> parens
               (opt "" refName
                <> optList " PARTITION BY " partitionClause
                <> optList " ORDER BY " orderClause)

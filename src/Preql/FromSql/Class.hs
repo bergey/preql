@@ -54,6 +54,6 @@ nullable (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
         Just bs -> either (throwLocated . ParseFailure) (pure . Just) (BP.run parser bs)
 
 throwLocated :: UnlocatedFieldError -> InternalDecoder a
-throwLocated failure = do
+throwLocated fieldError = do
     DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
-    throwError (FieldError (fromIntegral r) (fromIntegral c) failure)
+    throwError (FieldError (fromIntegral r) (fromIntegral c) fieldError)

@@ -18,18 +18,18 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 queryWith :: KnownNat (Width r) =>
   RowEncoder p -> RowDecoder (Width r) r -> PQ.Connection ->
   Query (Width r) -> p -> IO (Either QueryError (Vector r))
-queryWith enc dec conn (Query query) params = do
+queryWith enc dec conn (Query q) params = do
     -- TODO safer Connection type
     -- withMVar (connectionHandle conn) $ \connRaw -> do
-        e_result <- execParams enc conn query params
+        e_result <- execParams enc conn q params
         case e_result of
             Left err -> return (Left err)
-            Right result -> decodeVector (lookupType conn) dec result
+            Right rows -> decodeVector (lookupType conn) dec rows
 
 -- If there is no result, we don't need a Decoder
 queryWith_ :: RowEncoder p -> PQ.Connection -> Query n -> p -> IO (Either QueryError ())
-queryWith_ enc conn (Query query) params = do
-    e_result <- execParams enc conn query params
+queryWith_ enc conn (Query q) params = do
+    e_result <- execParams enc conn q params
     return (void e_result)
 
 query :: (ToSql p, FromSql r, KnownNat (Width r)) =>
@@ -40,16 +40,16 @@ query_ :: ToSql p => PQ.Connection -> Query n -> p -> IO (Either QueryError ())
 query_ = queryWith_ toSql
 
 execParams :: RowEncoder p -> PQ.Connection -> ByteString -> p -> IO (Either QueryError PQ.Result)
-execParams enc conn query params = do
-    e_result <- connectionError conn =<< PQ.execParams conn query (runEncoder enc params) PQ.Binary
+execParams enc conn q params = do
+    e_result <- connectionError conn =<< PQ.execParams conn q (runEncoder enc params) PQ.Binary
     case e_result of
         Left err -> return (Left (ConnectionError err))
-        Right result -> do
-            status <- PQ.resultStatus result
+        Right res -> do
+            status <- PQ.resultStatus res
             if status == PQ.CommandOk || status == PQ.TuplesOk
-                then return (Right result)
+                then return (Right res)
                 else do
-                    msg <- PQ.resultErrorMessage result
+                    msg <- PQ.resultErrorMessage res
                         <&> maybe (T.pack (show status)) (decodeUtf8With lenientDecode)
                     return (Left (ConnectionError msg))
 

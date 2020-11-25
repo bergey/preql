@@ -344,17 +344,17 @@ parser = testGroup "parser"
   ]
 
 testParse :: TestName -> Statement -> TestTree
-testParse query expected = testCase query $
-    assertEqual "testParse" (Right expected) (parseStatement "<testcase>" query)
+testParse queryStr expected = testCase queryStr $
+    assertEqual "testParse" (Right expected) (parseStatement "<testcase>" queryStr)
 
 testParseSelect :: TestName -> SelectStmt -> TestTree
-testParseSelect query expected = testCase query $
-    assertEqual "testParseSelect" (Right expected) (parseSelect "<testcase>" query)
+testParseSelect queryStr expected = testCase queryStr $
+    assertEqual "testParseSelect" (Right expected) (parseSelect "<testcase>" queryStr)
 
 testParseExpr :: TestName -> Expr -> TestTree
-testParseExpr query expected = testCase query $
-    assertEqual "testParseExpr" (Right expected) (parseExpr "<testcase>" query)
+testParseExpr queryStr expected = testCase queryStr $
+    assertEqual "testParseExpr" (Right expected) (parseExpr "<testcase>" queryStr)
 
 testLex :: TestName -> [L.Token] -> TestTree
-testLex query expected = testCase query $
-    assertEqual "testLex" (Right (expected ++ [L.EOF])) (L.testLex query)
+testLex queryStr expected = testCase queryStr $
+    assertEqual "testLex" (Right (expected ++ [L.EOF])) (L.testLex queryStr)

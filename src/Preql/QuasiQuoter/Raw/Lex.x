@@ -68,7 +68,7 @@ alexMonadScan' = do
     AlexEOF -> alexEOF
     AlexError (p, _, _, s) ->
         alexError' p ("lexical error at character '" ++ take 1 s ++ "'")
-    AlexSkip  inp' len -> do
+    AlexSkip  inp' _len -> do
         alexSetInput inp'
         alexMonadScan'
     AlexToken inp' len action -> do
@@ -92,10 +92,10 @@ runAlex' a fp input = runAlex input (setFilePath fp >> a)
 
 lexAll :: Alex [LocToken]
 lexAll = do
-    token <- alexMonadScan
-    case unLoc token of
-        EOF -> return [token]
-        _ -> fmap (token :) lexAll
+    t <- alexMonadScan
+    case unLoc t of
+        EOF -> return [t]
+        _ -> fmap (t :) lexAll
 
 parseQuery' :: FilePath -> String -> Either String [LocToken]
 parseQuery' fp s = runAlex' lexAll fp s

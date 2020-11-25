@@ -21,7 +21,6 @@ import qualified Preql.Wire.Query as W
 import Control.Exception (throwIO)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Int
-import Data.List.NonEmpty (NonEmpty(..))
 import GHC.TypeNats
 import Prelude hiding (Ordering(..), lex)
 import Test.Tasty

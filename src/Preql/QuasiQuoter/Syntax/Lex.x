@@ -266,11 +266,11 @@ unLex t = case t of
 
 -- | remove single quotes, and '' escape sequences
 unquoteString :: String -> String
-unquoteString ('\'' : rest) = go rest
+unquoteString ('\'' : str) = go str
   where
     go  ('\'' : '\'' : rest) = '\'' : go rest
     go ['\''] = ""
-    go [_] = error "string did not end with a '"
+    go [] = error "string did not end with a '"
     go ('\'' : _rest) = error "unescaped ' in middle"
     go (c : rest)  = c : go rest
 unquoteString _ = error "string did not begin with a '"
@@ -298,7 +298,7 @@ alexMonadScan' = do
     AlexEOF -> alexEOF
     AlexError (p, _, _, s) ->
         alexErrorPosn p ("lexical error at character '" ++ take 1 s ++ "'")
-    AlexSkip  inp' len -> do
+    AlexSkip  inp' _len -> do
         alexSetInput inp'
         alexMonadScan'
     AlexToken inp' len action -> do
@@ -320,10 +320,10 @@ runAlexWithFilepath a fp input = runAlex input (setFilePath fp >> a)
 
 lexAll :: Alex [LocToken]
 lexAll = do
-    token <- alexMonadScan
-    case unLoc token of
-        EOF -> return [token]
-        _ -> fmap (token :) lexAll
+    t <- alexMonadScan
+    case unLoc t of
+        EOF -> return [t]
+        _ -> fmap (t :) lexAll
 
 testLex' :: String -> Either String [LocToken]
 testLex' s = runAlex s lexAll

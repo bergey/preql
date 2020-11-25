@@ -14,8 +14,8 @@ import Language.Haskell.TH
 deriveFromSqlTuple :: Int -> Q [Dec]
 deriveFromSqlTuple n = do
     names <- traverse newName (take n alphabet)
-    let tupleT = foldl AppT (TupleT n) (map VarT names)
-    return [fromSqlDecl names tupleT (tupleDataName n) n]
+    let tuple = foldl AppT (TupleT n) (map VarT names)
+    return [fromSqlDecl names tuple (tupleDataName n) n]
 
 deriveFromSql :: Name -> Q [Dec]
 deriveFromSql tyName = do
@@ -26,9 +26,9 @@ deriveFromSql tyName = do
                 tyVars = map tyVarName binders
                 targetTy = foldl AppT (VarT typeN) (map VarT tyVars)
                 (conN, fieldCount) = case constructors of
-                    [NormalC conN elems] -> (conN, length elems)
-                    [RecC conN fields] -> (conN, length fields)
-                    [InfixC _ conN _] -> (conN, 2)
+                    [NormalC con elems] -> (con, length elems)
+                    [RecC con fields] -> (con, length fields)
+                    [InfixC _ con _] -> (con, 2)
                     [_] -> error "deriveFromSql does not handle GADTs or constructors with class constraints"
                     _ -> error "deriveFromSql does not handle sum types"
             in return [fromSqlDecl tyVars targetTy conN fieldCount]
@@ -52,7 +52,7 @@ fromSqlDecl tyVars targetTy constructor fieldCount =
         method = ValD
             (VarP 'fromSql)
             (NormalB (foldl
-                      (\row field -> InfixE (Just row) (VarE 'applyDecoder) (Just field))
+                      (\rowDecoder field -> InfixE (Just rowDecoder) (VarE 'applyDecoder) (Just field))
                       (VarE 'pureDecoder `AppE` ConE constructor)
                       (replicate fieldCount (VarE 'fromSql))))
             [] -- no where clause on the fromSql definition

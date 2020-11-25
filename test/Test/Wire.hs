@@ -8,7 +8,6 @@
 module Test.Wire where
 
 import Instances ()
-import Preql.Effect
 import Preql.Wire
 import Test.Wire.Enum
 
@@ -19,19 +18,19 @@ import Data.Either
 import Data.Int
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
+import Data.Text.Encoding (encodeUtf8)
 import Data.Time (Day, TimeOfDay, UTCTime)
-import           Data.Text.Encoding        (encodeUtf8)
-import           Data.Vector               (Vector)
-import           GHC.TypeNats
-import           System.Environment        (lookupEnv)
-import           Test.Tasty
-import           Test.Tasty.HUnit
+import Data.Vector (Vector)
+import GHC.TypeNats
+import System.Environment (lookupEnv)
+import Test.Tasty
+import Test.Tasty.HUnit
 
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 
-import qualified Data.Text                 as T
-import qualified Data.Text.Lazy            as TL
-import qualified Data.UUID                 as UUID
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.UUID as UUID
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified PostgreSQL.Binary.Decoding as PGB
 import qualified Preql.Wire.Query as W
@@ -53,13 +52,13 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
           , inTransaction "decode False" $
               assertQuery [False] "SELECT false"
           , inTransaction "decode Int64 literal" $
-              assertQuery [2^32 :: Int64] "SELECT (2^32)::int8"
+              assertQuery [2 `expt` 32 :: Int64] "SELECT (2^32)::int8"
           , inTransaction "decode Int32 literal" $
-              assertQuery [2^16 :: Int32] "SELECT (2^16)::int4"
+              assertQuery [2 `expt` 16 :: Int32] "SELECT (2^16)::int4"
           , inTransaction "decode Int16 literal" $
-              assertQuery [2^8 :: Int16] "SELECT (2^8)::int2"
+              assertQuery [2 `expt` 8 :: Int16] "SELECT (2^8)::int2"
           , inTransaction "decode Float literal" $
-              assertQuery [2**32 :: Float] "SELECT (2^32)::float4"
+              assertQuery [2**32 :: Float] "SELECT (2 ^ 32)::float4"
           , inTransaction "decode Double literal" $
               assertQuery [2**32 :: Double] "SELECT (2^32)::float8"
           -- , inTransaction "decode Char literal" $
@@ -244,3 +243,6 @@ data Foo = Foo !Bool !Int deriving (Show, Eq)
 
 instance FromSql Foo where
   fromSql = notNull (FieldDecoder (TypeName "foo") (PGB.composite (Foo <$> PGB.valueComposite PGB.bool <*> PGB.valueComposite PGB.int)))
+
+expt :: Num a => a -> Int64 -> a
+expt = (^)

@@ -7,8 +7,8 @@ import Preql.QuasiQuoter.Common (alphabet)
 import Language.Haskell.TH
 
 deriveToSqlTuple :: Int -> Q [Dec]
-deriveToSqlTuple  n = do
-    names <- traverse newName (take n alphabet)
+deriveToSqlTuple size = do
+    names <- traverse newName (take size alphabet)
     Just classN <- lookupTypeName "ToSql"
     Just fieldN <- lookupTypeName "ToSqlField"
     Just toSql <- lookupValueName "toSql"
@@ -16,7 +16,7 @@ deriveToSqlTuple  n = do
     Just toSqlField <- lookupValueName "toSqlField"
     let
         context = [ ConT fieldN `AppT` VarT n | n <- names ]
-        instanceHead = ConT classN `AppT` foldl AppT (TupleT n) (map VarT names)
+        instanceHead = ConT classN `AppT` foldl AppT (TupleT size) (map VarT names)
         method = FunD toSql
             [Clause
                 [TupP (map VarP names)]

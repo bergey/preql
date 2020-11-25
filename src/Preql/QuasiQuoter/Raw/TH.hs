@@ -11,9 +11,6 @@ import Preql.Wire (Query)
 import Data.String (IsString(..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax (Lift(..))
-
-import qualified Data.Text as T
 
 -- | Convert a rewritten SQL string to a ByteString, leaving width free
 makeQuery :: String -> Q Exp
@@ -69,20 +66,20 @@ sql  = expressionOnly "sql " $ \raw -> do
 
 maxParam :: [Token] -> Word
 maxParam = foldr nextParam 0 where
-  nextParam token maxParam =
+  nextParam token maxSoFar =
       case token of
-          NumberedParam i -> max i maxParam
-          _               -> maxParam
+          NumberedParam i -> max i maxSoFar
+          _               -> maxSoFar
 
 numberAntiquotes :: Word -> [Token] -> (String, [String])
-numberAntiquotes mp ts = (concat sqlStrings, variableNames) where
-  (sqlStrings, variableNames) = go mp ts
-  go _maxParam [] = ([], [])
-  go maxParam (token : ts) =
+numberAntiquotes mp tokens = (concat sqlStrings, variableNames) where
+  (sqlStrings, variableNames) = go mp tokens
+  go _maxSoFar [] = ([], [])
+  go maxSoFar (token : ts) =
       case token of
           HaskellParam name -> let
-              newParam = maxParam + 1
+              newParam = maxSoFar + 1
               (ss, ns) = go newParam ts
               in (unLex (NumberedParam newParam) : ss, name : ns)
-          EOF -> go maxParam ts
-          _ -> let (ss, ns) = go maxParam ts in (unLex token : ss, ns)
+          EOF -> go maxSoFar ts
+          _ -> let (ss, ns) = go maxSoFar ts in (unLex token : ss, ns)

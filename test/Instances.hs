@@ -92,8 +92,8 @@ instance Arbitrary Expr where
                        )
     shrink expr = case expr of
         -- either subterm, or shrink one or both subterms
-        BinOp op l r -> l : r : tail (BinOp op <$> l : shrink l <*> r : shrink r)
-        Unary op e -> e : (Unary op <$> shrink e)
+        BinOp oper l r -> l : r : tail (BinOp oper <$> l : shrink l <*> r : shrink r)
+        Unary oper e -> e : (Unary oper <$> shrink e)
         _ -> [] -- remaning terms can't be shrunk
 
 instance Arbitrary ColumnRef where arbitrary = genericArbitraryU

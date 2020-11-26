@@ -1543,17 +1543,23 @@ b_expr :: { Expr }
 -- * inside parentheses, such as function arguments; that cannot introduce
 -- * ambiguity to the b_expr syntax.
 c_expr :: { Expr }
-    : columnref { CRef $1 }
+    : columnref { $1 }
     | AexprConst { Lit $1 }
     -- TODO check_indirection
-    | PARAM opt_indirection { NumberedParam $1 (reverse $2) }
+    | PARAM opt_indirection
+        { case $2 of
+          Nothing -> NumberedParam $1
+          Just ne -> Indirection (NumberedParam $1) ne }
     | HASKELL_PARAM { HaskellParam $1 }
-    | '(' a_expr ')' opt_indirection { Indirection $2 (reverse $4) }
+    | '(' a_expr ')' opt_indirection
+      { case $4 of
+        Nothing -> $2
+        Just ne -> Indirection $2 ne }
     -- gram.y optionally warns about operator precedence
     | case_expr { Cas $1 }
     | func_expr { Fun $1 }
-    | select_with_parens			%prec UMINUS { SelectExpr $1 [] }
-    | select_with_parens indirection { SelectExpr $1 $2 }
+    | select_with_parens			%prec UMINUS { SelectExpr $1 }
+    | select_with_parens indirection { Indirection (SelectExpr $1) $2 }
 -- * Because the select_with_parens nonterminal is designed
 -- * to "eat" as many levels of parens as possible, the
 -- * '(' a_expr ')' opt_indirection production above will
@@ -2055,9 +2061,9 @@ Null
         | IS NOT NULL_P { NotNull }
         | NOTNULL { NotNull }
 
-columnref :: { ColumnRef }
-    : ColId { ColumnRef $1 [] }
-    | ColId indirection { ColumnRef $1 (reverse $2) }
+columnref :: { Expr }
+    : ColId { CRef $1 }
+    | ColId indirection { Indirection (CRef $1) $2 }
 
 indirection_el :: { Name } -- TODO bigger type
     : '.' attr_name { $2 }
@@ -2091,11 +2097,11 @@ indirection_el :: { Name } -- TODO bigger type
 -- TODO 			| /*EMPTY*/								{ $$ = NULL; }
 -- TODO 		;
 
-indirection : list(indirection_el) { $1 }
+indirection : list(indirection_el) { NE.fromList (reverse $1) }
 
-opt_indirection :: { [Name] }
-			: { [] }
-			| indirection { $1 }
+opt_indirection :: { Maybe (NonEmpty Name) }
+			: { Nothing }
+			| indirection { Just $1 }
 
 -- TODO opt_asymmetric: ASYMMETRIC
 -- TODO 			| /*EMPTY*/
@@ -2178,7 +2184,7 @@ file_name :	Sconst { $1 }
 -- * ever implement SQL99-like methods, such syntax may actually become legal!)
 func_name :: { (Name, [Indirection]) }
     :	type_function_name { ($1, []) }
-	  | ColId indirection { ($1, $2) }
+	  | ColId indirection { ($1, NE.toList $2) }
 
 -- * Constants
 

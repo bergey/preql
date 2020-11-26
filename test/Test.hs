@@ -6,6 +6,7 @@
 
 module Main where
 
+import Test.Syntax.RoundTrip
 import Test.Syntax.Parser
 import Test.Syntax.Printer
 import Test.Wire (badConnection, connectionString, wire)
@@ -37,6 +38,7 @@ main = defaultMain $ testGroup "preql"
     , printer
     , lexer
     , parser
+    , roundtrip
     , integration
     ]
 
@@ -83,7 +85,7 @@ antiquotes = testGroup "antiquotes"
             (QS (Simple Syntax.select
                  { from =  [ Table "baz" ]
                  , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
-                 , whereClause = Just (BinOp Eq (CRef "foo") (NumberedParam 1 []))
+                 , whereClause = Just (BinOp Eq (CRef "foo") (NumberedParam 1))
                  }), AntiquoteState 1 ["foo0"])
             (Syntax.numberAntiquotes 0 (QS (Simple Syntax.select
                  { from =  [ Table "baz" ]

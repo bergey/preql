@@ -21,7 +21,7 @@ numberAntiquotesExpr (HaskellParam txt) = do
     AntiquoteState { paramCount, haskellExpressions } <- get
     let i = paramCount + 1
     put (AntiquoteState i (txt : haskellExpressions))
-    return (NumberedParam i [])
+    return (NumberedParam i)
 numberAntiquotesExpr expr = return expr
 
 -- invariant: paramCount = length haskellExpressions
@@ -39,14 +39,14 @@ maxParam = everything max (mkQ 0 maxParamExpr)
 
 maxParamExpr :: Expr -> Word
 maxParamExpr expr = case expr of
-    NumberedParam i _ -> i
+    NumberedParam i -> i
     HaskellParam _ -> 0
     BinOp _ l r     -> max (maxParamExpr l) (maxParamExpr r)
     Unary _ e       -> maxParamExpr e
     Lit _           -> 0
     CRef _ -> 0
     Indirection e _ -> maxParamExpr e
-    SelectExpr stmt _ -> everything max (mkQ 0 maxParamExpr) stmt
+    SelectExpr stmt -> everything max (mkQ 0 maxParamExpr) stmt
     And l r -> max (maxParamExpr l) (maxParamExpr r)
     Or l r -> max (maxParamExpr l) (maxParamExpr r)
     Not e -> maxParamExpr e

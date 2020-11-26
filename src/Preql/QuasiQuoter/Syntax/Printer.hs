@@ -113,7 +113,7 @@ instance FormatSql Update where
 instance FormatSql Expr where
     fmt (Lit lit)  = fmt lit
     fmt (CRef name) = fmt name
-    fmt (NumberedParam i indirect) = B.fromString ('$' : show i) <> fmtIndirections indirect
+    fmt (NumberedParam i) = B.fromString ('$' : show i)
     fmt (HaskellParam txt) = "${" <> B.fromText txt <> "}"
     fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
     fmt (Unary op expr) = case op of
@@ -121,8 +121,14 @@ instance FormatSql Expr where
         NegateBool -> "NOT " <> parens (fmt expr)
         IsNull     -> parens (fmt expr) <> " IS NULL"
         NotNull    -> parens (fmt expr) <> " IS NOT NULL"
-    fmt (Indirection e names) = parens (fmt e) <> foldMap (("." <>) . fmt) names
-    fmt (SelectExpr stmt indirects) = parens (fmt stmt) <> fmtIndirections indirects
+    -- TODO better check if we need parens
+    fmt (Indirection e indirects) =
+      let m_parens = case e of
+            NumberedParam _ -> id
+            CRef _ -> id
+            _ -> parens
+      in m_parens (fmt e) <> fmtIndirections indirects
+    fmt (SelectExpr stmt) = parens (fmt stmt)
     fmt (And l r) = fmt l <> " AND " <> fmt r
     fmt (Or l r) = fmt l <> " OR " <> fmt r
     fmt (Not expr) = "NOT " <> fmt expr
@@ -130,11 +136,8 @@ instance FormatSql Expr where
     fmt (Fun f) = fmt f
     fmt (Cas c) = fmt c
 
-instance FormatSql ColumnRef where
-    fmt (ColumnRef name is) = fmt name <> fmtIndirections is
-
-fmtIndirections :: [Indirection] -> TLB.Builder
-fmtIndirections = mconcat . map (("." <>) . fmt)
+fmtIndirections :: Foldable f => f Indirection -> TLB.Builder
+fmtIndirections = foldMap (("." <>) . fmt)
 
 instance FormatSql BinOp where
     fmt op = case op of

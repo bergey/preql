@@ -51,7 +51,7 @@ printer = testGroup "printer" [
         (fmt (QS (Simple select
                   { from = [ Table "users" ]
                   , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
-                  , whereClause = Just (BinOp Eq (CRef "name") (NumberedParam 1 []))
+                  , whereClause = Just (BinOp Eq (CRef "name") (NumberedParam 1))
                   })))
     , testPrint "SELECT * FROM foobar LIMIT 5.0"
         (QS (S (Simple select { from = [Table "foobar" ], targetList = [Star] })

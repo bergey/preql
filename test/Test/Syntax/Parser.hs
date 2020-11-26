@@ -166,13 +166,13 @@ parser = testGroup "parser"
       (QS (Simple select { from = [ CrossJoin (Table "foo") (Table "bar")]
                          , targetList = [Star] }))
     , testParse "SELECT * FROM foo JOIN bar ON foo.f = bar.b"
-      (QS (Simple select { from = [ Join Inner (On (BinOp Eq (CRef "foo.f") (CRef "bar.b"))) (Table "foo") (Table "bar")]
+      (QS (Simple select { from = [ Join Inner (On (BinOp Eq (Indirection (CRef "foo") ("f" :| [])) (Indirection (CRef "bar") ("b" :| [])))) (Table "foo") (Table "bar")]
                          , targetList = [Star]}))
     , testParse "SELECT * FROM foo JOIN bar USING (f, b)"
       (QS (Simple select { from = [ Join Inner (Using ["f", "b"]) (Table "foo") (Table "bar")]
                          , targetList = [Star]}))
     , testParse "SELECT * FROM foo LEFT JOIN bar ON bar.foo = f.id"
-      (QS (Simple select { from = [ Join LeftJoin (On (BinOp Eq (CRef "bar.foo") (CRef "f.id"))) (Table "foo") (Table "bar")]
+      (QS (Simple select { from = [ Join LeftJoin (On (BinOp Eq (Indirection (CRef "bar") ("foo" :| [])) (Indirection (CRef "f") ("id" :| [])))) (Table "foo") (Table "bar")]
                          , targetList = [Star]}))
     , testParse "SELECT * FROM foo NATURAL JOIN bar"
       (QS (Simple select { from = [ Join Inner Natural (Table "foo") (Table "bar")]

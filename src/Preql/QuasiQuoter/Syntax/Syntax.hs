@@ -187,13 +187,13 @@ data CTE = CommonTableExpr
   }
   deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Expr = Lit !Literal | CRef ColumnRef
-    | NumberedParam !Word [Indirection]
+data Expr = Lit !Literal | CRef Name
+    | NumberedParam !Word
     | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
-    | Indirection Expr [Indirection]
-    | SelectExpr SelectStmt [Indirection]
+    | Indirection Expr (NonEmpty Indirection)
+    | SelectExpr SelectStmt
     | And Expr Expr
     | Or Expr Expr
     | Not Expr
@@ -202,26 +202,18 @@ data Expr = Lit !Literal | CRef ColumnRef
     | Cas Case
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data ColumnRef = ColumnRef Name [Indirection]
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
-instance IsString ColumnRef where
-    fromString s = case map Name (T.split (== '.') (T.pack s)) of
-        (n : indirections) -> ColumnRef n indirections
-        [] -> error ("impossible: split returned empty list s=" ++ s)
-
 type Indirection = Name -- FIXME
 
 data BinOp = Mul | Div | Add | Sub | Exponent | Mod
            | Eq | LT | LTE | GT | GTE | NEq
            | IsDistinctFrom | IsNotDistinctFrom
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift, Bounded, Enum)
 
 data UnaryOp = NegateNum | NegateBool | IsNull | NotNull
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift, Bounded, Enum)
 
 data LikeOp = Like | ILike | Similar -- TODO add ~ !~ ~* !~*
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift, Bounded, Enum)
 
 data LikeE = LikeE
     { op :: LikeOp

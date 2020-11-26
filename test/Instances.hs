@@ -2,16 +2,16 @@
 {-# LANGUAGE CPP #-}
 module Instances where
 
-import           Preql.QuasiQuoter.Syntax.Name
-import           Preql.QuasiQuoter.Syntax.Syntax
+import Preql.QuasiQuoter.Syntax.Name
+import Preql.QuasiQuoter.Syntax.Syntax
 
-import           Control.Applicative
-import           Data.Char           (toUpper)
-import           Data.List.NonEmpty  (NonEmpty (..))
-import           Generic.Random
-import           Test.QuickCheck
+import Control.Applicative
+import Data.Char (toUpper)
+import Data.List.NonEmpty (NonEmpty(..))
+import Generic.Random
+import Test.QuickCheck
 
-import qualified Data.Text           as T
+import qualified Data.Text as T
 
 instance Arbitrary a => Arbitrary (NonEmpty a) where
     arbitrary = liftA2 (:|) arbitrary arbitrary
@@ -55,7 +55,6 @@ instance Arbitrary DistinctClause where arbitrary = genericArbitraryU
 instance Arbitrary SetOp where arbitrary = genericArbitraryU
 instance Arbitrary AllOrDistinct where arbitrary = genericArbitraryU
 instance Arbitrary ResTarget where arbitrary = genericArbitraryU
--- instance Arbitrary ColumnRef where arbitrary = genericArbitraryU
 instance Arbitrary Window where arbitrary = genericArbitraryU
 instance Arbitrary SortBy where arbitrary = genericArbitraryU
 instance Arbitrary SortOrderOrUsing where arbitrary = genericArbitraryU
@@ -81,11 +80,11 @@ instance Arbitrary Expr where
                         , And <$> arbitrary <*> arbitrary
                         , Or <$> arbitrary <*> arbitrary
                         , Indirection <$> arbitrary <*> arbitrary
-                        , SelectExpr <$> arbitrary <*> arbitrary
+                        , SelectExpr <$> arbitrary
                         ]
                         <> map (scale pred)
                         [ Lit <$> arbitrary, CRef <$> arbitrary
-                        , NumberedParam <$> arbitrary <*> pure []
+                        , NumberedParam <$> arbitrary
                         , Unary <$> arbitrary <*> arbitrary
                         , Not <$> arbitrary
                         ]
@@ -96,6 +95,5 @@ instance Arbitrary Expr where
         Unary oper e -> e : (Unary oper <$> shrink e)
         _ -> [] -- remaning terms can't be shrunk
 
-instance Arbitrary ColumnRef where arbitrary = genericArbitraryU
 instance Arbitrary BinOp where arbitrary = genericArbitraryU
 instance Arbitrary UnaryOp where arbitrary = genericArbitraryU

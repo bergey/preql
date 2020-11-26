@@ -2097,7 +2097,12 @@ indirection_el :: { Name } -- TODO bigger type
 -- TODO 			| /*EMPTY*/								{ $$ = NULL; }
 -- TODO 		;
 
-indirection : list(indirection_el) { NE.fromList (reverse $1) }
+indirection :: { NonEmpty Name }
+  : rev_indirection { NE.reverse $1 }
+
+rev_indirection :: { NonEmpty Name }
+  : indirection_el { $1 :| [] }
+  | rev_indirection indirection_el { NE.cons $2 $1 }
 
 opt_indirection :: { Maybe (NonEmpty Name) }
 			: { Nothing }

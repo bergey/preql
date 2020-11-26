@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeApplications    #-}
 module Test.Wire where
 
-import Instances ()
 import Preql.Wire
 import Test.Wire.Enum
 

@@ -6,8 +6,12 @@ module Test.Syntax.Generators where
 import Preql.QuasiQuoter.Syntax.Name
 import Preql.QuasiQuoter.Syntax.Syntax
 
+import Data.Set (Set)
+import Data.Text (Text)
 import Hedgehog
 import Hedgehog.Internal.Range (clamp)
+import qualified Data.Set as Set
+import qualified Data.Text as T
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
@@ -24,11 +28,17 @@ litE :: Gen Expr
 litE = Lit <$> lit
 
 unicodeNotNull :: Gen Char
-unicodeNotNull = Gen.filter (/= '\0') Gen.unicode
+unicodeNotNull = Gen.filter (\c -> c /= '\0' && c /= '\'' ) Gen.unicode
 
 name_ :: Gen Name
-name_ = Name <$> Gen.text (Range.linear 1 30)
-  (Gen.frequency [(26, Gen.lower), (1, pure '_')])
+name_ = Name <$> Gen.filter (flip Set.notMember keywords)
+  (T.cons <$> Gen.lower <*>
+    Gen.text (Range.linear 0 29) (Gen.frequency [(26, Gen.lower), (1, pure '_')]))
+
+keywords :: Set Text
+keywords = Set.fromList
+  [ "and", "delete", "from", "ilike", "insert", "into", "is", "isnull", "like" , "not", "notnull"
+  , "null", "or", "select", "values", "where" ]
 
 expr :: Gen Expr
 expr = normalizeExpr <$> Gen.choice -- TODO frequency

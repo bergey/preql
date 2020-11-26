@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -12,7 +15,10 @@ import Preql.Imports
 import Preql.QuasiQuoter.Syntax.Name
 import Preql.QuasiQuoter.Syntax.Syntax as Syn hiding (select)
 
+import Data.Data
 import Data.List (intersperse)
+import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift(..))
 import Prelude hiding (GT, LT, lex)
 
 import qualified Data.Text as T
@@ -32,11 +38,18 @@ doubleQuote s = "\"" <> s <> "\""
 parens :: B.Builder -> B.Builder
 parens s = "(" <> s <> ")"
 
+parensIf :: Bool -> B.Builder -> B.Builder
+parensIf cond inner = if cond then parens inner else inner
+
 spaceAfter :: B.Builder -> B.Builder
 spaceAfter = (<> " ")
 
 class FormatSql a where
     fmt :: a -> B.Builder
+    fmt = fmtPrec 0
+
+    fmtPrec :: Int -> a -> B.Builder
+    fmtPrec _ = fmt
 
 formatAsString :: FormatSql a => a -> String
 formatAsString = TL.unpack . TLB.toLazyText . fmt
@@ -111,27 +124,31 @@ instance FormatSql Update where
                 Just conditions' -> " WHERE " <> fmt conditions'
 
 instance FormatSql Expr where
-    fmt (Lit lit)  = fmt lit
-    fmt (CRef name) = fmt name
-    fmt (NumberedParam i) = B.fromString ('$' : show i)
-    fmt (HaskellParam txt) = "${" <> B.fromText txt <> "}"
-    fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
-    fmt (Unary op expr) = case op of
-        Negate  -> "-" <> parens (fmt expr)
-        Not -> "NOT " <> parens (fmt expr)
-        IsNull     -> parens (fmt expr) <> " IS NULL"
-        NotNull    -> parens (fmt expr) <> " IS NOT NULL"
-    -- TODO better check if we need parens
-    fmt (Indirection e indirects) =
+    fmtPrec _ (Lit lit)  = fmt lit
+    fmtPrec _ (CRef name) = fmt name
+    fmtPrec _ (NumberedParam i) = B.fromString ('$' : show i)
+    fmtPrec _ (HaskellParam txt) = "${" <> B.fromText txt <> "}"
+    fmtPrec p (BinOp op l r) = let (assoc, p1) = binOpPrec op
+      in parensIf (p > p1) $ case assoc of
+          LeftAssoc -> fmtPrec p1 l <> " " <> fmt op <> " " <> fmtPrec (p1 + 1) r
+          RightAssoc -> fmtPrec (p1 + 1) l <> " " <> fmt op <> " " <> fmtPrec p1 r
+          NonAssoc -> fmtPrec (p1 + 1) l <> " " <> fmt op <> " " <> fmtPrec (p1 + 1) r
+    fmtPrec p (Unary op expr) = case op of
+        Negate -> "-" <> parensIf (p > 15) (fmtPrec 15 expr)
+        Not -> parensIf (p > 5) ("NOT " <> fmtPrec 5 expr)
+        IsNull -> parensIf (p > 7) (fmtPrec 7 expr) <> " IS NULL"
+        NotNull -> parensIf (p > 7) (fmtPrec 7 expr) <> " IS NOT NULL"
+    -- This looks funky, but seems to match the parser
+    fmtPrec _ (Indirection e indirects) =
       let m_parens = case e of
             NumberedParam _ -> id
             CRef _ -> id
             _ -> parens
       in m_parens (fmt e) <> fmtIndirections indirects
-    fmt (SelectExpr stmt) = parens (fmt stmt)
-    fmt (L likeE) = fmt likeE
-    fmt (Fun f) = fmt f
-    fmt (Cas c) = fmt c
+    fmtPrec _ (SelectExpr stmt) = parens (fmt stmt)
+    fmtPrec _ (L likeE) = fmt likeE
+    fmtPrec _ (Fun f) = fmt f
+    fmtPrec _ (Cas c) = fmt c
 
 fmtIndirections :: Foldable f => f Indirection -> TLB.Builder
 fmtIndirections = foldMap (("." <>) . fmt)
@@ -155,10 +172,32 @@ instance FormatSql BinOp where
         And -> "AND"
         Or -> "OR"
 
+data Assoc = LeftAssoc | RightAssoc | NonAssoc
+  deriving (Show, Eq, Enum, Bounded, Data, Lift, Generic)
+
+binOpPrec :: BinOp -> (Assoc, Int)
+binOpPrec op = case op of
+  Or -> (LeftAssoc, 3)
+  And -> (LeftAssoc, 4)
+  IsDistinctFrom -> (NonAssoc, 7)
+  IsNotDistinctFrom -> (NonAssoc, 7)
+  Eq -> (NonAssoc, 8)
+  LT -> (NonAssoc, 8)
+  LTE -> (NonAssoc, 8)
+  GT -> (NonAssoc, 8)
+  GTE -> (NonAssoc, 8)
+  NEq -> (NonAssoc, 8)
+  Add -> (LeftAssoc, 12)
+  Sub -> (LeftAssoc, 12)
+  Mul -> (LeftAssoc, 13)
+  Div -> (LeftAssoc, 13)
+  Mod -> (LeftAssoc, 13)
+  Exponent -> (LeftAssoc, 14)
+
 instance FormatSql LikeE where
     fmt LikeE{op, string, likePattern, escape, invert} =
-        fmt string <> (if invert then " NOT" else "")
-        <> op' <> fmt likePattern <> opt " ESCAPE" escape
+        parens (fmt string) <> (if invert then " NOT" else "")
+        <> op' <> parens (fmt likePattern) <> opt " ESCAPE " escape
       where op' = case op of
               Like -> " LIKE "
               ILike -> " ILIKE "

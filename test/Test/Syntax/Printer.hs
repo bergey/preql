@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings        #-}
 
@@ -6,14 +7,20 @@ module Test.Syntax.Printer where
 import Preql.QuasiQuoter.Syntax.Name
 import Preql.QuasiQuoter.Syntax.Printer
 import Preql.QuasiQuoter.Syntax.Syntax
+import Test.Syntax.Generators
 
+import Control.Monad
+import Data.Either
 import Data.List.NonEmpty (NonEmpty(..))
+import Hedgehog
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.HUnit hiding (assert)
+import qualified Test.Tasty.Hedgehog as Tasty (testProperty)
 
 -- | Tests of the SQL syntax printer
 printer :: TestTree
 printer = testGroup "printer" [
+  testGroup "bespoke" [
     testCase "DELETE, no condition" $
         assertEqual ""
             "DELETE FROM taffy"
@@ -63,8 +70,22 @@ printer = testGroup "printer" [
     , testPrint "SELECT * FROM (SELECT foo FROM bar) AS baz"
       (QS (Simple select { targetList = [Star]
                          , from = [ SubSelect (Simple select { targetList = [ Column (CRef "foo") Nothing ], from = [ Table "bar" ] }) (Alias "baz" []) ] } ))
+    , testPrint "a.b.c" (Indirection (CRef "a") ("b" :| ["c" ]))
     ]
+  , testGroup "hedgehog"
+    [ testProperty "hedgehog should run" success
+    , testProperty "parse Literal" do
+        ast <- forAll litE
+        void $ evalNF $ formatAsString ast
+    , testProperty "Expr" do
+        ast <- forAll expr
+        void $ evalNF $ formatAsString ast
+    ]
+  ]
 
-testPrint :: TestName -> Statement -> TestTree
+testPrint :: FormatSql sql => TestName -> sql -> TestTree
 testPrint expected statement = testCase expected $
     assertEqual "testPrint" expected (formatAsString statement)
+
+testProperty :: TestName -> PropertyT IO () -> TestTree
+testProperty name = Tasty.testProperty name . property

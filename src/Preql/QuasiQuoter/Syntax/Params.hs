@@ -49,7 +49,6 @@ maxParamExpr expr = case expr of
     SelectExpr stmt -> everything max (mkQ 0 maxParamExpr) stmt
     And l r -> max (maxParamExpr l) (maxParamExpr r)
     Or l r -> max (maxParamExpr l) (maxParamExpr r)
-    Not e -> maxParamExpr e
     L likeE -> everything max (mkQ 0 maxParamExpr) likeE
     -- L LikeE {string, likePattern, escape} -> maybe id (max . maxParamExpr) escape
     --   (max (maxParamExpr string) (maxParamExpr likePattern))

@@ -866,7 +866,7 @@ select_offset_value :: { Expr }
 select_fetch_first_value :: { Expr }
     : c_expr { $1 }
     | '+' I_or_F_const { Lit $2 }
-    | '-' I_or_F_const { Unary NegateNum (Lit $2) }
+    | '-' I_or_F_const { Unary Negate (Lit $2) }
 
 I_or_F_const :: { Literal }
     : Fconst { F $1 }
@@ -1218,7 +1218,7 @@ a_expr :: { Expr }
 -- TODO 											   @2);
 -- What about lines 13060-13102 of gram.y?
     | '+' a_expr					%prec UMINUS { $2 } -- TODO keep + for round-trip?
-    | '-' a_expr					%prec UMINUS { Unary NegateNum $2 }
+    | '-' a_expr					%prec UMINUS { Unary Negate $2 }
     | a_expr '+' a_expr { BinOp Add $1 $3 }
     | a_expr '-' a_expr { BinOp Sub $1 $3 }
     | a_expr '*' a_expr { BinOp Mul $1 $3 }
@@ -1240,7 +1240,7 @@ a_expr :: { Expr }
 -- TODO     | a_expr qual_Op a_expr				%prec Op { BinOp $2 $1 $3 }
     | a_expr AND a_expr { And $1 $3 }
 	  | a_expr OR a_expr { Or $1 $3 }
-    | NOT a_expr { Not $2 }
+    | NOT a_expr { Unary Not $2 }
 -- TODO 			| NOT a_expr						%prec NOT
 -- TODO 				{ $$ = makeNotExpr($2, @1); }
    | a_expr LIKE a_expr { L (LikeE Like $1 $3 Nothing False) }
@@ -1495,7 +1495,7 @@ b_expr :: { Expr }
 -- TODO 				{ $$ = makeTypeCast($1, $3, @2); }
     | '+' b_expr					%prec UMINUS { $2 } -- TODO keep + for round-trip?
 -- TODO 				{ $$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "+", NULL, $2, @1); }
-    | '-' b_expr					%prec UMINUS { Unary NegateNum $2 }
+    | '-' b_expr					%prec UMINUS { Unary Negate $2 }
     | b_expr '+' b_expr { BinOp Add $1 $3 }
     | b_expr '-' b_expr { BinOp Sub $1 $3 }
     | b_expr '*' b_expr { BinOp Mul $1 $3 }

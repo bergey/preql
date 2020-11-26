@@ -117,8 +117,8 @@ instance FormatSql Expr where
     fmt (HaskellParam txt) = "${" <> B.fromText txt <> "}"
     fmt (BinOp op l r) = "(" <> fmt l <> ") " <> fmt op <> " (" <> fmt r <> ")"
     fmt (Unary op expr) = case op of
-        NegateNum  -> "-" <> parens (fmt expr)
-        NegateBool -> "NOT " <> parens (fmt expr)
+        Negate  -> "-" <> parens (fmt expr)
+        Not -> "NOT " <> parens (fmt expr)
         IsNull     -> parens (fmt expr) <> " IS NULL"
         NotNull    -> parens (fmt expr) <> " IS NOT NULL"
     -- TODO better check if we need parens
@@ -131,7 +131,6 @@ instance FormatSql Expr where
     fmt (SelectExpr stmt) = parens (fmt stmt)
     fmt (And l r) = fmt l <> " AND " <> fmt r
     fmt (Or l r) = fmt l <> " OR " <> fmt r
-    fmt (Not expr) = "NOT " <> fmt expr
     fmt (L likeE) = fmt likeE
     fmt (Fun f) = fmt f
     fmt (Cas c) = fmt c

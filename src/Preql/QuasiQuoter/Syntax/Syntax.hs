@@ -196,7 +196,6 @@ data Expr = Lit !Literal | CRef Name
     | SelectExpr SelectStmt
     | And Expr Expr
     | Or Expr Expr
-    | Not Expr
     | L LikeE
     | Fun FunctionApplication
     | Cas Case
@@ -209,7 +208,7 @@ data BinOp = Mul | Div | Add | Sub | Exponent | Mod
            | IsDistinctFrom | IsNotDistinctFrom
     deriving (Show, Eq, Generic, Typeable, Data, Lift, Bounded, Enum)
 
-data UnaryOp = NegateNum | NegateBool | IsNull | NotNull
+data UnaryOp = Negate | Not | IsNull | NotNull
     deriving (Show, Eq, Generic, Typeable, Data, Lift, Bounded, Enum)
 
 data LikeOp = Like | ILike | Similar -- TODO add ~ !~ ~* !~*

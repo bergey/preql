@@ -86,7 +86,6 @@ instance Arbitrary Expr where
                         [ Lit <$> arbitrary, CRef <$> arbitrary
                         , NumberedParam <$> arbitrary
                         , Unary <$> arbitrary <*> arbitrary
-                        , Not <$> arbitrary
                         ]
                        )
     shrink expr = case expr of

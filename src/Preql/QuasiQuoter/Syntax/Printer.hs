@@ -95,9 +95,14 @@ optList :: FormatSql a => B.Builder -> [a] -> B.Builder
 optList _ [] = ""
 optList prepend as = prepend <> commas as
 
+-- TODO replace all calls to @opt@ with @opt'@, rename
 opt :: FormatSql a => B.Builder -> Maybe a -> B.Builder
 opt _ Nothing = ""
 opt prepend (Just a) = prepend <> fmt a
+
+opt' :: FormatSql a => B.Builder -> Int -> Maybe a -> B.Builder
+opt' _ _ Nothing = ""
+opt' prepend p (Just a) = prepend <> fmtPrec p a
 
 instance FormatSql B.Builder where
     fmt = id
@@ -134,10 +139,10 @@ instance FormatSql Expr where
           RightAssoc -> fmtPrec (p1 + 1) l <> " " <> fmt op <> " " <> fmtPrec p1 r
           NonAssoc -> fmtPrec (p1 + 1) l <> " " <> fmt op <> " " <> fmtPrec (p1 + 1) r
     fmtPrec p (Unary op expr) = case op of
-        Negate -> "-" <> parensIf (p > 15) (fmtPrec 15 expr)
+        Negate -> parensIf (p > 15) ("-" <>  fmtPrec 15 expr)
         Not -> parensIf (p > 5) ("NOT " <> fmtPrec 5 expr)
-        IsNull -> parensIf (p > 7) (fmtPrec 7 expr) <> " IS NULL"
-        NotNull -> parensIf (p > 7) (fmtPrec 7 expr) <> " IS NOT NULL"
+        IsNull -> parensIf (p > 7) (fmtPrec 8 expr <> " IS NULL")
+        NotNull -> parensIf (p > 7) (fmtPrec 8 expr <> " IS NOT NULL")
     -- This looks funky, but seems to match the parser
     fmtPrec _ (Indirection e indirects) =
       let m_parens = case e of
@@ -146,7 +151,7 @@ instance FormatSql Expr where
             _ -> parens
       in m_parens (fmt e) <> fmtIndirections indirects
     fmtPrec _ (SelectExpr stmt) = parens (fmt stmt)
-    fmtPrec _ (L likeE) = fmt likeE
+    fmtPrec p (L likeE) = parensIf (p > 6) (fmtPrec 6 likeE)
     fmtPrec _ (Fun f) = fmt f
     fmtPrec _ (Cas c) = fmt c
 
@@ -195,9 +200,10 @@ binOpPrec op = case op of
   Exponent -> (LeftAssoc, 14)
 
 instance FormatSql LikeE where
+  -- Expr L puts parens around if needed
     fmt LikeE{op, string, likePattern, escape, invert} =
-        parens (fmt string) <> (if invert then " NOT" else "")
-        <> op' <> parens (fmt likePattern) <> opt " ESCAPE " escape
+        fmtPrec 6 string <> (if invert then " NOT" else "")
+        <> op' <> fmtPrec 6 likePattern <> opt' " ESCAPE " 6 escape
       where op' = case op of
               Like -> " LIKE "
               ILike -> " ILIKE "

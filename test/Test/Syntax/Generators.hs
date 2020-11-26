@@ -42,19 +42,28 @@ haskellVarName :: Gen Text
 haskellVarName = T.cons <$> Gen.lower <*> Gen.text (Range.linear 0 29) Gen.alphaNum
 
 expr :: Gen Expr
-expr = Gen.choice -- TODO frequency
-  [ litE
-  , CRef <$> name_
-  , NumberedParam <$> Gen.integral (Range.linear 1 20)
-  , HaskellParam <$> haskellVarName
-  , Unary <$> unaryOp <*> scaleOne expr
-  , BinOp <$> binOp <*> scaleHalf expr <*> scaleHalf expr
-  , Indirection <$> scaleOne expr <*> Gen.nonEmpty (Range.linear 1 4) name_
-  -- TODO SelectExpr
-  , L <$> scaleOne likeE
-  , Cas <$> caseE
-  -- TODO remaining constructors
-  ]
+expr = Gen.sized go where
+  -- TODO frequency
+  go 0 = Gen.choice zeros
+  go 1 = Gen.choice (zeros ++ ones)
+  go n = Gen.choice (zeros ++ ones ++ twos)
+  zeros =
+    [ litE
+    , CRef <$> name_
+    , NumberedParam <$> Gen.integral (Range.linear 1 20)
+    , HaskellParam <$> haskellVarName
+    ]
+  ones =
+    [ Unary <$> unaryOp <*> scaleOne expr
+    , L <$> scaleOne likeE
+    ]
+  twos =
+    [ BinOp <$> binOp <*> scaleHalf expr <*> scaleHalf expr
+    , Indirection <$> scaleOne expr <*> Gen.nonEmpty (Range.linear 1 4) name_
+    -- TODO SelectExpr
+    -- TODO FunctionApplication
+    , Cas <$> caseE
+    ]
 
 unaryOp :: Gen UnaryOp
 unaryOp = Gen.enumBounded

@@ -157,7 +157,7 @@ instance FormatSql BinOp where
 
 instance FormatSql LikeE where
     fmt LikeE{op, string, likePattern, escape, invert} =
-        fmt string <> if invert then " NOT" else ""
+        fmt string <> (if invert then " NOT" else "")
         <> op' <> fmt likePattern <> opt " ESCAPE" escape
       where op' = case op of
               Like -> " LIKE "
@@ -325,6 +325,6 @@ instance FormatSql Argument where
 
 instance FormatSql Case where
   fmt Case { whenClause, implicitArg, elseClause } =
-   "CASE" <> opt " " implicitArg <> whenClauses' <> opt " ELSE " elseClause
-    where whenClauses' = spaces [ "WHEN " <> fmt condition <> " THEN " <> fmt result
+   "CASE" <> opt " " implicitArg <> whenClauses' <> opt " ELSE " elseClause <> " END"
+    where whenClauses' = spaces [ " WHEN " <> fmt condition <> " THEN " <> fmt result
                                 | (condition, result) <- whenClause ]

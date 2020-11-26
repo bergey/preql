@@ -133,8 +133,8 @@ tokens :-
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
 
     $digit+ { lex' (Iconst . read) } -- positive only?
-    "-"? $digit+ ("." $digit+) { lex' (Fconst . read) }
-    "-"? $digit+ ("." $digit+)? ($e "-"? $digit+) { lex' (Fconst . read) }
+    $digit+ ("." $digit+) { lex' (Fconst . read) }
+    $digit+ ("." $digit+)? ($e "-"? $digit+) { lex' (Fconst . read) }
 
     "$" $digit+ { lex' (NumberedParam . read . tail) }
     "${" $haskell+ "}" { lex' (HaskellParam . T.pack . init . drop 2) }

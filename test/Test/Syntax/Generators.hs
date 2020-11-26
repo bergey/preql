@@ -20,8 +20,9 @@ import qualified Hedgehog.Range as Range
 
 lit :: Gen Literal
 lit = Gen.choice
+  -- positive numeric literals only, use Unary Negate for negative
   [ I <$> Gen.integral (Range.linearFrom 1 0 maxBound)
-  , F <$> Gen.double (Range.linearFracFrom 0 (-1e300) 1e300)
+  , F <$> Gen.double (Range.linearFracFrom 1 0 1e300)
   , T <$> Gen.text (Range.linear 0 100) unicodeNotControl
   , B <$> Gen.bool
   , pure Null

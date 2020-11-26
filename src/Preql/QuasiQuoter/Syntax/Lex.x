@@ -60,6 +60,7 @@ tokens :-
     $d $i $s $t $i $n $c $t { lex DISTINCT }
     $e $l $s $e { lex ELSE }
     $e $n $d { lex END_P }
+    $e $s $c $a $p $e  { lex ESCAPE }
     $e $x $c $e $p $t { lex EXCEPT }
     $f $a $l $s $e { lex FALSE_P }
     $f $i $r $s $t { lex First }

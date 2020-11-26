@@ -113,6 +113,7 @@ tokens :-
     "." { lex Dot }
     "*" { lex Mul }
     "/" { lex Div }
+    "%" { lex Mod }
     "+" { lex Add }
     "-" { lex Sub }
     "^" { lex Exponent }

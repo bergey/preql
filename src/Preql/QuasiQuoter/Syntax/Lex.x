@@ -1,8 +1,9 @@
 {
 module Preql.QuasiQuoter.Syntax.Lex where
 
-import           Data.Text (Text)
-import           Prelude hiding (LT, GT, lex)
+import Data.Text (Text)
+import Data.Word (Word)
+import Prelude hiding (LT, GT, lex)
 
 import qualified Data.Text as T
 
@@ -130,7 +131,7 @@ tokens :-
     [\'] ("''" | $quoted)* [\'] { lex' (String . T.pack . unquoteString) }
     $firstLetter $unicodeIds* { lex' (Name . T.pack) }
 
-    "-"? $digit+ { lex' (Iconst . read) }
+    $digit+ { lex' (Iconst . read) } -- positive only?
     "-"? $digit+ ("." $digit+) { lex' (Fconst . read) }
     "-"? $digit+ ("." $digit+)? ($e "-"? $digit+) { lex' (Fconst . read) }
 
@@ -153,7 +154,7 @@ data Token = -- Delete | Select | Insert | Update
     -- | Union | Except
     -- | From | Where | Into | Values | Set
     -- TODO rename Name -> Ident to match bison
-    | Name Text | String Text | Iconst Int | Fconst Double
+    | Name Text | String Text | Iconst Word | Fconst Double
     | NumberedParam Word | HaskellParam Text
     | LParen | RParen | Comma
     | Mul | Div | Add | Sub | Mod | Exponent

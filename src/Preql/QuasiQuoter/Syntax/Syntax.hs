@@ -14,13 +14,14 @@ import Data.Data
 import Data.List.NonEmpty (NonEmpty)
 import Data.String (IsString(..))
 import Data.Text (Text)
+import Data.Word (Word)
 import GHC.Generics
 import Instances.TH.Lift ()
 import Language.Haskell.TH.Syntax (Lift(..))
 import qualified Data.Text as T
 
 -- FIXME rename to Constant?
-data Literal = I !Int | F !Double | T !Text | B !Bool | Null
+data Literal = I !Word | F !Double | T !Text | B !Bool | Null
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Statement = QI !Insert | QD !Delete | QU !Update | QS !SelectStmt

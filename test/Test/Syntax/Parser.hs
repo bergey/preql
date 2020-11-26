@@ -108,7 +108,7 @@ parser = testGroup "parser"
       (QS (Simple select
        { from = [ Table "bar" ]
        , targetList = [ Column (CRef "foo") Nothing ]
-       , whereClause = Just (BinOp GT (CRef "baz") (Lit (I (-2))))
+       , whereClause = Just (BinOp GT (CRef "baz") (Unary Negate (Lit (I 2))))
        }))
     , testParse "SELECT foo FROM bar WHERE baz = 2e-2"
       (QS (Simple select

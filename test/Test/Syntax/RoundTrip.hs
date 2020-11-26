@@ -36,5 +36,5 @@ roundTrip name gen = Tasty.testProperty name $ property do
 
 knownCase :: Expr -> TestTree
 knownCase e = testCase name $
-    assertEqual "knownCase" (Right e) (normalizeExpr <$> parseExpr "knownCase" name)
+    assertEqual "knownCase" (Right e) (parseExpr "knownCase" name)
   where name = formatAsString e

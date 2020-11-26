@@ -56,3 +56,4 @@ jobs:
         PGPORT: 5432
         PGUSER: postgres
         PGPASSWORD: postgres
+        TASTY_HEDGEHOG_REPLAY: 'Size 10 Seed 112358 3'

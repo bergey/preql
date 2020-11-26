@@ -88,7 +88,7 @@ parser = testGroup "parser"
       (QS (Simple select
        { from = [ Table "users" ]
        , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
-       , whereClause = Just (Or (BinOp Eq (CRef "name") (Lit (T "Daniel"))) (BinOp Eq (CRef "name") (Lit (T "Bergey"))))
+       , whereClause = Just (BinOp Or (BinOp Eq (CRef "name") (Lit (T "Daniel"))) (BinOp Eq (CRef "name") (Lit (T "Bergey"))))
        }))
     , testParse "SELECT name FROM users WHERE age = 35"
         -- We currently parse integers & decimals all to Double

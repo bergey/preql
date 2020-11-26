@@ -195,8 +195,6 @@ data Expr = Lit !Literal | CRef Name
     | Unary !UnaryOp !Expr
     | Indirection Expr (NonEmpty Indirection)
     | SelectExpr SelectStmt
-    | And Expr Expr
-    | Or Expr Expr
     | L LikeE
     | Fun FunctionApplication
     | Cas Case
@@ -207,6 +205,7 @@ type Indirection = Name -- FIXME
 data BinOp = Mul | Div | Add | Sub | Exponent | Mod
            | Eq | LT | LTE | GT | GTE | NEq
            | IsDistinctFrom | IsNotDistinctFrom
+           | And | Or
     deriving (Show, Eq, Generic, Typeable, Data, Lift, Bounded, Enum)
 
 data UnaryOp = Negate | Not | IsNull | NotNull

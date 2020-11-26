@@ -129,8 +129,6 @@ instance FormatSql Expr where
             _ -> parens
       in m_parens (fmt e) <> fmtIndirections indirects
     fmt (SelectExpr stmt) = parens (fmt stmt)
-    fmt (And l r) = fmt l <> " AND " <> fmt r
-    fmt (Or l r) = fmt l <> " OR " <> fmt r
     fmt (L likeE) = fmt likeE
     fmt (Fun f) = fmt f
     fmt (Cas c) = fmt c
@@ -154,6 +152,8 @@ instance FormatSql BinOp where
         NEq   -> "!="
         IsDistinctFrom -> "IS DISTINCT FROM"
         IsNotDistinctFrom -> "IS NOT DISTINCT FROM"
+        And -> "AND"
+        Or -> "OR"
 
 instance FormatSql LikeE where
     fmt LikeE{op, string, likePattern, escape, invert} =

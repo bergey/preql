@@ -1238,8 +1238,8 @@ a_expr :: { Expr }
 -- TODO 			| a_expr qual_Op					%prec POSTFIXOP
 -- TODO 				{ $$ = (Node *) makeA_Expr(AEXPR_OP, $2, $1, NULL, @2); }
 -- TODO     | a_expr qual_Op a_expr				%prec Op { BinOp $2 $1 $3 }
-    | a_expr AND a_expr { And $1 $3 }
-	  | a_expr OR a_expr { Or $1 $3 }
+    | a_expr AND a_expr { BinOp And $1 $3 }
+	  | a_expr OR a_expr { BinOp Or $1 $3 }
     | NOT a_expr { Unary Not $2 }
 -- TODO 			| NOT a_expr						%prec NOT
 -- TODO 				{ $$ = makeNotExpr($2, @1); }

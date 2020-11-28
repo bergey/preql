@@ -45,7 +45,7 @@ haskellVarName = T.cons <$> Gen.lower <*> Gen.text (Range.linear 0 29) Gen.alpha
 
 select :: Gen SelectStmt
 select = do
-  from <- Gen.list (Range.linear 1 10) (Table <$> name_)
+  from <- Gen.list (Range.linear 1 10) tableRef
   return $ Simple Syntax.select {from}
 
 expr :: Gen Expr
@@ -106,6 +106,25 @@ caseE = do
   implicitArg <- justIf hasImplicit
   elseClause <- justIf hasElse
   return Case{..}
+
+tableRef :: Gen TableRef
+tableRef = Gen.sized \case
+    0 -> singleTable
+    1 -> Gen.choice [ singleTable, aliased ]
+    n -> Gen.choice [ singleTable, aliased ] -- TODO subSelect ]
+  where
+    singleTable = (J <$> joinedTable)
+    aliased = As <$> scaleOne joinedTable <*> alias
+    alias = Alias <$> name_ <*>
+      Gen.choice [pure [], Gen.list (Range.linear 1 5) name_]
+
+joinedTable :: Gen JoinedTable
+joinedTable = Gen.sized \case
+    0 -> singleTable
+    1 -> singleTable
+    n -> singleTable -- TODO
+  where
+    singleTable = Table <$> name_
 
 clampSize :: Size -> Size
 clampSize = clamp 0 99

@@ -722,7 +722,7 @@ simple_select :: { SelectStmt }
         , window = $9
         }) }
             | values_clause { SelectValues $1 }
-            | TABLE relation_expr { Simple select { targetList = [ Star ], from = [ Table $2 ] } }
+            | TABLE relation_expr { Simple select { targetList = [ Star ], from = [ J (Table $2) ] } }
             -- * same as SELECT * FROM relation_expr
             | select_clause UNION all_or_distinct select_clause { Set Union $3 $1 $4 }
             | select_clause INTERSECT all_or_distinct select_clause { Set Intersect $3 $1 $4 }
@@ -975,8 +975,8 @@ from_list : list(table_ref) { $1 }
 -- * table_ref is where an alias clause can be attached.
 table_ref :: { TableRef }
     : relation_expr opt_alias_clause { case $2 of
-        Nothing -> Table $1
-        Just a -> Aliased (Table $1) a }
+        Nothing -> J (Table $1)
+        Just a -> As (Table $1) a }
 -- TODO			| relation_expr opt_alias_clause tablesample_clause
 -- TODO				{
 -- TODO					RangeTableSample *n = (RangeTableSample *) $3;
@@ -1059,8 +1059,8 @@ table_ref :: { TableRef }
 -- TODO					}
 -- TODO					$$ = (Node *) n;
 -- TODO				}
-    | joined_table { $1 }
-    | '(' joined_table ')' alias_clause { Aliased $2 $4 }
+    | joined_table { J $1 }
+    | '(' joined_table ')' alias_clause { As $2 $4 }
 
 -- * It may seem silly to separate joined_table from table_ref, but there is
 -- * method in SQL's madness: if you don't do it this way you get reduce-
@@ -1077,7 +1077,7 @@ table_ref :: { TableRef }
 -- * tables and the shape is determined by which columns are
 -- * in common. We'll collect columns during the later transformations.
 
-joined_table :: { TableRef }
+joined_table :: { JoinedTable }
     : '(' joined_table ')' { $2 }
     -- * CROSS JOIN is same as unqualified inner join
     | table_ref CROSS JOIN table_ref { CrossJoin $1 $4 }

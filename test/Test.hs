@@ -83,12 +83,12 @@ antiquotes = testGroup "antiquotes"
     [ testCase "numberAntiquotes, Syntax" $
         assertEqual ""
             (QS (Simple Syntax.select
-                 { from =  [ Table "baz" ]
+                 { from =  [ J (Table "baz") ]
                  , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
                  , whereClause = Just (BinOp Eq (CRef "foo") (NumberedParam 1))
                  }), AntiquoteState 1 ["foo0"])
             (Syntax.numberAntiquotes 0 (QS (Simple Syntax.select
-                 { from =  [ Table "baz" ]
+                 { from =  [ J (Table "baz") ]
                  , targetList = [ Column (CRef  "foo") Nothing, Column (CRef "bar") Nothing ]
                  , whereClause = Just (BinOp Eq (CRef "foo") (HaskellParam "foo0"))
                  })))

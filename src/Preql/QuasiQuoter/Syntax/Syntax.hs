@@ -102,12 +102,16 @@ selectOptions = SelectOptions
     }
 
 data TableRef
-    = Table Name
-    | Aliased TableRef Alias
-    | Join JoinType JoinQual TableRef TableRef
-    | CrossJoin TableRef TableRef
-    | SubSelect SelectStmt Alias
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+  = J JoinedTable
+  | As JoinedTable Alias
+  | SubSelect SelectStmt Alias
+  deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data JoinedTable
+  = Table Name
+  | Join JoinType JoinQual TableRef TableRef
+  | CrossJoin TableRef TableRef
+  deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Alias = Alias
     { aliasName :: Name

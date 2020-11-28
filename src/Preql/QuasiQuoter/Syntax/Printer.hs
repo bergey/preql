@@ -260,17 +260,21 @@ instance FormatSql CTE where
       spacesAround s = " " <> s <> " "
 
 instance FormatSql TableRef where
-    fmt (Table name) = fmt name
-    fmt (Aliased ref alias) = fmt ref <> " AS " <> fmt alias
-    fmt (CrossJoin l r) = fmt l <> " CROSS JOIN " <> fmt r
-    fmt (Join ty Natural l r) = fmt l <> " NATURAL" <> fmt ty <> fmt r
-    fmt (Join ty (Using cols) l r) = fmt l <> fmt ty <> fmt r <> " USING " <> commas cols
-    fmt (Join ty (On expr) l r) = fmt l <> fmt ty <> fmt r <> " ON " <> fmt expr
+    fmt (J jt) = fmt jt
+    fmt (As jt@(Table _) alias) = fmt jt <> " AS " <> fmt alias
+    fmt (As jt alias) = parens (fmt jt) <> " AS " <> fmt alias
     fmt (SubSelect stmt alias) = parens (fmt stmt) <> " AS " <> fmt alias
 
 instance FormatSql Alias where
     fmt (Alias name []) = fmt name
-    fmt (Alias name columns) = fmt name <> parens (commas (fmt <$> columns))
+    fmt (Alias name columns) = fmt name <> parens (commas columns)
+
+instance FormatSql JoinedTable where
+    fmt (Table name) = fmt name
+    fmt (CrossJoin l r) = fmt l <> " CROSS JOIN " <> fmt r
+    fmt (Join ty Natural l r) = fmt l <> " NATURAL" <> fmt ty <> fmt r
+    fmt (Join ty (Using cols) l r) = fmt l <> fmt ty <> fmt r <> " USING " <> commas cols
+    fmt (Join ty (On expr) l r) = fmt l <> fmt ty <> fmt r <> " ON " <> fmt expr
 
 instance FormatSql JoinType where
     fmt Inner = " INNER "

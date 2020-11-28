@@ -56,20 +56,20 @@ printer = testGroup "printer" [
         -- Extra parens until the printer is clever about Expr precedence
         "SELECT name, email FROM users WHERE name = $1"
         (fmt (QS (Simple select
-                  { from = [ Table "users" ]
+                  { from = [ J (Table "users") ]
                   , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]
                   , whereClause = Just (BinOp Eq (CRef "name") (NumberedParam 1))
                   })))
     , testPrint "SELECT * FROM foobar LIMIT 5.0"
-        (QS (S (Simple select { from = [Table "foobar" ], targetList = [Star] })
+        (QS (S (Simple select { from = [J (Table "foobar") ], targetList = [Star] })
              selectOptions { limit = Just (Lit (F 5)) }))
     , testPrint "SELECT foo FROM bar UNION SELECT baz FROM quux"
       (QS (Set Union Distinct
-              (Simple select { from = [ Table "bar" ], targetList = [ Column (CRef "foo") Nothing ] })
-              (Simple select { from = [ Table "quux" ], targetList = [ Column (CRef "baz") Nothing ] })))
+              (Simple select { from = [ J (Table "bar") ], targetList = [ Column (CRef "foo") Nothing ] })
+              (Simple select { from = [ J (Table "quux") ], targetList = [ Column (CRef "baz") Nothing ] })))
     , testPrint "SELECT * FROM (SELECT foo FROM bar) AS baz"
       (QS (Simple select { targetList = [Star]
-                         , from = [ SubSelect (Simple select { targetList = [ Column (CRef "foo") Nothing ], from = [ Table "bar" ] }) (Alias "baz" []) ] } ))
+                         , from = [ SubSelect (Simple select { targetList = [ Column (CRef "foo") Nothing ], from = [ J (Table "bar") ] }) (Alias "baz" []) ] } ))
     , testPrint "a.b.c" (Indirection (CRef "a") ("b" :| ["c" ]))
     ]
   , testGroup "hedgehog"

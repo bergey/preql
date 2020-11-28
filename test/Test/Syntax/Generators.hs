@@ -44,8 +44,10 @@ haskellVarName :: Gen Text
 haskellVarName = T.cons <$> Gen.lower <*> Gen.text (Range.linear 0 29) Gen.alphaNum
 
 select :: Gen SelectStmt
-select = do
-  from <- Gen.list (Range.linear 1 10) tableRef
+select = Gen.sized \size -> do
+  nTables <- Gen.integral (Range.linear 1 10)
+  let scale = Gen.scale (clampSize . (`div` Size nTables))
+  from <- Gen.list (Range.singleton nTables) (scale tableRef)
   return $ Simple Syntax.select {from}
 
 expr :: Gen Expr
@@ -111,12 +113,13 @@ tableRef :: Gen TableRef
 tableRef = Gen.sized \case
     0 -> singleTable
     1 -> Gen.choice [ singleTable, aliased ]
-    n -> Gen.choice [ singleTable, aliased ] -- TODO subSelect ]
+    n -> Gen.choice [ singleTable, aliased, subSelect ]
   where
     singleTable = (J <$> joinedTable)
     aliased = As <$> scaleOne joinedTable <*> alias
     alias = Alias <$> name_ <*>
       Gen.choice [pure [], Gen.list (Range.linear 1 5) name_]
+    subSelect = SubSelect <$> scaleOne Test.Syntax.Generators.select <*> alias
 
 joinedTable :: Gen JoinedTable
 joinedTable = Gen.sized \case

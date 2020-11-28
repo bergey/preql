@@ -1,10 +1,11 @@
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE LambdaCase #-}
 module Test.Syntax.Generators where
 
 import Preql.QuasiQuoter.Syntax.Name
-import Preql.QuasiQuoter.Syntax.Syntax
+import Preql.QuasiQuoter.Syntax.Syntax as Syntax
 
 import Control.Applicative
 import Control.Monad
@@ -42,12 +43,18 @@ name_ = Name <$> Gen.filter (flip Set.notMember keywords)
 haskellVarName :: Gen Text
 haskellVarName = T.cons <$> Gen.lower <*> Gen.text (Range.linear 0 29) Gen.alphaNum
 
+select :: Gen SelectStmt
+select = do
+  from <- Gen.list (Range.linear 1 10) (Table <$> name_)
+  return $ Simple Syntax.select {from}
+
 expr :: Gen Expr
-expr = Gen.sized go where
+expr = Gen.sized \case
   -- TODO frequency
-  go 0 = Gen.choice zeros
-  go 1 = Gen.choice (zeros ++ ones)
-  go n = Gen.choice (zeros ++ ones ++ twos)
+  0 -> Gen.choice zeros
+  1 -> Gen.choice (zeros ++ ones)
+  n -> Gen.choice (zeros ++ ones ++ twos)
+ where
   zeros =
     [ litE
     , CRef <$> name_

@@ -7,7 +7,7 @@ module Test.Syntax.Printer where
 import Preql.QuasiQuoter.Syntax.Name
 import Preql.QuasiQuoter.Syntax.Printer
 import Preql.QuasiQuoter.Syntax.Syntax
-import Test.Syntax.Generators
+import Test.Syntax.Generators hiding (select)
 
 import Control.Monad
 import Data.Either

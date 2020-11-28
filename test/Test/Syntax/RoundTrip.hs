@@ -4,7 +4,7 @@ module Test.Syntax.RoundTrip where
 import Preql.QuasiQuoter.Syntax.Parser
 import Preql.QuasiQuoter.Syntax.Printer
 import Preql.QuasiQuoter.Syntax.Syntax
-import Test.Syntax.Generators
+import Test.Syntax.Generators as Gen
 
 import Data.List.NonEmpty (NonEmpty(..))
 import Hedgehog
@@ -29,18 +29,27 @@ roundtrip = testGroup "roundtrip"
   , testGroup "hedgehog"
     [ roundTrip "literal" litE
     , roundTrip "Expr" expr
+    , roundTrip "simple Select" Gen.select
     ]
   ]
 
 testProperty :: TestName -> PropertyT IO () -> TestTree
 testProperty testName = Tasty.testProperty testName . property
 
-roundTrip :: TestName -> Gen Expr -> TestTree
+roundTrip :: (FormatSql sql, ParseSql sql, Show sql, Eq sql) =>
+  TestName -> Gen sql -> TestTree
 roundTrip testName gen = Tasty.testProperty testName $ property do
   ast <- forAll gen
-  tripping ast formatAsString (parseExpr testName)
+  tripping ast formatAsString (parseSql testName)
 
 knownCase :: Expr -> TestTree
 knownCase e = testCase testName $
     assertEqual "knownCase" (Right e) (parseExpr "knownCase" testName)
   where testName = formatAsString e
+
+class ParseSql a where
+  parseSql :: FilePath -> String -> Either String a
+
+instance ParseSql Statement where parseSql = parseStatement
+instance ParseSql SelectStmt where parseSql = parseSelect
+instance ParseSql Expr where parseSql = parseExpr

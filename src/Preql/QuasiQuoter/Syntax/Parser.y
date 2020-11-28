@@ -39,7 +39,6 @@ import qualified Data.List.NonEmpty as NE
 %left OR
 %left AND
 %right NOT
-%nonassoc LIKE ILIKE
 %nonassoc	IS ISNULL NOTNULL -- * IS sets precedence for IS NULL, etc
 %nonassoc '<' '>' '=' '!=' '<=' '>='
 %nonassoc	BETWEEN IN_P LIKE ILIKE SIMILAR NOT_LA

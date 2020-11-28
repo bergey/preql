@@ -30,7 +30,7 @@ printer = testGroup "printer" [
                   }))
     , testCase "DELETE, = condition" $
         assertEqual ""
-            "DELETE FROM taffy WHERE (flavor) = ('blueberry')"
+            "DELETE FROM taffy WHERE flavor = 'blueberry'"
             (fmt (QD Delete
                   { table = mkName "taffy"
                   , conditions = Just (BinOp Eq (CRef "flavor") (Lit (T"blueberry")))
@@ -54,7 +54,7 @@ printer = testGroup "printer" [
     , testCase "params" $
       assertEqual ""
         -- Extra parens until the printer is clever about Expr precedence
-        "SELECT name, email FROM users WHERE (name) = ($1)"
+        "SELECT name, email FROM users WHERE name = $1"
         (fmt (QS (Simple select
                   { from = [ Table "users" ]
                   , targetList = [ Column (CRef "name") Nothing, Column (CRef "email") Nothing ]

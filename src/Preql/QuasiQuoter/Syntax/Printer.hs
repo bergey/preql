@@ -151,7 +151,7 @@ instance FormatSql Expr where
             _ -> parens
       in m_parens (fmt e) <> fmtIndirections indirects
     fmtPrec _ (SelectExpr stmt) = parens (fmt stmt)
-    fmtPrec p (L likeE) = parensIf (p > 6) (fmtPrec 6 likeE)
+    fmtPrec p (L likeE) = fmtPrec p likeE
     fmtPrec _ (Fun f) = fmt f
     fmtPrec _ (Cas c) = fmt c
 
@@ -201,10 +201,12 @@ binOpPrec op = case op of
 
 instance FormatSql LikeE where
   -- Expr L puts parens around if needed
-    fmt LikeE{op, string, likePattern, escape, invert} =
-        fmtPrec 6 string <> (if invert then " NOT" else "")
-        <> op' <> fmtPrec 6 likePattern <> opt' " ESCAPE " 6 escape
-      where op' = case op of
+    fmtPrec p LikeE{op, string, likePattern, escape, invert} = parensIf (p > likePrec) $
+        fmtPrec 10 string <> (if invert then " NOT" else "")
+        <> op' <> fmtPrec 10 likePattern <> opt' " ESCAPE " 10 escape
+      where
+        likePrec = if invert then 5 else 9
+        op' = case op of
               Like -> " LIKE "
               ILike -> " ILIKE "
               Similar -> " SIMILAR TO "

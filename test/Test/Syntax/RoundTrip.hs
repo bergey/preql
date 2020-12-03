@@ -30,7 +30,7 @@ roundtrip = testGroup "roundtrip"
   , testGroup "hedgehog"
     [ roundTrip "literal" litE
     , roundTrip "Expr" expr
-    , roundTrip "simple Select" Gen.select
+    , roundTrip "Select" Gen.select
     ]
   ]
 

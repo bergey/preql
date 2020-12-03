@@ -10,6 +10,7 @@ import Preql.QuasiQuoter.Syntax.Syntax as Syntax
 
 import Control.Applicative
 import Control.Monad
+import Data.Maybe (isNothing)
 import Data.Set (Set)
 import Data.Text (Text)
 import Hedgehog
@@ -44,8 +45,25 @@ name_ = Name <$> Gen.filter (flip Set.notMember keywords)
 haskellVarName :: Gen Text
 haskellVarName = T.cons <$> Gen.lower <*> Gen.text (Range.linear 0 29) Gen.alphaNum
 
+
 select :: Gen SelectStmt
-select = Gen.sized \size -> do
+select = select_
+
+select_ :: Gen SelectStmt
+select_ = Gen.frequency
+  [ (40, Simple <$> simpleSelect)
+  , (20, SelectValues <$> Gen.nonEmpty (Range.linear 1 100)
+         (Gen.nonEmpty (Range.linear 1 20) expr))
+  , (20, S <$> selectWithoutOptions <*> selectOptions_)
+  , (20, Set Union Distinct <$> scaleHalf select_ <*> scaleHalf select_)
+  ]
+  where
+    selectWithoutOptions = Gen.filter noOptions (scaleOne select_)
+    noOptions (S _ _) = False
+    noOptions _ = True
+
+simpleSelect :: Gen Select
+simpleSelect = Gen.sized \size -> do
   nTables <- Gen.integral (Range.linear 1 10)
   let scale = Gen.scale (clampSize . (`div` Size nTables))
   -- now bind fields of Syntax.Select
@@ -56,14 +74,27 @@ select = Gen.sized \size -> do
   whereClause <- Gen.maybe expr
   groupBy <- Gen.list (Range.linear 0 5) expr
   having <- Gen.maybe expr
-  return $ Simple Syntax.select {distinct, from, targetList, whereClause, groupBy, having}
+  return $ Syntax.select {distinct, from, targetList, whereClause, groupBy, having}
+
+selectOptions_ :: Gen SelectOptions
+selectOptions_ = Gen.filter nonTrivial do
+  sortBy <- Gen.list (Range.linear 0 5) sortBy_
+  offset <- Gen.maybe expr
+  limit <- Gen.maybe expr
+  let locking = [] -- TODO
+  let withClause = Nothing
+  return SelectOptions{..}
+ where
+   nonTrivial SelectOptions{..} =
+     not (null sortBy && isNothing offset && isNothing limit && null locking && isNothing withClause)
+
 
 expr :: Gen Expr
 expr = Gen.sized \case
   -- TODO frequency
   0 -> Gen.choice zeros
   1 -> Gen.choice (zeros ++ ones)
-  n -> Gen.choice (zeros ++ ones ++ twos)
+  _ -> Gen.choice (zeros ++ ones ++ twos)
  where
   zeros =
     [ litE

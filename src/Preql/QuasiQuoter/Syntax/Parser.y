@@ -720,7 +720,7 @@ simple_select :: { SelectStmt }
         , having = $8
         , window = $9
         }) }
-            | values_clause { SelectValues $1 }
+            | values_clause { SelectValues (NE.reverse $1) }
             | TABLE relation_expr { Simple select { targetList = [ Star ], from = [ J (Table $2) ] } }
             -- * same as SELECT * FROM relation_expr
             | select_clause UNION all_or_distinct select_clause { Set Union $3 $1 $4 }
@@ -1876,7 +1876,7 @@ over_clause :: { Maybe Window }
 
 window_specification :: { Window }
 : '(' opt_existing_window_name opt_partition_clause opt_sort_clause opt_frame_clause ')'
-    { Window Nothing $2 $3 $4 }
+    { Window Nothing $2 $3 $4  }
 
 -- * If we see PARTITION, RANGE, ROWS or GROUPS as the first token after the '('
 -- * of a window_specification, we want the assumption to be that there is

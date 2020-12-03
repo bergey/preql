@@ -54,6 +54,8 @@ data Update = Update
     , conditions :: Maybe Expr
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
+-- TODO prevent multiple SelectOptions on the same query
+-- If each constructor takes SelectOptions, we can ditch S and the empty SelectOptions becomes valid
 data SelectStmt
     = SelectValues (NonEmpty (NonEmpty Expr))
     | Simple Select

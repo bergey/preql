@@ -199,6 +199,12 @@ binOpPrec op = case op of
   Mod -> (LeftAssoc, 13)
   Exponent -> (LeftAssoc, 14)
 
+setOpPrec :: SetOp -> Int
+setOpPrec op = case op of
+  Union -> 1
+  Except -> 1
+  Intersect -> 2
+
 instance FormatSql LikeE where
   -- Expr L puts parens around if needed
     fmtPrec p LikeE{op, string, likePattern, escape, invert} = parensIf (p > likePrec) $
@@ -212,14 +218,17 @@ instance FormatSql LikeE where
               Similar -> " SIMILAR TO "
 
 instance FormatSql SelectStmt where
-    fmt (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
-    fmt (Simple un) = fmt un
-    fmt (S ss so) = let topLevel = fmt ss <> fmt so in
+    fmtPrec _ (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
+    fmtPrec _ (Simple un) = fmt un
+    fmtPrec _ (S ss so) = let topLevel = fmt ss <> fmt so in
       case withClause so of
         Nothing -> topLevel
         Just ctes -> fmt ctes <> " " <> topLevel
-    fmt (Set op distinct l r) = fmt l <> " " <> fmt op <> d <> fmt r
-      where d = case distinct of
+    fmtPrec p (Set op distinct l r) = parensIf (p > q) $
+      fmtPrec q l <> " " <> fmt op <> d <> fmtPrec (q + 1) r
+      where
+        q = setOpPrec op
+        d = case distinct of
                 All -> " ALL "
                 Distinct -> " "
 
@@ -262,7 +271,7 @@ instance FormatSql CTE where
 instance FormatSql TableRef where
     fmtPrec p (J jt) = fmtPrec p jt
     fmtPrec p (As jt alias) = parensIf (p > 1) $ fmtPrec 1 jt <> " AS " <> fmt alias
-    fmtPrec p (SubSelect stmt alias) = parens (fmt stmt) <> " AS " <> fmt alias
+    fmtPrec _ (SubSelect stmt alias) = parens (fmt stmt) <> " AS " <> fmt alias
 
 instance FormatSql Alias where
     fmt (Alias name []) = fmt name

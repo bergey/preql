@@ -24,6 +24,7 @@ import qualified Hedgehog.Range as Range
 lit :: Gen Literal
 lit = Gen.choice
   -- positive numeric literals only, use Unary Negate for negative
+  -- TODO randomly pick [1,9] when we get down to size 1
   [ I <$> Gen.integral (Range.linearFrom 1 0 maxBound)
   , F <$> Gen.double (Range.linearFracFrom 1 0 1e300)
   , T <$> Gen.text (Range.linear 0 100) unicodeNotControl
@@ -37,10 +38,14 @@ litE = Lit <$> lit
 unicodeNotControl :: Gen Char
 unicodeNotControl = Gen.filter (\c -> Char.ord c > 31 && c /= '\DEL' && c /= '\'' ) Gen.unicode
 
+-- TODO Gen.prune once we get down to length 1
 name_ :: Gen Name
-name_ = Name <$> Gen.filter (flip Set.notMember keywords)
-  (T.cons <$> Gen.lower <*>
-    Gen.text (Range.linear 0 29) (Gen.frequency [(26, Gen.lower), (1, pure '_')]))
+name_ = Gen.sized \case
+  -- don't shrink to "a"; assume all letters are the same, make queries more legible
+  1 -> Gen.prune (Name <$> (T.cons <$> Gen.lower <*> pure ""))
+  _ -> Name <$> Gen.filter (flip Set.notMember keywords)
+    (T.cons <$> Gen.lower <*>
+     Gen.text (Range.linear 0 29) (Gen.frequency [(26, Gen.lower), (1, pure '_')]))
 
 haskellVarName :: Gen Text
 haskellVarName = T.cons <$> Gen.lower <*> Gen.text (Range.linear 0 29) Gen.alphaNum
@@ -50,20 +55,23 @@ select :: Gen SelectStmt
 select = select_
 
 select_ :: Gen SelectStmt
-select_ = Gen.frequency
-  [ (40, Simple <$> simpleSelect)
-  , (20, SelectValues <$> Gen.nonEmpty (Range.linear 1 100)
-         (Gen.nonEmpty (Range.linear 1 20) expr))
-  , (20, S <$> selectWithoutOptions <*> selectOptions_)
-  , (20, Set Union Distinct <$> scaleHalf select_ <*> scaleHalf select_)
-  ]
-  where
-    selectWithoutOptions = Gen.filter noOptions (scaleOne select_)
-    noOptions (S _ _) = False
-    noOptions _ = True
+select_ = Gen.sized \case
+  1 -> Gen.frequency smallSelects
+  _ -> Gen.frequency ( (20, setSelect) : smallSelects )
+ where
+  smallSelects =
+    [ (40, Simple <$> simpleSelect)
+    , (20, SelectValues <$> Gen.nonEmpty (Range.exponential 1 100)
+            (Gen.nonEmpty (Range.exponential 1 20) expr))
+    , (20, S <$> selectWithoutOptions <*> selectOptions_)
+    ]
+  setSelect = Set <$> Gen.enumBounded <*> Gen.enumBounded <*> scaleHalf select_ <*> scaleHalf select_
+  selectWithoutOptions = Gen.filter noOptions (scaleOne select_)
+  noOptions (S _ _) = False
+  noOptions _ = True
 
 simpleSelect :: Gen Select
-simpleSelect = Gen.sized \size -> do
+simpleSelect = do
   nTables <- Gen.integral (Range.linear 1 10)
   let scale = Gen.scale (clampSize . (`div` Size nTables))
   -- now bind fields of Syntax.Select
@@ -120,6 +128,9 @@ unaryOp = Gen.enumBounded
 binOp :: Gen BinOp
 binOp = Gen.enumBounded
 
+mathOp :: Gen BinOp
+mathOp = Gen.element [ Mul, Div, Add, Sub, Exponent, Mod, Eq, Syntax.LT, LTE, Syntax.GT, GTE, NEq ]
+
 likeOp :: Gen LikeOp
 likeOp = Gen.enumBounded
 
@@ -152,9 +163,9 @@ tableRef :: Gen TableRef
 tableRef = Gen.sized \case
     0 -> singleTable
     1 -> Gen.choice [ singleTable, aliased ]
-    n -> Gen.choice [ singleTable, aliased, subSelect ]
+    _ -> Gen.choice [ singleTable, aliased, subSelect ]
   where
-    singleTable = (J <$> joinedTable)
+    singleTable = J <$> joinedTable
     aliased = As <$> scaleOne joinedTable <*> alias
     alias = Alias <$> name_ <*>
       Gen.choice [pure [], Gen.list (Range.linear 1 5) name_]
@@ -164,7 +175,7 @@ joinedTable :: Gen JoinedTable
 joinedTable = Gen.sized \case
     0 -> singleTable
     1 -> singleTable
-    n -> Gen.choice [ singleTable, joined, crossJoin ]
+    _ -> Gen.choice [ singleTable, joined, crossJoin ]
   where
     singleTable = Table <$> name_
     joined = Join <$> Gen.enumBounded <*> joinQual
@@ -199,7 +210,7 @@ sortBy_ :: Gen SortBy
 sortBy_ = SortBy <$> expr <*> sortOrderOrUsing <*> nullsOrder
 
 sortOrderOrUsing :: Gen SortOrderOrUsing
-sortOrderOrUsing = Gen.choice [ SortOrder <$> sortOrder, SortUsing <$> binOp ]
+sortOrderOrUsing = Gen.choice [ SortOrder <$> sortOrder, SortUsing <$> mathOp ]
 
 sortOrder :: Gen SortOrder
 sortOrder = Gen.enumBounded

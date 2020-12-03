@@ -220,7 +220,7 @@ instance FormatSql LikeE where
 instance FormatSql SelectStmt where
     fmtPrec _ (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
     fmtPrec _ (Simple un) = fmt un
-    fmtPrec _ (S ss so) = let topLevel = fmt ss <> fmt so in
+    fmtPrec p (S ss so) = let topLevel = parensIf (p > 0) (fmtPrec 1 ss <> fmt so) in
       case withClause so of
         Nothing -> topLevel
         Just ctes -> fmt ctes <> " " <> topLevel
@@ -296,7 +296,7 @@ instance FormatSql DistinctClause where
     fmt (DistinctOn expr) = "DISTINCT ON " <> parens (commas expr)
 
 instance FormatSql SortBy where
-    fmt (SortBy expr order nulls) = fmt expr <> fmt order <> fmt nulls
+    fmt (SortBy expr order nulls) = fmt expr <> " " <> fmt order <> fmt nulls
 
 instance FormatSql SortOrderOrUsing where
     fmt (SortOrder order) = fmt order

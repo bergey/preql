@@ -76,7 +76,7 @@ tokens :-
     $i $s $n $u $l $l { lex ISNULL }
     $i $s { lex IS }
     $j $o $i $n { lex JOIN }
-    $l $a $s $t { lex Last }
+    $l $a $s $t { lex LAST }
     $l $e $a $s $t { lex LEAST }
     $l $e $f $t { lex LEFT }
     $l $i $k $e { lex LIKE }
@@ -151,7 +151,7 @@ data LocToken = LocToken
 -- commented out PascallCase, where I've added CAPS
 data Token = -- Delete | Select | Insert | Update
     -- | Asc | Desc | Order | By | Using | Operator
-    Nulls | First | Last
+    Nulls | First
     -- | All | Distinct | On | As
     -- | Union | Except
     -- | From | Where | Into | Values | Set
@@ -192,7 +192,7 @@ data Token = -- Delete | Select | Insert | Update
     | INDEXES | INHERIT | INHERITS | INITIALLY | INLINE_P | INNER_P | INOUT
     | INPUT_P | INSENSITIVE | INSERT | INSTEAD | INTEGER | INTERSECT | INTERVAL
     | INTO | INT_P | INVOKER | IN_P | IS | ISNULL | ISOLATION | JOIN | KEY | LABEL
-    | LANGUAGE | LARGE_P | LAST_P | LATERAL_P | LEADING | LEAKPROOF | LEAST | LEFT
+    | LANGUAGE | LARGE_P | LAST | LATERAL_P | LEADING | LEAKPROOF | LEAST | LEFT
     | LEVEL | LIKE | LIMIT | LISTEN | LOAD | LOCAL | LOCALTIME | LOCALTIMESTAMP
     | LOCATION | LOCKED | LOCK_P | LOGGED | MAPPING | MATCH | MATERIALIZED
     | MAXVALUE | METHOD | MINUTE_P | MINVALUE | MODE | MONTH_P | MOVE | NAMES

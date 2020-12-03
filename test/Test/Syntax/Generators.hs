@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -47,8 +48,15 @@ select :: Gen SelectStmt
 select = Gen.sized \size -> do
   nTables <- Gen.integral (Range.linear 1 10)
   let scale = Gen.scale (clampSize . (`div` Size nTables))
+  -- now bind fields of Syntax.Select
+  distinct <- Gen.maybe distinctClause
+  -- TODO why don't we support table.* in ResTarget?  Is it part of a_expr?
+  targetList <- Gen.frequency [(1, pure [Star]), (99, Gen.list (Range.linear 1 15) columnTarget)]
   from <- Gen.list (Range.singleton nTables) (scale tableRef)
-  return $ Simple Syntax.select {from}
+  whereClause <- Gen.maybe expr
+  groupBy <- Gen.list (Range.linear 0 5) expr
+  having <- Gen.maybe expr
+  return $ Simple Syntax.select {distinct, from, targetList, whereClause, groupBy, having}
 
 expr :: Gen Expr
 expr = Gen.sized \case
@@ -138,6 +146,35 @@ joinQual = Gen.choice
   , Using <$> Gen.list (Range.linear 1 10) name_
   , On <$> scaleOne expr
   ]
+
+-- | 'Star' is generated in 'select', so we only do @Column@ here
+columnTarget :: Gen ResTarget
+columnTarget = Column <$> expr <*> Gen.maybe name_
+
+distinctClause :: Gen DistinctClause
+distinctClause = Gen.frequency
+  [ (1, pure DistinctAll)
+  , (9, DistinctOn <$> Gen.nonEmpty (Range.linear 1 5) expr) ]
+
+window :: Gen Window
+window = do
+  name <- Gen.maybe name_
+  refName <- Gen.maybe name_
+  partitionClause <- Gen.list (Range.linear 0 3) expr
+  orderClause <- Gen.list (Range.linear 0 3) sortBy_
+  return Window {..}
+
+sortBy_ :: Gen SortBy
+sortBy_ = SortBy <$> expr <*> sortOrderOrUsing <*> nullsOrder
+
+sortOrderOrUsing :: Gen SortOrderOrUsing
+sortOrderOrUsing = Gen.choice [ SortOrder <$> sortOrder, SortUsing <$> binOp ]
+
+sortOrder :: Gen SortOrder
+sortOrder = Gen.enumBounded
+
+nullsOrder :: Gen NullsOrder
+nullsOrder = Gen.enumBounded
 
 clampSize :: Size -> Size
 clampSize = clamp 0 99

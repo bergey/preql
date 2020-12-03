@@ -107,7 +107,6 @@ import qualified Data.List.NonEmpty as NE
     OPERATOR { LocToken _ L.OPERATOR }
     NULLS { LocToken _ L.Nulls }
     FIRST { LocToken _ L.First }
-    LAST { LocToken _ L.Last }
     ALL { LocToken _ L.ALL }
     DISTINCT { LocToken _ L.DISTINCT }
     ON { LocToken _ L.ON }
@@ -351,7 +350,7 @@ import qualified Data.List.NonEmpty as NE
     LABEL { L.LocToken _ L.LABEL }
     LANGUAGE { L.LocToken _ L.LANGUAGE }
     LARGE_P { L.LocToken _ L.LARGE_P }
-    LAST_P { L.LocToken _ L.LAST_P }
+    LAST { L.LocToken _ L.LAST }
     LATERAL_P { L.LocToken _ L.LATERAL_P }
     LEADING { L.LocToken _ L.LEADING }
     LEAKPROOF { L.LocToken _ L.LEAKPROOF }
@@ -1872,12 +1871,12 @@ window_definition :: { Window }
 
 over_clause :: { Maybe Window }
 : OVER window_specification { Just $2 }
-| OVER ColId { Just (Window (Just $2) Nothing [] [] () ) }
+| OVER ColId { Just (Window (Just $2) Nothing [] [] ) }
 | { Nothing }
 
 window_specification :: { Window }
 : '(' opt_existing_window_name opt_partition_clause opt_sort_clause opt_frame_clause ')'
-    { Window Nothing $2 $3 $4 $5 }
+    { Window Nothing $2 $3 $4 }
 
 -- * If we see PARTITION, RANGE, ROWS or GROUPS as the first token after the '('
 -- * of a window_specification, we want the assumption to be that there is
@@ -2455,7 +2454,7 @@ unreserved_keyword :: { Name }
     | LABEL { Name "label" }
     | LANGUAGE { Name "language" }
     | LARGE_P { Name "large" }
-    | LAST_P { Name "last" }
+    | LAST { Name "last" }
     | LEAKPROOF { Name "leakproof" }
     | LEVEL { Name "level" }
     | LISTEN { Name "listen" }

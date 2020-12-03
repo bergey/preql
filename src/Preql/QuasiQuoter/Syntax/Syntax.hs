@@ -141,7 +141,7 @@ data Window = Window
     , refName :: Maybe Name
     , partitionClause :: [Expr]
     , orderClause :: [SortBy ]
-    , frameOptions :: () -- FIXME implement
+    -- , frameOptions :: _ -- FIXME implement
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SortBy = SortBy
@@ -154,10 +154,10 @@ data SortOrderOrUsing = SortOrder SortOrder | SortUsing BinOp
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SortOrder = Ascending | Descending | DefaultSortOrder
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift, Enum, Bounded)
 
 data NullsOrder = NullsFirst | NullsLast | NullsOrderDefault
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift, Enum, Bounded)
 
 data Locking = Locking
     { strength :: LockingStrength

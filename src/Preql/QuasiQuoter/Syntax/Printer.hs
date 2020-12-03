@@ -360,7 +360,7 @@ instance FormatSql FunctionApplication where
       withinGroup' = if withinGroup then optList "WITHIN GROUP " sortBy else ""
       over' = case over of
         Nothing -> ""
-        Just (Window (Just alias) _ _ _ _) -> "OVER " <> fmt alias
+        Just (Window (Just alias) _ _ _) -> "OVER " <> fmt alias
         Just Window {refName, partitionClause, orderClause} -> "OVER " <> parens
               (opt "" refName
                <> optList " PARTITION BY " partitionClause

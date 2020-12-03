@@ -108,6 +108,7 @@ tokens :-
     $w $h $e $n { lex WHEN }
     $w $h $e $r $e { lex WHERE }
     $w $i $t $h { lex WITH }
+    $f $u $l $l { lex FULL }
 
     "(" { lex LParen }
     "," { lex Comma }

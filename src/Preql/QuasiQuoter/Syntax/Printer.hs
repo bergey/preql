@@ -260,21 +260,21 @@ instance FormatSql CTE where
       spacesAround s = " " <> s <> " "
 
 instance FormatSql TableRef where
-    fmt (J jt) = fmt jt
-    fmt (As jt@(Table _) alias) = fmt jt <> " AS " <> fmt alias
-    fmt (As jt alias) = parens (fmt jt) <> " AS " <> fmt alias
-    fmt (SubSelect stmt alias) = parens (fmt stmt) <> " AS " <> fmt alias
+    fmtPrec p (J jt) = fmtPrec p jt
+    fmtPrec p (As jt alias) = parensIf (p > 1) $ fmtPrec 1 jt <> " AS " <> fmt alias
+    fmtPrec p (SubSelect stmt alias) = parens (fmt stmt) <> " AS " <> fmt alias
 
 instance FormatSql Alias where
     fmt (Alias name []) = fmt name
     fmt (Alias name columns) = fmt name <> parens (commas columns)
 
 instance FormatSql JoinedTable where
-    fmt (Table name) = fmt name
-    fmt (CrossJoin l r) = fmt l <> " CROSS JOIN " <> fmt r
-    fmt (Join ty Natural l r) = fmt l <> " NATURAL" <> fmt ty <> fmt r
-    fmt (Join ty (Using cols) l r) = fmt l <> fmt ty <> fmt r <> " USING " <> commas cols
-    fmt (Join ty (On expr) l r) = fmt l <> fmt ty <> fmt r <> " ON " <> fmt expr
+    fmtPrec _ (Table name) = fmt name
+    fmtPrec p (CrossJoin l r) = parensIf (p > 0) $ fmtPrec 0 l <> " CROSS JOIN " <> fmtPrec 1 r
+    fmtPrec p (Join Inner Natural l r) = parensIf (p > 0) $ fmtPrec 0 l <> " NATURAL JOIN " <> fmtPrec 1 r
+    fmtPrec p (Join ty Natural l r) = parensIf (p > 0) $ fmtPrec 0 l <> " NATURAL" <> fmt ty <> "JOIN " <> fmtPrec 1 r
+    fmtPrec p (Join ty (Using cols) l r) = parensIf (p > 0) $ fmtPrec 0 l <> fmt ty <> " JOIN " <> fmtPrec 1 r <> " USING " <> parens (commas cols)
+    fmtPrec p (Join ty (On expr) l r) = parensIf (p > 0) $ fmtPrec 0 l <> fmt ty <> " JOIN " <> fmtPrec 0 r <> " ON " <> fmtPrec 0 expr
 
 instance FormatSql JoinType where
     fmt Inner = " INNER "

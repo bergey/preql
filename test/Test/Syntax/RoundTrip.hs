@@ -24,6 +24,8 @@ roundtrip = testGroup "roundtrip"
                   (Lit (I 4)) Nothing False))
                   Nothing False)
                 )
+    , knownCase (Simple Syntax.select
+                 { from = [ J (Join Inner (Using [ "c" ]) (J (Table "a")) (J (Table "b"))) ] })
     ]
   , testGroup "hedgehog"
     [ roundTrip "literal" litE

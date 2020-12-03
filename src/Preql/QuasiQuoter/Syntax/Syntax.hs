@@ -119,7 +119,7 @@ data Alias = Alias
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data JoinType = Inner | LeftJoin | RightJoin | Full
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift, Enum, Bounded)
 
 data JoinQual = Using [Name] | On Expr | Natural
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
@@ -128,10 +128,10 @@ data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data SetOp = Union | Intersect | Except
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift, Enum, Bounded)
 
 data AllOrDistinct = All | Distinct
-    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+    deriving (Show, Eq, Generic, Typeable, Data, Lift, Enum, Bounded)
 
 data ResTarget = Star | Column Expr (Maybe Name)
     deriving (Show, Eq, Generic, Typeable, Data, Lift)

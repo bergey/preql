@@ -125,9 +125,19 @@ joinedTable :: Gen JoinedTable
 joinedTable = Gen.sized \case
     0 -> singleTable
     1 -> singleTable
-    n -> singleTable -- TODO
+    n -> Gen.choice [ singleTable, joined, crossJoin ]
   where
     singleTable = Table <$> name_
+    joined = Join <$> Gen.enumBounded <*> joinQual
+             <*> scaleHalf tableRef <*> scaleHalf tableRef
+    crossJoin = CrossJoin <$> scaleHalf tableRef <*> scaleHalf tableRef
+
+joinQual :: Gen JoinQual
+joinQual = Gen.choice
+  [ pure Natural
+  , Using <$> Gen.list (Range.linear 1 10) name_
+  , On <$> scaleOne expr
+  ]
 
 clampSize :: Size -> Size
 clampSize = clamp 0 99

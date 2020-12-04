@@ -47,7 +47,7 @@ tokens :-
 
     $white+            ;
 
-    $a $l $l  {lex ALL }
+    $a $l $l  { lex ALL }
     $a $n $d { lex AND }
     $a $s $c { lex ASC }
     $a $s { lex AS }
@@ -64,7 +64,9 @@ tokens :-
     $e $x $c $e $p $t { lex EXCEPT }
     $f $a $l $s $e { lex FALSE_P }
     $f $i $r $s $t { lex First }
+    $f $o $r { lex FOR }
     $f $r $o $m { lex FROM }
+    $f $u $l $l { lex FULL }
     $g $r $e $a $t $e $s $t { lex GREATEST }
     $g $r $o $u $p { lex GROUP_P }
     $h $a $v $i $n $g { lex HAVING }
@@ -76,18 +78,23 @@ tokens :-
     $i $s $n $u $l $l { lex ISNULL }
     $i $s { lex IS }
     $j $o $i $n { lex JOIN }
+    $k $e $y { lex KEY }
     $l $a $s $t { lex LAST }
     $l $e $a $s $t { lex LEAST }
     $l $e $f $t { lex LEFT }
     $l $i $k $e { lex LIKE }
     $l $i $m $i $t { lex LIMIT }
+    $l $o $c $k $e $d { lex LOCKED }
     $m $a $t $e $r $i $a $l $i $z $e $d { lex MATERIALIZED }
     $n $a $t $u $r $a $l { lex NATURAL }
     $n $o $t $n $u $l $l { lex NOTNULL }
     $n $o $t { lex NOT }
+    $n $o $w $a $i $t { lex NOWAIT }
+    $n $o { lex NO }
     $n $u $l $l $s { lex Nulls }
     $n $u $l $l { lex NULL_P }
     $o $f $f $s $e $t { lex OFFSET }
+    $o $f { lex OF }
     $o $n { lex ON }
     $o $p $e $r $a $t $o $r { lex OPERATOR }
     $o $r $d $e $r { lex ORDER }
@@ -96,7 +103,9 @@ tokens :-
     $r $i $g $h $t { lex RIGHT }
     $s $e $l $e $c $t { lex SELECT }
     $s $e $t { lex SET }
+    $s $h $a $r $e { lex SHARE }
     $s $i $m $i $l $a $r { lex SIMILAR }
+    $s $k $i $p { lex SKIP }
     $t $a $b $l $e { lex TABLE }
     $t $h $e $n { lex THEN }
     $t $o { lex TO }
@@ -108,7 +117,6 @@ tokens :-
     $w $h $e $n { lex WHEN }
     $w $h $e $r $e { lex WHERE }
     $w $i $t $h { lex WITH }
-    $f $u $l $l { lex FULL }
 
     "(" { lex LParen }
     "," { lex Comma }
@@ -149,20 +157,14 @@ data LocToken = LocToken
      } deriving Show
 
 -- commented out PascallCase, where I've added CAPS
-data Token = -- Delete | Select | Insert | Update
-    -- | Asc | Desc | Order | By | Using | Operator
+data Token = -- Delete | Select | Insert
     Nulls | First
-    -- | All | Distinct | On | As
-    -- | Union | Except
-    -- | From | Where | Into | Values | Set
     -- TODO rename Name -> Ident to match bison
     | Name Text | String Text | Iconst Word | Fconst Double
     | NumberedParam Word | HaskellParam Text
     | LParen | RParen | Comma
     | Mul | Div | Add | Sub | Mod | Exponent
     | Equals | NotEquals | LT | LTE | GT | GTE
-    -- | Like | ILike
-    -- | And | Or | Not
     | Dot | Semicolon | EOF
     | COLON_EQUALS | EQUALS_GREATER
     -- all the keywords, from bison

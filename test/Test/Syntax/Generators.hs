@@ -57,7 +57,7 @@ select = select_
 select_ :: Gen SelectStmt
 select_ = Gen.sized \case
   1 -> Gen.frequency smallSelects
-  _ -> Gen.frequency ( (20, setSelect) : smallSelects )
+  _ -> Gen.frequency ( smallSelects ++ [ (20, setSelect) ])
  where
   smallSelects =
     [ (40, Simple <$> simpleSelect)
@@ -89,13 +89,12 @@ selectOptions_ = Gen.filter nonTrivial do
   sortBy <- Gen.list (Range.linear 0 5) sortBy_
   offset <- Gen.maybe expr
   limit <- Gen.maybe expr
-  let locking = [] -- TODO
+  locking <- Gen.list (Range.linear 0 3) locking_
   let withClause = Nothing
   return SelectOptions{..}
  where
    nonTrivial SelectOptions{..} =
      not (null sortBy && isNothing offset && isNothing limit && null locking && isNothing withClause)
-
 
 expr :: Gen Expr
 expr = Gen.sized \case
@@ -217,6 +216,13 @@ sortOrder = Gen.enumBounded
 
 nullsOrder :: Gen NullsOrder
 nullsOrder = Gen.enumBounded
+
+locking_ :: Gen Locking
+locking_ = do
+  strength <- Gen.enumBounded
+  tables <- Gen.list (Range.linear 0 5) name_
+  wait <- Gen.enumBounded
+  return Locking{..}
 
 clampSize :: Size -> Size
 clampSize = clamp 0 99

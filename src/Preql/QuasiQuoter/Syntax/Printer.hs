@@ -244,8 +244,9 @@ instance FormatSql Select where
 
 instance FormatSql SelectOptions where
   -- ignore WithClause here; handle it in SelectStmt so we can put it before the top query
-    fmt SelectOptions{sortBy, offset, limit, locking} = spaces locking -- no commas
-        <> optList " ORDER BY " sortBy
+    fmt SelectOptions{sortBy, offset, limit, locking} =
+        optList " ORDER BY " sortBy
+        <> " " <> spaces locking -- no commas
         <> opt " LIMIT " limit
         <> opt " OFFSET " offset
 
@@ -316,7 +317,7 @@ instance FormatSql NullsOrder where
 
 instance FormatSql Locking where
     fmt Locking{strength, tables, wait} =
-        fmt strength <> optList " OF " tables <> " " <> fmt wait
+        " " <> fmt strength <> optList " OF " tables <> " " <> fmt wait
 
 instance FormatSql LockingStrength where
     fmt ForUpdate = "FOR UPDATE"

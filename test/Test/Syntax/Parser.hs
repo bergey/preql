@@ -9,6 +9,7 @@ import Preql.QuasiQuoter.Syntax.Syntax
 
 import qualified Preql.QuasiQuoter.Syntax.Lex as L
 
+import Data.Either (isRight)
 import Data.List.NonEmpty (NonEmpty(..))
 import Prelude hiding (Ordering(..), lex)
 import Test.Tasty
@@ -341,6 +342,16 @@ parser = testGroup "parser"
               }
             }))
     ]
+  , testGroup "locking"
+    [ testParseSelect  "SELECT * FROM j FOR UPDATE NOWAIT"
+      (S (Simple select { targetList = [Star], from = [J (Table "j")] }) selectOptions { locking = [Locking ForUpdate [] LockWaitError] })
+    , testParseSelect  "SELECT * FROM j UNION ALL SELECT * FROM d"
+      ( Set Union All
+        (Simple select { targetList = [Star] , from = [ J (Table "j") ]})
+        (Simple select { targetList = [Star] , from = [ J (Table "d") ]})
+      )
+    , canParse  "SELECT * FROM j UNION ALL SELECT * FROM d UNION ALL (SELECT * FROM z UNION ALL SELECT * FROM c) FOR UPDATE NOWAIT"
+    ]
   ]
 
 testParse :: TestName -> Statement -> TestTree
@@ -358,3 +369,7 @@ testParseExpr queryStr expected = testCase queryStr $
 testLex :: TestName -> [L.Token] -> TestTree
 testLex queryStr expected = testCase queryStr $
     assertEqual "testLex" (Right (expected ++ [L.EOF])) (L.testLex queryStr)
+
+canParse :: TestName -> TestTree
+canParse queryStr = testCase queryStr $
+  assertBool "canParse" (isRight (parseSelect "<testcase>" queryStr))

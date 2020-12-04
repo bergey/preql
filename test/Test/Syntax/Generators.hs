@@ -24,8 +24,10 @@ import qualified Hedgehog.Range as Range
 lit :: Gen Literal
 lit = Gen.choice
   -- positive numeric literals only, use Unary Negate for negative
-  -- TODO randomly pick [1,9] when we get down to size 1
-  [ I <$> Gen.integral (Range.linearFrom 1 0 maxBound)
+  [ I <$> Gen.sized \case
+      -- randomly pick [1,10] when we get down to size 1
+      1 -> Gen.prune (Gen.integral (Range.linear 1 10))
+      _ -> Gen.integral (Range.linearFrom 1 0 maxBound)
   , F <$> Gen.double (Range.linearFracFrom 1 0 1e300)
   , T <$> Gen.text (Range.linear 0 100) unicodeNotControl
   , B <$> Gen.bool
@@ -62,7 +64,7 @@ select_ = Gen.sized \case
   smallSelects =
     [ (40, Simple <$> simpleSelect)
     , (20, SelectValues <$> Gen.nonEmpty (Range.exponential 1 100)
-            (Gen.nonEmpty (Range.exponential 1 20) expr))
+            (Gen.nonEmpty (Range.exponential 1 20) (scaleOne valueExpr)))
     , (20, S <$> selectWithoutOptions <*> selectOptions_)
     ]
   setSelect = Set <$> Gen.enumBounded <*> Gen.enumBounded <*> scaleHalf select_ <*> scaleHalf select_
@@ -70,31 +72,40 @@ select_ = Gen.sized \case
   noOptions (S _ _) = False
   noOptions _ = True
 
+scaledList :: Range Int -> Gen a -> Gen [a]
+scaledList range ga = do
+  n <- Gen.integral range
+  let scale = Gen.scale (clampSize . (`div` Size n))
+  Gen.list (Range.singleton n) (scale ga)
+
 simpleSelect :: Gen Select
 simpleSelect = do
-  nTables <- Gen.integral (Range.linear 1 10)
-  let scale = Gen.scale (clampSize . (`div` Size nTables))
   -- now bind fields of Syntax.Select
   distinct <- Gen.maybe distinctClause
   -- TODO why don't we support table.* in ResTarget?  Is it part of a_expr?
-  targetList <- Gen.frequency [(1, pure [Star]), (99, Gen.list (Range.linear 1 15) columnTarget)]
-  from <- Gen.list (Range.singleton nTables) (scale tableRef)
-  whereClause <- Gen.maybe expr
-  groupBy <- Gen.list (Range.linear 0 5) expr
-  having <- Gen.maybe expr
+  targetList <- Gen.frequency [(1, pure [Star]), (99, scaledList (Range.linear 1 15) columnTarget)]
+  from <- scaledList (Range.linear 1 10) tableRef
+  whereClause <- Gen.maybe (scaleHalf expr)
+  groupBy <- scaledList (Range.linear 0 5) expr
+  having <- Gen.maybe (scaleHalf expr)
   return $ Syntax.select {distinct, from, targetList, whereClause, groupBy, having}
 
 selectOptions_ :: Gen SelectOptions
 selectOptions_ = Gen.filter nonTrivial do
   sortBy <- Gen.list (Range.linear 0 5) sortBy_
-  offset <- Gen.maybe expr
-  limit <- Gen.maybe expr
-  locking <- Gen.list (Range.linear 0 3) locking_
+  offset <- Gen.maybe (scaleOne expr)
+  limit <- Gen.maybe (scaleOne expr)
+  locking <- scaledList (Range.linear 0 3) locking_
   let withClause = Nothing
   return SelectOptions{..}
  where
    nonTrivial SelectOptions{..} =
      not (null sortBy && isNothing offset && isNothing limit && null locking && isNothing withClause)
+
+valueExpr :: Gen Expr
+valueExpr = Gen.filter notSelectExpr expr where
+  notSelectExpr (SelectExpr _) = False
+  notSelectExpr _ = True
 
 expr :: Gen Expr
 expr = Gen.sized \case
@@ -112,11 +123,15 @@ expr = Gen.sized \case
   ones =
     [ Unary <$> unaryOp <*> scaleOne expr
     , L <$> scaleOne likeE
+    , Indirection <$> scaleOne expr <*> Gen.nonEmpty (Range.linear 1 4) name_
     ]
   twos =
     [ BinOp <$> binOp <*> scaleHalf expr <*> scaleHalf expr
-    , Indirection <$> scaleOne expr <*> Gen.nonEmpty (Range.linear 1 4) name_
-    -- TODO SelectExpr
+    -- One might expect scaleOne for SelectExpr, but in practice that
+    -- leads to unacceptably long test times for Expr.  It might be
+    -- nice to work out the maximum number of constructors (or p90?)
+    -- in SelectStmt of size n, and do something more precise here.
+    , SelectExpr <$> scaleHalf select_
     -- TODO FunctionApplication
     , Cas <$> caseE
     ]
@@ -168,7 +183,7 @@ tableRef = Gen.sized \case
     aliased = As <$> scaleOne joinedTable <*> alias
     alias = Alias <$> name_ <*>
       Gen.choice [pure [], Gen.list (Range.linear 1 5) name_]
-    subSelect = SubSelect <$> scaleOne Test.Syntax.Generators.select <*> alias
+    subSelect = SubSelect <$> scaleOne select_ <*> alias
 
 joinedTable :: Gen JoinedTable
 joinedTable = Gen.sized \case
@@ -190,7 +205,7 @@ joinQual = Gen.choice
 
 -- | 'Star' is generated in 'select', so we only do @Column@ here
 columnTarget :: Gen ResTarget
-columnTarget = Column <$> expr <*> Gen.maybe name_
+columnTarget = Column <$> valueExpr <*> Gen.maybe name_
 
 distinctClause :: Gen DistinctClause
 distinctClause = Gen.frequency

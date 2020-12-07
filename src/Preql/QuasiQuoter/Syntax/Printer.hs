@@ -246,7 +246,7 @@ instance FormatSql SelectOptions where
   -- ignore WithClause here; handle it in SelectStmt so we can put it before the top query
     fmt SelectOptions{sortBy, offset, limit, locking} =
         optList " ORDER BY " sortBy
-        <> " " <> spaces locking -- no commas
+        <> unlessEmpty (" " <>) (spaces locking) -- no commas
         <> opt " LIMIT " limit
         <> opt " OFFSET " offset
 

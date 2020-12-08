@@ -132,7 +132,7 @@ expr = Gen.sized \case
     -- nice to work out the maximum number of constructors (or p90?)
     -- in SelectStmt of size n, and do something more precise here.
     , SelectExpr <$> scaleHalf select_
-    -- TODO FunctionApplication
+    , Fun <$> funApp
     , Cas <$> caseE
     ]
 
@@ -157,6 +157,29 @@ likeE = do
     [(50, pure Nothing), (49, Just . Lit . T . T.singleton <$> Gen.alphaNum), (1, Just <$> scaleHalf expr)]
   invert <- Gen.bool
   return LikeE {..}
+
+funApp :: Gen FunctionApplication
+funApp = do
+  name <- name_
+  indirection <- Gen.list (Range.linear 0 3) name_
+  len_arguments <- Gen.integral (Range.linear (-1) 10)
+  len_sortBy <- Gen.integral (Range.linear 0 3)
+  hasFilter <- Gen.bool
+  hasOver <- Gen.bool
+  let
+    n = len_sortBy + min 0 len_arguments + if hasFilter then 1 else 0 + if hasOver then 3 else 0
+    scale = if n <= 0 then id else Gen.scale (clampSize . (`div` Size n))
+  arguments <- if len_arguments < 0
+    then pure StarArg
+    else A <$> Gen.list (Range.singleton len_arguments)
+      (Gen.choice [ E <$> scale expr, Named <$> name_ <*> scale expr ])
+  sortBy <- Gen.list (Range.singleton len_sortBy) (scale sortBy_)
+  distinct <- if arguments == StarArg then pure False else Gen.bool
+  -- TODO withinGroup is non-sense for empty sortBy; make this in the type
+  withinGroup <- if null sortBy then pure False else Gen.bool
+  filterClause <- if hasFilter then Just <$> scale expr  else pure Nothing
+  over <- if hasOver then Just <$> scale window_ else pure Nothing
+  return FApp{..}
 
 caseE :: Gen Case
 caseE = do
@@ -212,8 +235,8 @@ distinctClause = Gen.frequency
   [ (1, pure DistinctAll)
   , (9, DistinctOn <$> Gen.nonEmpty (Range.linear 1 5) expr) ]
 
-window :: Gen Window
-window = do
+window_ :: Gen Window
+window_ = do
   name <- Gen.maybe name_
   refName <- Gen.maybe name_
   partitionClause <- Gen.list (Range.linear 0 3) expr

@@ -1625,8 +1625,9 @@ c_expr :: { Expr }
 -- TODO 		;
 
 func_application :: { FunctionApplication }
-    : func_name '(' ')' { fapp $1 [] }
-	  | func_name '(' func_arg_list opt_sort_clause ')' { (fapp $1 $3) { sortBy = $4 } }
+    : func_name '(' ')' { fapp $1 NoArgs }
+	  | func_name '(' func_arg_list opt_sort_clause ')'
+        { fapp $1 (Args (argsList $3)) `setSortBy` $4 }
 -- TODO     | func_name '(' VARIADIC func_arg_expr opt_sort_clause ')'
 -- TODO 				{
 -- TODO 					FuncCall *n = makeFuncCall($1, list_make1($4), @1);
@@ -1641,14 +1642,15 @@ func_application :: { FunctionApplication }
 -- TODO n->agg_order = $7;
 -- TODO 					$$ = (Node *)n;
 -- TODO 				}
-	  | func_name '(' ALL func_arg_list opt_sort_clause ')' { (fapp $1 $4) { sortBy = $5 } }
+    | func_name '(' ALL func_arg_list opt_sort_clause ')'
+        { fapp $1 (Args (argsList $4)) `setSortBy` $5 }
         -- * Ideally we'd mark the FuncCall node to indicate
         -- * "must be an aggregate", but there's no provision
         -- * for that in FuncCall at the moment.
         -- *
     | func_name '(' DISTINCT func_arg_list opt_sort_clause ')'
-        { (fapp $1 $4) { sortBy = $5, distinct = True } }
-    | func_name '(' '*' ')' { (fapp $1 []) { arguments = StarArg } }
+        { fapp $1 (Args (ArgsList $4 $5 True))}
+    | func_name '(' '*' ')' { (fapp $1 StarArg) { arguments = StarArg } }
 
 --  * func_expr and its cousin func_expr_windowless are split out from c_expr just
 --  * so that we have classifications for "everything that is a function call or
@@ -1660,6 +1662,9 @@ func_application :: { FunctionApplication }
 
 func_expr :: { FunctionApplication }
     : func_application within_group_clause filter_clause over_clause
+-- We disallow some cases that the PostgreSQL server disallows,
+-- even though our representation doesn't have exactly the same
+-- constraints.  Upstream comment:
 -- * The order clause for WITHIN GROUP and the one for
 -- * plain-aggregate ORDER BY share a field, so we have to
 -- * check here that at most one is present.  We also check
@@ -1669,10 +1674,13 @@ func_expr :: { FunctionApplication }
 {% do
     result <- case ($1, $2) of
         (_, []) -> return $1
-        (FApp{distinct, sortBy}, _) -> do
-            when (not (null sortBy)) (fail "cannot use multiple ORDER BY clauses with WITHIN GROUP")
-            when distinct (fail "cannot use DISTINCT with WITHIN GROUP")
-            return $1 { sortBy = $2, withinGroup = True }
+        (FApp{arguments}, _) -> do
+            case arguments of
+              Args ArgsList {distinct, sortBy} -> do
+                when (not (null sortBy)) (fail "cannot use multiple ORDER BY clauses with WITHIN GROUP")
+                when distinct (fail "cannot use DISTINCT with WITHIN GROUP")
+              _ -> pure ()
+            return $1 { withinGroup = $2 }
     return result { filterClause = $3 , over = $4 }
 }
 -- TODO 						if (n->func_variadic)
@@ -1866,17 +1874,17 @@ window_clause
 
 window_definition_list : list(window_definition) { $1 }
 
-window_definition :: { Window }
-    : ColId AS window_specification { ($3 :: Window) { name = Just $1 } }
+window_definition :: { WindowDef }
+    : ColId AS window_specification { WindowDef $1 $3 }
 
-over_clause :: { Maybe Window }
-: OVER window_specification { Just $2 }
-| OVER ColId { Just (Window (Just $2) Nothing [] [] ) }
-| { Nothing }
+over_clause :: { Over }
+: OVER window_specification { Window $2 }
+| OVER ColId { WindowName $2 }
+| { noWindow }
 
-window_specification :: { Window }
+window_specification :: { WindowSpec }
 : '(' opt_existing_window_name opt_partition_clause opt_sort_clause opt_frame_clause ')'
-    { Window Nothing $2 $3 $4  }
+    { WindowSpec $2 $3 $4 }
 
 -- * If we see PARTITION, RANGE, ROWS or GROUPS as the first token after the '('
 -- * of a window_specification, we want the assumption to be that there is
@@ -1968,7 +1976,7 @@ qual_all_Op
 expr_list : list(a_expr) { reverse $1 }
 
 -- * function arguments can have names
-func_arg_list : list(func_arg_expr) { reverse $1 }
+func_arg_list : list(func_arg_expr) { NE.fromList (reverse $1) }
 
 func_arg_expr :: { Argument }
     :  a_expr { E $1 }

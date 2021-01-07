@@ -63,6 +63,7 @@ tokens :-
     $e $s $c $a $p $e  { lex ESCAPE }
     $e $x $c $e $p $t { lex EXCEPT }
     $f $a $l $s $e { lex FALSE_P }
+    $f $i $l $t $e $r { lex FILTER }
     $f $i $r $s $t { lex First }
     $f $o $r { lex FOR }
     $f $r $o $m { lex FROM }
@@ -99,6 +100,8 @@ tokens :-
     $o $p $e $r $a $t $o $r { lex OPERATOR }
     $o $r $d $e $r { lex ORDER }
     $o $r { lex OR }
+    $o $v $e $r { lex OVER }
+    $p $a $r $t $i $t $i $o $n { lex PARTITION }
     $r $e $c $u $r $s $i $v $e { lex RECURSIVE }
     $r $i $g $h $t { lex RIGHT }
     $s $e $l $e $c $t { lex SELECT }
@@ -116,6 +119,7 @@ tokens :-
     $v $a $l $u $e $s { lex VALUES }
     $w $h $e $n { lex WHEN }
     $w $h $e $r $e { lex WHERE }
+    $w $i $t $h $i $n { lex WITHIN }
     $w $i $t $h { lex WITH }
 
     "(" { lex LParen }

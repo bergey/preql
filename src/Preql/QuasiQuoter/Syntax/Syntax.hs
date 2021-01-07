@@ -11,7 +11,7 @@ module Preql.QuasiQuoter.Syntax.Syntax where
 import Preql.QuasiQuoter.Syntax.Name
 
 import Data.Data
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.String (IsString(..))
 import Data.Text (Text)
 import Data.Word (Word)
@@ -70,7 +70,7 @@ data Select = Select
     , whereClause :: Maybe Expr
     , groupBy :: [Expr] -- TODO more accurate type than Expr?
     , having :: Maybe Expr
-    , window :: [Window]
+    , window :: [WindowDef]
     -- TODO remaining fields
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
@@ -138,13 +138,21 @@ data AllOrDistinct = All | Distinct
 data ResTarget = Star | Column Expr (Maybe Name)
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Window = Window
-    { name :: Maybe Name
-    , refName :: Maybe Name
+data WindowDef = WindowDef Name WindowSpec
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data Over = WindowName Name | Window WindowSpec
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data WindowSpec = WindowSpec
+    { refName :: Maybe Name
     , partitionClause :: [Expr]
     , orderClause :: [SortBy ]
     -- , frameOptions :: _ -- FIXME implement
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+noWindow :: Over
+noWindow = Window (WindowSpec Nothing [] [])
 
 data SortBy = SortBy
     { column :: Expr
@@ -236,29 +244,43 @@ data FunctionApplication = FApp
     { name :: Name
     , indirection :: [Indirection]
     , arguments :: FunctionArguments
-    , sortBy :: [SortBy]
-    , distinct :: Bool
-    , withinGroup :: Bool
+    , withinGroup :: [SortBy] -- not allowed if sortBy in arguments isn't empty
     , filterClause :: Maybe Expr
-    , over :: Maybe Window
+    , over :: Over
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-fapp :: (Name, [Indirection]) -> [Argument] -> FunctionApplication
+fapp :: (Name, [Indirection]) -> FunctionArguments -> FunctionApplication
 fapp (name, indirection) args = FApp
     { name, indirection
-    , arguments = A args
-    , sortBy = []
-    , distinct = False
-    , withinGroup = False
+    , arguments = args
+    , withinGroup = []
     , filterClause = Nothing
-    , over = Nothing
+    , over = noWindow
     }
 
 fapp1 :: Name -> [Expr] -> FunctionApplication
-fapp1 fName args = fapp (fName, []) (map E args)
+fapp1 fName args = fapp (fName, []) args' where
+  args' = case nonEmpty args of
+    Nothing -> NoArgs
+    Just ne -> Args (ArgsList (fmap E ne) [] False)
 
-data FunctionArguments = StarArg | A [Argument]
+setSortBy :: FunctionApplication -> [SortBy] -> FunctionApplication
+setSortBy f@FApp{ arguments } sorts = case arguments of
+  Args args -> f { arguments = Args args { sortBy = sorts } }
+  _ -> f
+
+data FunctionArguments = StarArg | NoArgs | Args ArgsList
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+data ArgsList = ArgsList
+  { arguments :: NonEmpty Argument
+  , sortBy :: [SortBy]
+  , distinct :: Bool
+  }
+    deriving (Show, Eq, Generic, Typeable, Data, Lift)
+
+argsList :: NonEmpty Argument -> ArgsList
+argsList args = ArgsList args [] False
 
 data Argument = E Expr | Named Name Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)

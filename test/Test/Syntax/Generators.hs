@@ -163,22 +163,25 @@ funApp = do
   name <- name_
   indirection <- Gen.list (Range.linear 0 3) name_
   len_arguments <- Gen.integral (Range.linear (-1) 10)
-  len_sortBy <- Gen.integral (Range.linear 0 3)
+  len_sortBy <- if len_arguments > 0 then pure 0 else Gen.integral (Range.linear 0 3)
+  len_withinGroup <- if len_sortBy == 0 then pure 0 else Gen.integral (Range.linear 0 3)
   hasFilter <- Gen.bool
   hasOver <- Gen.bool
   let
-    n = len_sortBy + min 0 len_arguments + if hasFilter then 1 else 0 + if hasOver then 3 else 0
+    n = len_sortBy + len_withinGroup + min 0 len_arguments + if hasFilter then 1 else 0 + if hasOver then 3 else 0
     scale = if n <= 0 then id else Gen.scale (clampSize . (`div` Size n))
-  arguments <- if len_arguments < 0
-    then pure StarArg
-    else A <$> Gen.list (Range.singleton len_arguments)
-      (Gen.choice [ E <$> scale expr, Named <$> name_ <*> scale expr ])
-  sortBy <- Gen.list (Range.singleton len_sortBy) (scale sortBy_)
-  distinct <- if arguments == StarArg then pure False else Gen.bool
-  -- TODO withinGroup is non-sense for empty sortBy; make this in the type
-  withinGroup <- if null sortBy then pure False else Gen.bool
+  arguments <- case len_arguments of
+    -1 -> pure StarArg
+    0 -> pure NoArgs
+    n -> do
+      arguments <- Gen.nonEmpty (Range.singleton len_arguments)
+        (Gen.choice [ E <$> scale expr, Named <$> name_ <*> scale expr ])
+      sortBy <- Gen.list (Range.singleton len_sortBy) (scale sortBy_)
+      distinct <- Gen.bool
+      return $ Args ArgsList {..}
+  withinGroup <- Gen.list (Range.singleton len_withinGroup) (scale sortBy_)
   filterClause <- if hasFilter then Just <$> scale expr  else pure Nothing
-  over <- if hasOver then Just <$> scale window_ else pure Nothing
+  over <- if hasOver then scale over_ else pure noWindow
   return FApp{..}
 
 caseE :: Gen Case
@@ -235,13 +238,16 @@ distinctClause = Gen.frequency
   [ (1, pure DistinctAll)
   , (9, DistinctOn <$> Gen.nonEmpty (Range.linear 1 5) expr) ]
 
-window_ :: Gen Window
+over_ :: Gen Over
+over_ = do
+  Gen.choice [ WindowName <$> name_ , Window <$> window_ ]
+
+window_ :: Gen WindowSpec
 window_ = do
-  name <- Gen.maybe name_
   refName <- Gen.maybe name_
   partitionClause <- Gen.list (Range.linear 0 3) expr
   orderClause <- Gen.list (Range.linear 0 3) sortBy_
-  return Window {..}
+  return WindowSpec {..}
 
 sortBy_ :: Gen SortBy
 sortBy_ = SortBy <$> expr <*> sortOrderOrUsing <*> nullsOrder

@@ -345,12 +345,12 @@ instance FormatSql ResTarget where
 --         Nothing -> ""
 --         Just n -> "." <> fmt n
 
-instance FormatSql Window where
-    fmt Window {name, refName, partitionClause, orderClause}
-        = m_name <> " AS (" <> mconcat [m_refName, m_partition, m_order ] <> ")" where
-      m_name = case name of
-          Nothing -> error "parser should never give a nameless Window"
-          Just n -> fmt n
+instance FormatSql WindowDef where
+  fmt (WindowDef name spec) = fmt name <> " AS " <> fmt spec
+
+instance FormatSql WindowSpec where
+    fmt WindowSpec { refName, partitionClause, orderClause }
+        = "(" <> mconcat [m_refName, m_partition, m_order ] <> ")" where
       m_refName = maybe "" fmt refName
       m_partition = case partitionClause of
           [] -> ""
@@ -361,24 +361,28 @@ instance FormatSql Window where
 
 instance FormatSql FunctionApplication where
   fmt FApp {..} = fmt name <> fmtIndirections indirection
-    <> parens (distinct' <> fmt arguments <> sortBy') <> withinGroup'
+    <> fmt arguments  <> withinGroup'
     <> maybe "" (\fc -> " FILTER " <> parens ("WHERE " <> fmt fc)) filterClause
     <> over'
     where
-      distinct' = if distinct then "DISTINCT " else ""
-      sortBy' = if withinGroup then "" else optList "ORDER BY " sortBy
-      withinGroup' = if withinGroup then optList "WITHIN GROUP " sortBy else ""
+      withinGroup' = case withinGroup of
+        [] -> ""
+        _ -> "WITHIN GROUP " <> parens ("ORDER BY " <> commas withinGroup)
       over' = case over of
-        Nothing -> ""
-        Just (Window (Just alias) _ _ _) -> "OVER " <> fmt alias
-        Just Window {refName, partitionClause, orderClause} -> "OVER " <> parens
+        (Window (WindowSpec Nothing [] [])) -> ""
+        (WindowName alias) -> "OVER " <> fmt alias
+        Window WindowSpec {refName, partitionClause, orderClause} ->
+          "OVER " <> parens
               (opt "" refName
                <> optList " PARTITION BY " partitionClause
                <> optList " ORDER BY " orderClause)
 
 instance FormatSql FunctionArguments where
-  fmt StarArg = "*"
-  fmt (A args) = commas args
+  fmt StarArg = "(*)"
+  fmt NoArgs = "()"
+  fmt (Args ArgsList{..}) = parens (distinct' <> commas arguments <> sortBy') where
+    distinct' = if distinct then "DISTINCT " else ""
+    sortBy' = optList " ORDER BY " sortBy
 
 instance FormatSql Argument where
   fmt (E e) = fmt e

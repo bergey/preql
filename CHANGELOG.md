@@ -1,4 +1,4 @@
-# 0.4 (2020-11-23)
+# 0.4 (2021-01-07)
 
 - `select` quasiquoter that validates syntax
 - tag number of columns consumed in `RowDecoder` type

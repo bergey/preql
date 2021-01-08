@@ -36,7 +36,7 @@ schema, are planned.
             for_ oldCats \(cat :: (Text, Int)) -> print cat
 
             -- A query that doesn't return rows
-            query_ [select| UPDATE cats SET age = 0 where age < 1 |]
+            query_ [sql| UPDATE cats SET age = 0 where age < 1 |]
 
             -- Multiple queries in a transaction
             moreOldCats <- runTransaction $ do

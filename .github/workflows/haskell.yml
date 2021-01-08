@@ -4,19 +4,20 @@ on:
   push:
   pull_request:
     branches: [ trunk ]
+    types: [opened, synchronize]
   schedule:
     - cron: "30 4 * * 2"
 
 jobs:
-  build:
+  stack: # Linux only because we run Postgres on Docker
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
-        plan:
-          - { build: stack, resolver: "" }
-          - { build: stack, resolver: "--resolver nightly" }
-
-    runs-on: ubuntu-latest
+        resolver:
+          - ""
+          - "--resolver nightly"
+          - "--resolver lts-16.4"
+      fail-fast: false
 
     services:
       postgres:
@@ -31,22 +32,18 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.stack
-        key: ${{ runner.os }}-${{ matrix.plan.resolver }}-${{ hashFiles('stack.yaml') }}
+        key: ${{ runner.os }}-${{ matrix.resolver }}-${{ hashFiles('stack.yaml') }}
         restore-keys: ${{ runner.os }}-${{ matrix.resolver}}-
-    # - uses: actions/setup-haskell@v1
-      # with:
-      #   ghc-version: '8.8.3'
-      #   cabal-version: '3.0'
     - name: Install dependencies
       run: |
         stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
       env:
-        ARGS: ${{ matrix.plan.resolver }}
+        ARGS: ${{ matrix.resolver }}
     - name: Build
       run: |
         stack --no-terminal $ARGS test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
       env:
-        ARGS: ${{ matrix.plan.resolver }}
+        ARGS: ${{ matrix.resolver }}
     - name: Run tests
       run: |
         stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
@@ -57,3 +54,77 @@ jobs:
         PGUSER: postgres
         PGPASSWORD: postgres
         TASTY_HEDGEHOG_REPLAY: 'Size 10 Seed 112358 3'
+
+  cross-platform:
+    # exactly the same as the above, but we don't run the tests
+    # and we only run a single resolver
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ macOS-latest ]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: restore from cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.stack
+        key: ${{ runner.os }}-${{ matrix.resolver }}-${{ hashFiles('stack.yaml') }}
+        restore-keys: ${{ runner.os }}-${{ matrix.resolver}}-
+    - name: Clear setup-exe-cache directory
+      # https://github.com/commercialhaskell/stack/issues/5405
+      if: runner.os == 'macOS'
+      continue-on-error: true
+      run: rm -r ~/.stack/setup-exe-cache
+    - name: Install dependencies
+      run: |
+        stack --no-terminal --install-ghc test --bench --only-dependencies
+    - name: Build
+      run: |
+        stack --no-terminal test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
+
+  cabal:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cabal: [ latest ]
+        ghc: [ latest ]
+    services:
+      postgres:
+        image: postgres:12.2
+        ports: [ "5432:5432" ]
+        env:
+          POSTGRES_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v2
+      - uses: haskell/actions/setup@v1
+        id: setup-haskell-cabal
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+      # This freeze file is regenerated on every build, so we will always test
+      # with the most recent version of our dependencies allowed by our upper
+      # bounds.
+      - name: Freeze
+        run: |
+          cabal configure --enable-tests --enable-benchmarks --test-show-details=direct
+          cabal freeze
+      - uses: actions/cache@v2
+        name: Cache Cabal Artifacts
+        with:
+          path: |
+            ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+            dist-newstyle
+          key: ${{ runner.os }}-cabal-${{ hashFiles('cabal.project.freeze') }}
+          restore-keys: ${{ runner.os }}-cabal-
+      - run: cabal v2-build
+      - run: cabal v2-test
+        env:
+          PREQL_TESTS_DB: postgres
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+      - run: cabal v2-haddock
+      - run: cabal v2-sdist

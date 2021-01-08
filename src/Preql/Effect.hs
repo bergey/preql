@@ -104,8 +104,6 @@ runTransactionIO level (Transaction m) conn = do
         Right _ -> W.commit conn
     return e_a
 
--- | The same @query@ methods can be used within a @Transaction@.
--- Nested @Transactions@ are implemented using savepoints.
 instance SqlQuery Transaction where
     query (q, p) = Transaction (ExceptT (ReaderT (\conn -> W.query conn q p)))
     query_ (q, p) = Transaction (ExceptT (ReaderT (\conn -> W.query_ conn q p)))

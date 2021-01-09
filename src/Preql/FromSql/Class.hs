@@ -10,7 +10,8 @@ import Preql.Wire.Internal
 
 import Control.Exception (throwIO)
 import Control.Monad.Except
-import Control.Monad.Trans.State
+import Control.Monad.Trans.Reader (ask)
+import Data.IORef (readIORef)
 import GHC.TypeNats
 import qualified BinaryParser as BP
 import qualified Data.Vector.Sized as VS
@@ -56,5 +57,5 @@ nullable (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
 
 throwLocated :: UnlocatedFieldError -> InternalDecoder a
 throwLocated fieldError = do
-    DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
+    DecoderState{row = PQ.Row r, column = PQ.Col c} <- lift . readIORef =<< ask
     lift $ throwIO (FieldError (fromIntegral r) (fromIntegral c) fieldError)

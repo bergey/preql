@@ -15,7 +15,8 @@ import Preql.Wire.Errors
 
 import Control.Monad.Except
 import Control.Monad.Trans.Except
-import Control.Monad.Trans.State
+import Control.Monad.Trans.Reader
+import Data.IORef
 import Data.String (IsString)
 import GHC.TypeNats
 import Preql.Imports
@@ -48,11 +49,10 @@ pureDecoder a = RowDecoder VS.empty (pure a)
 applyDecoder :: RowDecoder m (a -> b) -> RowDecoder n a -> RowDecoder (m+n) b
 applyDecoder (RowDecoder vm f) (RowDecoder vn a) = RowDecoder (vm VS.++ vn) (f <*> a)
 
--- TODO can I use ValidationT instead of ExceptT, since I ensure Column is incremented before errors?
 -- | Internal because we need IO for the libpq FFI, but we promise not
 -- to do any IO besides decoding.  We don't even make network calls to
 -- Postgres in @InternalDecoder@
-type InternalDecoder =  StateT DecoderState IO
+type InternalDecoder =  ReaderT (IORef DecoderState) IO
 
 data DecoderState = DecoderState
     { result :: !PQ.Result
@@ -63,11 +63,13 @@ data DecoderState = DecoderState
 
 -- | Can throw FieldError
 decodeRow :: RowDecoder n a -> PQ.Result -> PQ.Row -> IO a
-decodeRow (RowDecoder _ parsers) result row =
-    evalStateT parsers (DecoderState result row 0)
+decodeRow (RowDecoder _ parsers) result row = do
+    ref <- newIORef (DecoderState result row 0)
+    runReaderT parsers ref
 
 getNextValue :: InternalDecoder (Maybe ByteString)
 getNextValue = do
-    s@DecoderState{..} <- get
-    put (s { column = column + 1 } :: DecoderState)
+    ref <- ask
+    DecoderState{..} <- lift $ readIORef ref
+    lift $ modifyIORef' ref (\s -> s { column = column + 1 } :: DecoderState)
     liftIO $ PQ.getvalue result row column

@@ -1,3 +1,7 @@
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ApplicativeDo              #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
@@ -13,6 +17,7 @@ module Main where
 
 import           Preql
 import qualified Preql.Wire.TypeInfo.Static  as OID
+import Preql.FromSql
 
 import           Control.Concurrent          (forkIO, forkOS, myThreadId,
                                               threadDelay)
@@ -145,9 +150,4 @@ data TypeInfo = TypeInfo
     , typarray       :: !PQ.Oid
     }
     deriving (Generic, NFData)
-
-instance FromSql TypeInfo where
-    fromSql = TypeInfo <$>
-        fromSql <*> fromSql <*> fromSql <*> fromSql <*>
-        fromSql <*> fromSql <*> fromSql <*> fromSql <*>
-        fromSql <*> fromSql <*> fromSql <*> fromSql
+$(deriveFromSql ''TypeInfo)

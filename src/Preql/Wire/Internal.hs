@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -62,16 +63,23 @@ data DecoderState = DecoderState
     }
     deriving (Show, Eq)
 
+incrementColumn :: DecoderState -> DecoderState
+incrementColumn s@DecoderState{column} = s { column = column + 1 }
+
+incrementRow :: DecoderState -> DecoderState
+incrementRow s = s { row = row s + 1, column = 0 }
+
 -- | Can throw FieldError
-decodeRow :: RowDecoder n a -> PQ.Result -> PQ.Row -> IO a
-decodeRow (RowDecoder _ parsers) result row = do
-    ref <- newIORef (DecoderState result row 0)
-    runReaderT parsers ref
+decodeRow :: IORef DecoderState -> RowDecoder n a -> PQ.Result -> IO a
+decodeRow ref (RowDecoder _ parsers) result = do
+    result <- runReaderT parsers ref
+    modifyIORef ref incrementRow
+    return result
 
 {-# INLINE getNextValue #-}
 getNextValue :: InternalDecoder (Maybe ByteString)
 getNextValue = do
     ref <- ask
     DecoderState{..} <- lift $ readIORef ref
-    lift $ modifyIORef' ref (\s -> s { column = column + 1 } :: DecoderState)
+    lift $ modifyIORef' ref incrementColumn
     liftIO $ PQ.getvalue result row column

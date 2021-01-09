@@ -76,7 +76,6 @@ decodeRow ref (RowDecoder _ parsers) result = do
     modifyIORef ref incrementRow
     return result
 
-{-# INLINE getNextValue #-}
 getNextValue :: InternalDecoder (Maybe ByteString)
 getNextValue = do
     ref <- ask

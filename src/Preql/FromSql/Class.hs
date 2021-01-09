@@ -8,6 +8,7 @@ module Preql.FromSql.Class where
 import Preql.Wire.Errors
 import Preql.Wire.Internal
 
+import Control.Exception (throwIO)
 import Control.Monad.Except
 import Control.Monad.Trans.State
 import GHC.TypeNats
@@ -56,4 +57,4 @@ nullable (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
 throwLocated :: UnlocatedFieldError -> InternalDecoder a
 throwLocated fieldError = do
     DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
-    throwError (FieldError (fromIntegral r) (fromIntegral c) fieldError)
+    lift $ throwIO (FieldError (fromIntegral r) (fromIntegral c) fieldError)

@@ -13,7 +13,6 @@ module Preql.Wire.Internal where
 
 import Preql.Wire.Errors
 
-import Control.Exception (throwIO)
 import Control.Monad.Except
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
@@ -72,8 +71,3 @@ getNextValue = do
     s@DecoderState{..} <- get
     put (s { column = column + 1 } :: DecoderState)
     liftIO $ PQ.getvalue result row column
-
-throwLocated :: UnlocatedFieldError -> InternalDecoder a
-throwLocated failure = do
-    DecoderState{row = PQ.Row r, column = PQ.Col c} <- get
-    lift $ throwIO (FieldError (fromIntegral r) (fromIntegral c) failure)

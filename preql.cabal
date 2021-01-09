@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 35c1431368b7d0caabc3ab5970f071a4f1210b941eff76ea52b8b93e22e2e746
+-- hash: 2a2ec5f5deeca453de51df8d0ccb956a982efaf1fd15fef72eb3e307a05e6f8e
 
 name:           preql
 version:        0.4
@@ -107,7 +107,7 @@ executable preql-load
   hs-source-dirs:
       load-test
   default-extensions: OverloadedStrings DataKinds
-  ghc-options: -rtsopts -threaded -eventlog -O2 -fprof-auto -fprof-cafs
+  ghc-options: -rtsopts -threaded -eventlog -O2 -fprof-auto -fprof-cafs -fexternal-interpreter
   build-tools:
       alex
     , happy

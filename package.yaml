@@ -90,4 +90,4 @@ executables:
       - optparse-applicative
       - resource-pool
       - stm
-    ghc-options: "-rtsopts -threaded -eventlog -O2 -fprof-auto -fprof-cafs"
+    ghc-options: "-rtsopts -threaded -eventlog -O2 -fprof-auto -fprof-cafs -fexternal-interpreter"

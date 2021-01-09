@@ -8,3 +8,4 @@
 /.stack-work/
 TAGS
 /cabal.project.local
+/cabal.project.freeze

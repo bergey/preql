@@ -46,6 +46,7 @@ pureDecoder a = RowDecoder VS.empty (pure a)
 -- | Analogous to '<*>', @pureDecoder Constructor `applyDecoder` a
 -- `applyDecoder` b@ supplies two arguments to @Constructor@, from the
 -- 'RowDecoder' @a@ and @b@.
+{-# INLINE applyDecoder #-}
 applyDecoder :: RowDecoder m (a -> b) -> RowDecoder n a -> RowDecoder (m+n) b
 applyDecoder (RowDecoder vm f) (RowDecoder vn a) = RowDecoder (vm VS.++ vn) (f <*> a)
 

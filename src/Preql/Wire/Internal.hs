@@ -67,6 +67,7 @@ decodeRow (RowDecoder _ parsers) result row = do
     ref <- newIORef (DecoderState result row 0)
     runReaderT parsers ref
 
+{-# INLINE getNextValue #-}
 getNextValue :: InternalDecoder (Maybe ByteString)
 getNextValue = do
     ref <- ask

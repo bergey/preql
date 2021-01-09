@@ -39,6 +39,7 @@ class FromSql a where
     default fromSql :: (FromSqlField a, Width a ~ 1) => RowDecoder (Width a) a
     fromSql = notNull fromSqlField
 
+{-# INLINE notNull #-}
 -- | Construct a decoder for a single non-nullable column.
 notNull :: FieldDecoder a -> RowDecoder 1 a
 notNull (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
@@ -47,6 +48,7 @@ notNull (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
         Nothing -> throwLocated UnexpectedNull
         Just bs -> either (throwLocated . ParseFailure) pure (BP.run parser bs)
 
+{-# INLINE nullable #-}
 -- | Construct a decoder for a single nullable column.
 nullable :: FieldDecoder a -> RowDecoder 1 (Maybe a)
 nullable (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do

@@ -4,10 +4,10 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2a2ec5f5deeca453de51df8d0ccb956a982efaf1fd15fef72eb3e307a05e6f8e
+-- hash: 2dc77fae4bd58a45bebd5f27ad6baf0b91312257052260b0d00ba5310915e0c8
 
 name:           preql
-version:        0.4
+version:        0.5
 synopsis:       safe PostgreSQL queries using Quasiquoters
 description:    Before you Post(gres)QL, preql.
                 .

@@ -1,3 +1,9 @@
+# 0.5 (2021-01-10)
+
+- fix `deriveFromSql` which was completely unusable
+- add benchmark / exe for speeed testing
+- 3x improvement in decoding speed for this benchmark
+
 # 0.4 (2021-01-07)
 
 - `select` quasiquoter that validates syntax

@@ -35,27 +35,31 @@ class FromSql a where
     -- | The number of columns read in decoding this type.
     type Width a :: Nat
     type Width a = 1
+    {-# INLINE fromSql #-}
     fromSql :: RowDecoder (Width a) a
     default fromSql :: (FromSqlField a, Width a ~ 1) => RowDecoder (Width a) a
     fromSql = notNull fromSqlField
 
 -- | Construct a decoder for a single non-nullable column.
+{-# INLINE notNull #-}
 notNull :: FieldDecoder a -> RowDecoder 1 a
-notNull (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
+notNull (FieldDecoder oid parser) = {-# SCC "notNull" #-} RowDecoder (VS.singleton oid) $ do
     m_bs <- getNextValue
     case m_bs of
         Nothing -> throwLocated UnexpectedNull
         Just bs -> either (throwLocated . ParseFailure) pure (BP.run parser bs)
 
 -- | Construct a decoder for a single nullable column.
+{-# INLINE nullable #-}
 nullable :: FieldDecoder a -> RowDecoder 1 (Maybe a)
-nullable (FieldDecoder oid parser) = RowDecoder (VS.singleton oid) $ do
+nullable (FieldDecoder oid parser) = {-# SCC "nullable" #-} RowDecoder (VS.singleton oid) $ do
     m_bs <- getNextValue
     case m_bs of
         Nothing -> return Nothing
         Just bs -> either (throwLocated . ParseFailure) (pure . Just) (BP.run parser bs)
 
+{-# INLINE throwLocated #-}
 throwLocated :: UnlocatedFieldError -> InternalDecoder a
-throwLocated fieldError = do
+throwLocated fieldError = {-# SCC "throwLocated" #-} do
     DecoderState{row = PQ.Row r, column = PQ.Col c} <- lift . readIORef =<< ask
     lift $ throwIO (FieldError (fromIntegral r) (fromIntegral c) fieldError)

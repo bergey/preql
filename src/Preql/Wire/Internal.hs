@@ -63,21 +63,25 @@ data DecoderState = DecoderState
     }
     deriving (Show, Eq)
 
+{-# INLINE incrementColumn #-}
 incrementColumn :: DecoderState -> DecoderState
 incrementColumn s@DecoderState{column} = s { column = column + 1 }
 
+{-# INLINE incrementRow #-}
 incrementRow :: DecoderState -> DecoderState
 incrementRow s = s { row = row s + 1, column = 0 }
 
 -- | Can throw FieldError
+{-# INLINE decodeRow #-}
 decodeRow :: IORef DecoderState -> RowDecoder n a -> PQ.Result -> IO a
-decodeRow ref (RowDecoder _ parsers) result = do
+decodeRow ref (RowDecoder _ parsers) result = {-# SCC "decodeRow" #-} do
     result <- runReaderT parsers ref
     modifyIORef ref incrementRow
     return result
 
+{-# INLINE getNextValue #-}
 getNextValue :: InternalDecoder (Maybe ByteString)
-getNextValue = do
+getNextValue = {-# SCC "getNextValue" #-} do
     ref <- ask
     DecoderState{..} <- lift $ readIORef ref
     lift $ modifyIORef' ref incrementColumn

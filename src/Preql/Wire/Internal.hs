@@ -85,4 +85,4 @@ getNextValue = {-# SCC "getNextValue" #-} do
     ref <- ask
     DecoderState{..} <- lift $ readIORef ref
     lift $ modifyIORef' ref incrementColumn
-    liftIO $ PQ.getvalue result row column
+    liftIO $ PQ.getvalue' result row column

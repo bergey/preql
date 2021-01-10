@@ -1,4 +1,5 @@
 resolver: lts-16.27
 
 packages:
-- .
+  - .
+  - speed-test

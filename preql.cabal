@@ -75,7 +75,6 @@ library
   hs-source-dirs:
       src
   default-extensions: OverloadedStrings DataKinds
-  ghc-options: -O2
   build-tools:
       alex
     , happy

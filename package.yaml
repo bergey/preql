@@ -46,7 +46,7 @@ build-tools:
 dependencies:
   - aeson >= 1.4.7.1
   - array >= 0.5.4.0
-  - base >= 4.13.0.0
+  - base >= 4.13.0.0 && < 4.15
   - binary-parser >= 0.5.6
   - bytestring >= 0.10.10.0
   - bytestring-strict-builder >= 0.4.5.3

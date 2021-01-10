@@ -9,9 +9,12 @@ A Haskell SQL library.
 
 ## Current Status
 
-**preql** provides a low-level interface to PostgreSQL and a quasiquoter that converts
-inline variable names to SQL parameters.  Higher-level interfaces, checking SQL syntax &
-schema, are planned.
+**preql** provides a a quasiquoter `select` that checks SQL syntax at compile time for most valid
+Select queries, and a more general `sql` quasiquoter that converts inline variable names to SQL
+parameters without validating syntax.  **preql** also includes a low-level interface to PostgreSQL,
+a `Transaction` type, and a pair type classes to support tagless final effects.  Eventually the
+quasiquoters will validate the rest of the SQL data manipulation language, and likely provide some
+form of schema checking.
 
 ## Quickstart
 

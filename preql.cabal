@@ -4,17 +4,19 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: eeadcaa0e1829873dd2c3c82cc64426e7aec352dffbc2dbab64df31d4bd8d97f
+-- hash: 980215290439595d559fc79a93a3668e06432dcdce77d2255822f8a696d9e3b1
 
 name:           preql
 version:        0.5
 synopsis:       safe PostgreSQL queries using Quasiquoters
 description:    Before you Post(gres)QL, preql.
                 .
-                @preql@ provides a low-level interface to PostgreSQL and a quasiquoter that converts
-                inline variable names to SQL parameters.  Higher-level interfaces, checking SQL syntax &
-                schema, are planned.
+                @preql@ provides an effect type class `SQL`, a `select` quasiquoter
+                that checks SQL syntax at compile time, and a `sql` quasiquoter that
+                supports variable antiquotes, but does not attempt syntax
+                validation.
                 .
+                For more details, read
                 the [quickstart](https://github.com/bergey/preql#quickstart) 
                 or the [vision](https://github.com/bergey/preql#vision-parsing-sql-in-haskell-quasiquotes)
                 .

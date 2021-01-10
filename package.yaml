@@ -5,10 +5,12 @@ synopsis: safe PostgreSQL queries using Quasiquoters
 description: |
   Before you Post(gres)QL, preql.
 
-  @preql@ provides a low-level interface to PostgreSQL and a quasiquoter that converts
-  inline variable names to SQL parameters.  Higher-level interfaces, checking SQL syntax &
-  schema, are planned.
+  @preql@ provides an effect type class `SQL`, a `select` quasiquoter
+  that checks SQL syntax at compile time, and a `sql` quasiquoter that
+  supports variable antiquotes, but does not attempt syntax
+  validation.
 
+  For more details, read
   the [quickstart](https://github.com/bergey/preql#quickstart) 
   or the [vision](https://github.com/bergey/preql#vision-parsing-sql-in-haskell-quasiquotes)
 

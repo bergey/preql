@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE TemplateHaskell #-}
 -- | Construct FromSql instances
@@ -14,8 +15,10 @@ import Language.Haskell.TH
 deriveFromSqlTuple :: Int -> Q [Dec]
 deriveFromSqlTuple n = do
     names <- traverse newName (take n alphabet)
-    let tuple = foldl AppT (TupleT n) (map VarT names)
-    return [fromSqlDecl names tuple (tupleDataName n) n]
+    let
+      fields = map VarT names
+      tuple = foldl AppT (TupleT n) fields
+    return [fromSqlDecl tuple (tupleDataName n) fields]
 
 deriveFromSql :: Name -> Q [Dec]
 deriveFromSql tyName = do
@@ -24,14 +27,14 @@ deriveFromSql tyName = do
         TyConI (DataD _cxt typeN binders _kind constructors _deriving) ->
             let
                 tyVars = map tyVarName binders
-                targetTy = foldl AppT (VarT typeN) (map VarT tyVars)
-                (conN, fieldCount) = case constructors of
-                    [NormalC con elems] -> (con, length elems)
-                    [RecC con fields] -> (con, length fields)
-                    [InfixC _ con _] -> (con, 2)
+                targetTy = foldl AppT (ConT typeN) (map VarT tyVars)
+                (conN, fieldTypes) = case constructors of
+                    [NormalC con elems] -> (con, [ty | (_, ty) <- elems])
+                    [RecC con fields] -> (con, [ty | (_, _, ty) <- fields])
+                    [InfixC (_, t1) con (_, t2)] -> (con, [t1, t2])
                     [_] -> error "deriveFromSql does not handle GADTs or constructors with class constraints"
                     _ -> error "deriveFromSql does not handle sum types"
-            in return [fromSqlDecl tyVars targetTy conN fieldCount]
+            in return [fromSqlDecl targetTy conN fieldTypes]
         _ -> error ("deriveFromSql only handles type names, got: " ++ show tyName)
 
 tyVarName :: TyVarBndr -> Name
@@ -40,19 +43,35 @@ tyVarName = \case
     KindedTV name _k -> name
 
 
-fromSqlDecl :: [Name] -> Type -> Name -> Int -> Dec
-fromSqlDecl tyVars targetTy constructor fieldCount =
+fromSqlDecl :: Type -> Name -> [Type] -> Dec
+fromSqlDecl targetTy constructor fields =
     InstanceD Nothing context instanceHead [TySynInstD width, method] where
-        context = [ ConT ''FromSql `AppT` VarT n | n <- tyVars ]
+        context = [ ConT ''FromSql `AppT` ty | ty <- fields, hasTyVar ty ]
         instanceHead = ConT ''FromSql `AppT` targetTy
         width = TySynEqn Nothing
             (ConT ''Width `AppT` targetTy)
             (foldl (\a b -> ConT ''(+) `AppT` a `AppT` b) (LitT (NumTyLit 0))
-                [ ConT ''Width `AppT` VarT n | n <- tyVars ])
+                [ ConT ''Width `AppT` ty | ty <- fields ])
         method = ValD
             (VarP 'fromSql)
             (NormalB (foldl
                       (\rowDecoder field -> InfixE (Just rowDecoder) (VarE 'applyDecoder) (Just field))
                       (VarE 'pureDecoder `AppE` ConE constructor)
-                      (replicate fieldCount (VarE 'fromSql))))
+                      (replicate (length fields) (VarE 'fromSql))))
             [] -- no where clause on the fromSql definition
+
+hasTyVar :: Type -> Bool
+hasTyVar = \case
+  VarT _ -> True
+  ForallT _ _ ty -> hasTyVar ty
+#if MIN_VERSION_template_haskell(2,16,0)
+  ForallVisT _ ty -> hasTyVar ty
+#endif
+  AppT t1 t2 -> hasTyVar t1 || hasTyVar t2
+  AppKindT ty _ -> hasTyVar ty
+  SigT ty _ -> hasTyVar ty
+  InfixT t1 _ t2 -> hasTyVar t1 || hasTyVar t2
+  UInfixT t1 _ t2 -> hasTyVar t1 || hasTyVar t2
+  ParensT ty -> hasTyVar ty
+  ImplicitParamT _ ty -> hasTyVar ty
+  _ -> False

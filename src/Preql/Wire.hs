@@ -11,6 +11,7 @@ module Preql.Wire (
     , ToSql(..), ToSqlField
     -- * Errors
     , QueryError(..), FieldError(..), UnlocatedFieldError(..), TypeMismatch(..)
+    , Tuple(..)
     , module X) where
 
 import Preql.Wire.Decode as X
@@ -19,4 +20,4 @@ import Preql.Wire.Internal as X (Query, RowDecoder)
 import Preql.Wire.ToSql as X
 import Preql.Wire.Types as X
 import Preql.Wire.Query as X (IsolationLevel(..))
-import Preql.FromSql.Class as X
+import Preql.FromSql as X

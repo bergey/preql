@@ -21,7 +21,10 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 -- Postgres type which can be decoded, and a parser from the binary
 -- representation of that type to the Haskell representation.
 data FieldDecoder a = FieldDecoder PgType (BP.BinaryParser a)
-    deriving Functor
+  deriving Functor
+
+fieldParser :: FieldDecoder a -> BP.BinaryParser a
+fieldParser (FieldDecoder _ parser) = parser
 
 -- | A type which can be decoded from a single SQL field.  This is
 -- mostly useful for defining what can be an element of an array or

@@ -7,6 +7,7 @@
 
 module Preql.FromSql.Instances where
 
+import Preql.FromSql.Tuple
 import           Preql.FromSql.Class
 import           Preql.FromSql.TH
 import           Preql.Wire.Errors
@@ -158,3 +159,33 @@ $(deriveFromSqlTuple 22)
 $(deriveFromSqlTuple 23)
 $(deriveFromSqlTuple 24)
 $(deriveFromSqlTuple 25)
+
+instance (FromSqlField a, FromSqlField b) => FromSqlField (Tuple (a, b)) where
+  fromSqlField =
+    let vc = PGB.valueComposite . fieldParser
+    in FieldDecoder (Oid OID.recordOid) (Tuple <$> PGB.composite (pure (,) <*> vc fromSqlField <*> vc fromSqlField))
+instance (FromSqlField a, FromSqlField b) => FromSql (Tuple (a, b))
+
+$(deriveFromSqlFieldTuple 3)
+$(deriveFromSqlFieldTuple 4)
+$(deriveFromSqlFieldTuple 5)
+$(deriveFromSqlFieldTuple 6)
+$(deriveFromSqlFieldTuple 7)
+$(deriveFromSqlFieldTuple 8)
+$(deriveFromSqlFieldTuple 9)
+$(deriveFromSqlFieldTuple 10)
+$(deriveFromSqlFieldTuple 11)
+$(deriveFromSqlFieldTuple 12)
+$(deriveFromSqlFieldTuple 13)
+$(deriveFromSqlFieldTuple 14)
+$(deriveFromSqlFieldTuple 15)
+$(deriveFromSqlFieldTuple 16)
+$(deriveFromSqlFieldTuple 17)
+$(deriveFromSqlFieldTuple 18)
+$(deriveFromSqlFieldTuple 19)
+$(deriveFromSqlFieldTuple 20)
+$(deriveFromSqlFieldTuple 21)
+$(deriveFromSqlFieldTuple 22)
+$(deriveFromSqlFieldTuple 23)
+$(deriveFromSqlFieldTuple 24)
+$(deriveFromSqlFieldTuple 25)

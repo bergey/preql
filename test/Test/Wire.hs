@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -194,6 +193,18 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
               query_ "create type foo as (bar bool, baz int)" ()
               result <- query "select row(true, 1)::foo as foo" ()
               assertEqual "" (Right [Foo True 1]) result
+          , inTransaction "anonymous row type (bool, int), row() syntax" $ do
+              result <- query "select row(true, 1)" ()
+              assertEqual "" (Right [Tuple (True, 1::Int32)]) result
+          , inTransaction "anonymous row type (bool, int), tuple syntax" $ do
+              result <- query "select (true, 1)" ()
+              assertEqual "" (Right [Tuple (True, 1::Int32)]) result
+          , inTransaction "longer derived row type" $ do
+              result <- query "select (true, 1, 'foo'::text)" ()
+              assertEqual "" (Right [Tuple (True, 1::Int32, "foo"::Text)]) result
+          , inTransaction "nested row types" $ do
+              result <- query "select (true, row(1, 2))" ()
+              assertEqual "" (Right [Tuple (True, Tuple (1::Int32, 2::Int32))]) result
           ]
         ]
 

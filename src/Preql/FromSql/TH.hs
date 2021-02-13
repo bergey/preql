@@ -6,12 +6,17 @@
 module Preql.FromSql.TH where
 
 import Preql.FromSql.Class
+import Preql.FromSql.Tuple
 import Preql.QuasiQuoter.Common (alphabet)
+import Preql.Wire.Errors (PgType(Oid))
 import Preql.Wire.Internal
+import qualified Preql.Wire.TypeInfo.Static as OID
 
 import GHC.TypeNats
 import Language.Haskell.TH
+import qualified PostgreSQL.Binary.Decoding as PGB
 
+-- | instance (FromSql a, FromSql b) => FromSql (a, b)
 deriveFromSqlTuple :: Int -> Q [Dec]
 deriveFromSqlTuple n = do
     names <- traverse newName (take n alphabet)
@@ -20,6 +25,8 @@ deriveFromSqlTuple n = do
       tuple = foldl AppT (TupleT n) fields
     return [fromSqlDecl tuple (tupleDataName n) fields]
 
+-- | derive a 'FromSql' instance for a record type
+-- (field names are not required, but there must be only one constructor)
 deriveFromSql :: Name -> Q [Dec]
 deriveFromSql tyName = do
     info <- reify tyName
@@ -59,6 +66,28 @@ fromSqlDecl targetTy constructor fields =
                       (VarE 'pureDecoder `AppE` ConE constructor)
                       (replicate (length fields) (VarE 'fromSql))))
             [] -- no where clause on the fromSql definition
+
+-- instance (FromSqlField a, FromSqlField b) => FromSqlField (Tuple (a, b))
+deriveFromSqlFieldTuple :: Int -> Q [Dec]
+deriveFromSqlFieldTuple n = do
+  names <- traverse newName (take n alphabet)
+  fieldOid <- [e| FieldDecoder (Oid OID.recordOid) |]
+  let
+    fields = map VarT names
+    tuple = ConT ''Tuple `AppT` foldl AppT (TupleT n) fields
+    context = [ ConT ''FromSqlField `AppT` ty | ty <- fields ]
+    width = TySynEqn Nothing (ConT ''Width `AppT` tuple) (LitT (NumTyLit 1))
+    parser = VarE 'fmap `AppE` ConE 'Tuple `AppE` (VarE 'PGB.composite `AppE` foldl
+             (\parser field -> VarE '(<*>) `AppE` parser `AppE` field)
+             (VarE 'pure `AppE` ConE (tupleDataName n))
+             (replicate n (VarE 'PGB.valueComposite `AppE` (VarE 'fieldParser `AppE` VarE 'fromSqlField))))
+    method = ValD
+      (VarP 'fromSqlField)
+      (NormalB (ConE 'FieldDecoder `AppE` (ConE 'Oid `AppE` VarE 'OID.recordOid) `AppE` parser))
+      []
+  return [ InstanceD Nothing context (ConT ''FromSqlField `AppT` tuple) [method]
+    , InstanceD Nothing context (ConT ''FromSql `AppT` tuple) [ ] ]
+
 
 hasTyVar :: Type -> Bool
 hasTyVar = \case

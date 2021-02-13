@@ -18,6 +18,7 @@ module Main where
 import           Preql
 import qualified Preql.Wire.TypeInfo.Static  as OID
 import Preql.FromSql
+import Preql.FromSql.TH
 
 import           Control.Concurrent          (forkIO, forkOS, myThreadId,
                                               threadDelay)

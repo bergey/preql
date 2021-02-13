@@ -1,10 +1,10 @@
 cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.34.3.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d56204964cb9b2be1a806f9feb77bc975fc037b053f1edf3b775c7dec9d2fed1
+-- hash: b190d5d3f47be53f9b2e296709d767413297743fb70c4a603625b28ff93f3a77
 
 name:           preql
 version:        0.5
@@ -48,6 +48,7 @@ library
       Preql.FromSql.Class
       Preql.FromSql.Instances
       Preql.FromSql.TH
+      Preql.FromSql.Tuple
       Preql.Imports
       Preql.QuasiQuoter.Common
       Preql.QuasiQuoter.Raw.Lex

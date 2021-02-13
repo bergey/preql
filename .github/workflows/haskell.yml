@@ -86,10 +86,17 @@ jobs:
 
   cabal:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       matrix:
         cabal: [ latest ]
-        ghc: [ latest ]
+        ghc: [ 8.10 ]
+        experimental: [ false ]
+        include:
+          -
+            cabal: latest
+            ghc: latest # 2021-02-13 cabal doesn't yet support GHC 9
+            experimental: true
     services:
       postgres:
         image: postgres:12.2

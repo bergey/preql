@@ -1,10 +1,10 @@
 cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.34.3.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d56204964cb9b2be1a806f9feb77bc975fc037b053f1edf3b775c7dec9d2fed1
+-- hash: ba7b7f3b4cac9c81fea5b5cdfc7a18d61ab5808897b5c7435a9b3aa1439b95fe
 
 name:           preql
 version:        0.5
@@ -160,7 +160,7 @@ benchmark pgbench
       alex
     , happy
   build-depends:
-      aeson >=1.4.7.1
+      aeson
     , array >=0.5.4.0
     , base >=4.13.0.0
     , binary-parser >=0.5.6
@@ -170,6 +170,7 @@ benchmark pgbench
     , criterion
     , deepseq
     , mtl >=2.2.2
+    , parallel
     , postgresql-binary >=0.12.2
     , postgresql-libpq >=0.9.4.2
     , preql

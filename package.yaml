@@ -80,3 +80,5 @@ benchmarks:
       - preql
       - criterion
       - deepseq
+      - parallel
+      - aeson

@@ -11,6 +11,7 @@ module Preql.Wire.Decode where
 import Preql.Wire.Errors
 import Preql.Wire.Internal
 
+import System.IO.Unsafe (unsafePerformIO)
 import Control.Exception (try)
 import Control.Monad.Except
 import Data.IORef (newIORef)
@@ -33,9 +34,9 @@ decodeVector lookupType rd@(RowDecoder pgtypes _parsers) result = do
                 m_name <- liftIO $ PQ.fname result column
                 let columnName = decodeUtf8With lenientDecode <$> m_name
                 return $ Just (TypeMismatch{column = fromIntegral cint, ..})
-    if not (null mismatches)
-        then return (Left (PgTypeMismatch mismatches))
-        else do
+    return $ if not (null mismatches)
+        then Left (PgTypeMismatch mismatches)
+        else unsafePerformIO $ do -- decoding does not need Connection
             (PQ.Row ntuples) <- liftIO $ PQ.ntuples result
             ref <- newIORef (DecoderState result 0 0)
             fmap (first DecoderError) . try $

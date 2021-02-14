@@ -1,3 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -7,29 +14,45 @@
 module Main where
 
 import Preql
+import Preql.FromSql
 import qualified Preql.Wire.TypeInfo.Static as OID
 
-import Control.DeepSeq (NFData(..))
+import Control.DeepSeq (NFData(..), deepseq)
 import Control.Exception (throwIO)
 import Control.Monad
 import Control.Monad.Trans.Reader (ReaderT(..), ask, runReaderT)
+import Control.Parallel (par)
 import Criterion
 import Criterion.Main
+import Data.Aeson (FromJSON, ToJSON, decode)
 import Data.ByteString (ByteString)
 import Data.Int
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Vector (Vector)
+import GHC.Generics
 import System.Environment (lookupEnv)
 import qualified Data.Text as T
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified PostgreSQL.Binary.Decoding as PGB
 
+data Foo = Foo
+  { email :: Text
+  , age :: Int16
+  , pets :: [Text]
+  } deriving (Eq, Show, NFData, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+instance FromSqlField Foo where fromSqlField = fromSqlJsonField
+instance FromSql Foo
+
 main :: IO ()
 main = do
   conn <- connectDB
+  let
+    withConn :: ReaderT PQ.Connection IO a -> IO a
+    withConn = flip runReaderT conn
   defaultMain
-    [ bench "pg_type" $ nfIO $ flip runReaderT conn $ do
+    [ bench "pg_type" $ nfIO $ withConn $ do
             let
                 typmod = -1 :: Int16
                 isdefined = True
@@ -37,7 +60,18 @@ main = do
             return (res :: Vector (PgName, PQ.Oid, PQ.Oid, Int16, Bool
                                   , Char, Bool, Bool, Char
                                   , PQ.Oid, PQ.Oid, PQ.Oid))
+    , bench "jsonb decode only" $ nf (decode @Foo)
+      "{\"email\": \"bergey@teallabs.org\", \"age\": 36, \"pets\": [\"Marx\", \"Jones\"]}"
+    , bench "jsonb baseline" $ nfIO $ withConn $ jsonbQuery
+    , bench "jsonb skip decode" $ nfIO $ withConn $ void jsonbQuery
+    , bench "jsonb parallel decode" $ nfIO $ withConn $ do
+        r1 <- jsonbQuery
+        r2 <- r1 `par` jsonbQuery
+        return (r1, r2)
     ]
+
+jsonbQuery :: ReaderT PQ.Connection IO (Vector Foo)
+jsonbQuery = query [sql| select jsonb_build_object('email', 'bergey@teallabs.org', 'age', 36, 'pets', '{Marx, Jones}'::text[]) |]
 
 connectDB :: IO PQ.Connection
 connectDB = do

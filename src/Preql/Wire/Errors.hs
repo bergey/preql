@@ -27,7 +27,7 @@ data FieldError = FieldError
 instance Exception FieldError
 $(deriveJSON defaultOptions ''FieldError)
 
-data PgType = Oid PQ.Oid -- ^ A Postgres type with a known ID
+data PgType = Oid PQ.Oid PQ.Oid -- ^ A Postgres type with a known ID, and the matching array ID
     | TypeName Text -- ^ A Postgres type which we will need to lookup by name
     deriving (Eq, Show, Typeable)
 $(deriveJSON defaultOptions ''PgType)

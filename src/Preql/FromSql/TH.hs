@@ -68,10 +68,11 @@ fromSqlDecl targetTy constructor fields =
             [] -- no where clause on the fromSql definition
 
 -- instance (FromSqlField a, FromSqlField b) => FromSqlField (Tuple (a, b))
+-- instance (FromSqlField a, FromSqlField b) => FromSql (Tuple (a, b))
 deriveFromSqlFieldTuple :: Int -> Q [Dec]
 deriveFromSqlFieldTuple n = do
   names <- traverse newName (take n alphabet)
-  fieldOid <- [e| FieldDecoder (Oid OID.recordOid) |]
+  fieldOid <- [e| Oid OID.recordOid OID.array_recordOid |]
   let
     fields = map VarT names
     tuple = ConT ''Tuple `AppT` foldl AppT (TupleT n) fields
@@ -83,7 +84,7 @@ deriveFromSqlFieldTuple n = do
              (replicate n (VarE 'PGB.valueComposite `AppE` (VarE 'fieldParser `AppE` VarE 'fromSqlField))))
     method = ValD
       (VarP 'fromSqlField)
-      (NormalB (ConE 'FieldDecoder `AppE` (ConE 'Oid `AppE` VarE 'OID.recordOid) `AppE` parser))
+      (NormalB (ConE 'FieldDecoder `AppE` fieldOid `AppE` parser))
       []
   return [ InstanceD Nothing context (ConT ''FromSqlField `AppT` tuple) [method]
     , InstanceD Nothing context (ConT ''FromSql `AppT` tuple) [ ] ]

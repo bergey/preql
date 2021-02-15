@@ -1,5 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-duplicate-exports #-}
--- | Description: Import this to start
+
+-- | Description: Import this to start to start
+
 module Preql (
     SQL(..), SqlQuery(..), sql, select, validSql
     , Transaction, Query

@@ -65,7 +65,7 @@ connectionError conn Nothing = do
         Nothing  -> return (Left "No error message available")
 
 lookupType :: PQ.Connection -> PgType -> IO (Either QueryError PQ.Oid)
-lookupType _ (Oid oid) = return (Right oid)
+lookupType _ (Oid oid _) = return (Right oid)
 lookupType conn (TypeName name) = do
     e_rows <- query conn "SELECT oid FROM pg_type WHERE typname = $1" name
     case fmap (V.!? 0) e_rows of

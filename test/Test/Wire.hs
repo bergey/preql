@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -11,14 +13,16 @@ import Test.Wire.Enum
 
 import Control.Exception (Exception, bracket_, throwIO)
 import Control.Monad
+import Data.Bits (shiftR)
 import Data.ByteString (ByteString)
 import Data.Either
 import Data.Int
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
 import Data.Time (Day, TimeOfDay, UTCTime)
 import Data.Vector (Vector)
+import Data.Word (Word8)
 import GHC.TypeNats
 import System.Environment (lookupEnv)
 import Test.Tasty
@@ -26,12 +30,16 @@ import Test.Tasty.HUnit
 
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 
+import qualified BinaryParser as BP
+import qualified Data.ByteString as BS
 import qualified Data.Text as T
+import qualified Data.Text.Encoding.Error as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.UUID as UUID
 import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified PostgreSQL.Binary.Decoding as PGB
 import qualified Preql.Wire.Query as W
+import qualified Preql.Wire.TypeInfo.Static as OID
 
 wire :: TestTree
 wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
@@ -206,7 +214,36 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
               result <- query "select (true, row(1, 2))" ()
               assertEqual "" (Right [Tuple (True, Tuple (1::Int32, 2::Int32))]) result
           ]
+        , testGroup "array types"
+          [ inTransaction "text array" $ do
+              result <- query "select '{foo, bar, baz}'::text[]" ()
+              assertEqual "" (Right [["foo", "bar", "baz"] :: [Text]]) result
+          , inTransaction "nested array" $ do
+              result <- query "select '{ {1, 2, 3}, {4, 5, 6} }'::int[][]" ()
+              assertEqual "" (Right [ [[1, 2, 3], [4, 5, 6]]:: [[Int32]] ] ) result
+          , inTransaction "vector array" $ do
+              result <- query "select '{foo, bar, baz}'::text[]" ()
+              assertEqual "" (Right [["foo", "bar", "baz"] :: Vector Text]) result
+          , inTransaction "array in row type" $ do
+              result <- query "select row(true, '{1, 2}'::int[])" ()
+              -- assertEqual "" (Right [  Debug "" ]) result
+              assertEqual "" (Right [ Tuple (True, [1,2] :: [Int32]) ]) result
+          , inTransaction "array of row type" $ do
+              result <- query "select ARRAY[row(true, 'foo'), row(false, 'bar')]" ()
+              assertEqual "" (Right [ [Tuple (True, "foo"), Tuple (False, "bar")] :: [Tuple (Bool, Text)] ]) result
+          ]
         ]
+
+newtype Debug = Debug ByteString
+  deriving Eq
+
+instance Show Debug where
+  show (Debug bs) = "text '" ++ T.unpack (decodeUtf8With T.lenientDecode bs)
+    ++ "' hex 0x" ++ concatMap hex (BS.unpack bs)
+
+instance FromSql Debug where
+  type Width Debug = 1
+  fromSql = notNull (FieldDecoder (Oid OID.recordOid OID.array_recordOid) (Debug <$> BP.remainders))
 
 initDB :: HasCallStack => IO PQ.Connection
 initDB = do
@@ -256,3 +293,25 @@ instance FromSql Foo where
 
 expt :: Num a => a -> Int64 -> a
 expt = (^)
+
+hex :: Word8 -> String
+hex byte = [ nibble hi, nibble lo ] where
+  lo = byte `mod` 16
+  hi = byte `shiftR` 4
+  nibble = \case
+    0 -> '0'
+    1 -> '1'
+    2 -> '2'
+    3 -> '3'
+    4 -> '4'
+    5 -> '5'
+    6 -> '6'
+    7 -> '7'
+    8 -> '8'
+    9 -> '9'
+    10 -> 'a'
+    11 -> 'b'
+    12 -> 'c'
+    13 -> 'd'
+    14 -> 'e'
+    15 -> 'f'

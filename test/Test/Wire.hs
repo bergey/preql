@@ -229,7 +229,7 @@ wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
               -- assertEqual "" (Right [  Debug "" ]) result
               assertEqual "" (Right [ Tuple (True, [1,2] :: [Int32]) ]) result
           , inTransaction "array of row type" $ do
-              result <- query "select ARRAY[row(true, 'foo'), row(false, 'bar')]" ()
+              result <- query "select ARRAY[row(true, 'foo'::text), row(false, 'bar'::text)]" ()
               assertEqual "" (Right [ [Tuple (True, "foo"), Tuple (False, "bar")] :: [Tuple (Bool, Text)] ]) result
           ]
         ]

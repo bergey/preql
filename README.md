@@ -56,6 +56,8 @@ form of schema checking.
             traverse_ putStrLn moreOldCats
 ```
 
+The top-level module [Preql](http://hackage.haskell.org/package/preql/docs/Preql.html) re-exports most of the useful functions.  Keep reading there.
+
 ## Vision: Parsing SQL in Haskell Quasiquotes
 
 Can GHC check that a query is sytactically correct at compile time, without having

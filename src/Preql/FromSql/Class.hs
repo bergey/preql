@@ -23,6 +23,9 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 data FieldDecoder a = FieldDecoder PgType (BP.BinaryParser a)
     deriving Functor
 
+-- | A type which can be decoded from a single SQL field.  This is
+-- mostly useful for defining what can be an element of an array or
+-- 'Tuple'.
 class FromSqlField a where
     fromSqlField :: FieldDecoder a
 
@@ -30,7 +33,8 @@ class FromSqlField a where
 -- includes the canonical order of fields.
 --
 -- The default (empty) instance works for any type with a
--- 'FromSqlField' instance
+-- 'FromSqlField' instance.  This is convenient when you define your
+-- own Postgres types, since they should be instances of both type classes.
 class FromSql a where
     -- | The number of columns read in decoding this type.
     type Width a :: Nat

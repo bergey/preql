@@ -78,10 +78,11 @@ deriveFromSqlFieldTuple n = do
     tuple = ConT ''Tuple `AppT` foldl AppT (TupleT n) fields
     context = [ ConT ''FromSqlField `AppT` ty | ty <- fields ]
     width = TySynEqn Nothing (ConT ''Width `AppT` tuple) (LitT (NumTyLit 1))
-    parser = VarE 'fmap `AppE` ConE 'Tuple `AppE` (VarE 'PGB.composite `AppE` foldl
+    tupleSizeE = LitE  (IntegerL (toInteger n))
+    parser = VarE 'fmap `AppE` ConE 'Tuple `AppE` (VarE 'composite `AppE` tupleSizeE `AppE` foldl
              (\parser field -> VarE '(<*>) `AppE` parser `AppE` field)
              (VarE 'pure `AppE` ConE (tupleDataName n))
-             (replicate n (VarE 'PGB.valueComposite `AppE` (VarE 'fieldParser `AppE` VarE 'fromSqlField))))
+             (replicate n (VarE 'valueComposite `AppE` VarE 'fromSqlField)))
     method = ValD
       (VarP 'fromSqlField)
       (NormalB (ConE 'FieldDecoder `AppE` fieldOid `AppE` parser))

@@ -224,8 +224,9 @@ instance {-# OVERLAPPABLE #-} FromSqlField a => FromSqlField [[[[[a]]]]] where
 
 instance (FromSqlField a, FromSqlField b) => FromSqlField (Tuple (a, b)) where
   fromSqlField =
-    let vc = PGB.valueComposite . fieldParser
-    in FieldDecoder (Oid OID.recordOid OID.array_recordOid) (Tuple <$> PGB.composite (pure (,) <*> vc fromSqlField <*> vc fromSqlField))
+    let vc = valueComposite
+    in FieldDecoder (Oid OID.recordOid OID.array_recordOid)
+        (Tuple <$> composite 2 (pure (,) <*> vc fromSqlField <*> vc fromSqlField))
 instance (FromSqlField a, FromSqlField b) => FromSql (Tuple (a, b))
 
 $(deriveFromSqlFieldTuple 3)

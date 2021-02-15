@@ -1,5 +1,8 @@
 # PreQL
 
+![https://github.com/bergey/preql/workflows/Haskell%20CI/badge.svg]
+![https://img.shields.io/hackage/v/preql]
+
 Before you Post(gres)QL, **preql**.
 
 A Haskell SQL library.

@@ -42,7 +42,7 @@ import qualified Preql.Wire.Query as W
 import qualified Preql.Wire.TypeInfo.Static as OID
 
 wire :: TestTree
-wire = withResource initDB PQ.finish $ \db -> testGroup "wire" $
+wire = withResource initDB W.finish $ \db -> testGroup "wire" $
     let
         inTransaction desc body = testCase desc $
             bracket_ (query_ "BEGIN TRANSACTION" ()) (query_ "ROLLBACK" ()) body
@@ -245,10 +245,10 @@ instance FromSqlField Debug where
   fromSqlField = FieldDecoder (Oid OID.recordOid OID.array_recordOid) (Debug <$> BP.remainders)
 instance FromSql Debug
 
-initDB :: HasCallStack => IO PQ.Connection
+initDB :: HasCallStack => IO Connection
 initDB = do
-    conn <- PQ.connectdb =<< connectionString
-    status <- PQ.status conn
+    conn@(W.Connection rawConn _) <- W.connectdbSharedCache =<< connectionString
+    status <- PQ.status rawConn
     unless (status == PQ.ConnectionOk) (throwIO =<< badConnection conn)
     void $ W.query_ conn "DROP TABLE IF EXISTS encoder_tests" ()
     void $ W.query_ conn "CREATE TABLE encoder_tests (b boolean, i16 int2, i32 int4, i64 int8, f float4, d float8, t text, by bytea, ts timestamptz, day date, time time, ttz timetz, u uuid)" ()
@@ -272,8 +272,8 @@ data BadConnection = BadConnection
     deriving (Show)
 instance Exception BadConnection
 
-badConnection :: PQ.Connection -> IO BadConnection
-badConnection c = do
+badConnection :: Connection -> IO BadConnection
+badConnection (W.Connection c _) = do
     status <- PQ.status c
     errorMessage <- fromMaybe "" <$> PQ.errorMessage c
     host <- fromMaybe "" <$> PQ.host c

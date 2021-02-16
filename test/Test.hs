@@ -43,7 +43,7 @@ main = defaultMain $ testGroup "preql"
     ]
 
 integration :: TestTree
-integration = withResource initDB PQ.finish $ \db ->
+integration = withResource initDB W.finish $ \db ->
   let
     query' :: (ToSql p, FromSql r, KnownNat (Width r)) =>
       (Preql.Query (Width r), p) -> IO (Vector r)
@@ -67,10 +67,10 @@ integration = withResource initDB PQ.finish $ \db ->
         assertEqual "" [(1, "one")] (result :: Vector (Int32, T.Text))
     ]
 
-initDB :: HasCallStack => IO PQ.Connection
+initDB :: HasCallStack => IO Connection
 initDB = do
-    conn <- PQ.connectdb =<< connectionString
-    status <- PQ.status conn
+    conn@(W.Connection rawConn _) <- W.connectdbSharedCache =<< connectionString
+    status <- PQ.status rawConn
     unless (status == PQ.ConnectionOk) (throwIO =<< badConnection conn)
     let query' q = either throwIO return =<< W.query_ conn q ()
     query' "DROP TABLE IF EXISTS baz"

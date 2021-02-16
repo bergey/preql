@@ -14,10 +14,9 @@ module Preql.Wire (
     , Tuple(..)
     , module X) where
 
-import Preql.Wire.Decode as X
 import Preql.Wire.Errors as X
 import Preql.Wire.Internal as X (Query, RowDecoder)
 import Preql.Wire.ToSql as X
 import Preql.Wire.Types as X
-import Preql.Wire.Query as X (IsolationLevel(..))
+import Preql.Wire.Query as X (Connection, IsolationLevel(..), decodeVector)
 import Preql.FromSql as X

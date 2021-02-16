@@ -10,7 +10,6 @@ import Preql.Wire
 
 import Control.Monad.Trans.Except (ExceptT(..))
 import Control.Monad.Trans.Reader (ReaderT(..))
-import Database.PostgreSQL.LibPQ (Connection)
 
 -- | A Transaction can only contain SQL queries (and pure functions).
 newtype Transaction a = Transaction (ExceptT QueryError (ReaderT Connection IO) a)

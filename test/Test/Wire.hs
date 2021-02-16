@@ -241,9 +241,9 @@ instance Show Debug where
   show (Debug bs) = "text '" ++ T.unpack (decodeUtf8With T.lenientDecode bs)
     ++ "' hex 0x" ++ concatMap hex (BS.unpack bs)
 
-instance FromSql Debug where
-  type Width Debug = 1
-  fromSql = notNull (FieldDecoder (Oid OID.recordOid OID.array_recordOid) (Debug <$> BP.remainders))
+instance FromSqlField Debug where
+  fromSqlField = FieldDecoder (Oid OID.recordOid OID.array_recordOid) (Debug <$> BP.remainders)
+instance FromSql Debug
 
 initDB :: HasCallStack => IO PQ.Connection
 initDB = do

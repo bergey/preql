@@ -8,6 +8,7 @@ import Preql.QuasiQuoter.Syntax.Syntax
 import Preql.QuasiQuoter.Syntax.Name
 import Preql.QuasiQuoter.Syntax.Lex (Alex, LocToken(..), Token)
 
+import Data.Text (Text)
 import           Prelude hiding (LT, GT, lex)
 import           Control.Monad (when)
 import           Data.List.NonEmpty        (NonEmpty (..))
@@ -590,13 +591,28 @@ Statement :: { Statement }
 
 PreparableStmt :: { Statement }
     : SelectStmt { QS $1 }
-    | Delete { QD $1 }
+    | DeleteStmt { QD $1 }
     | Insert { QI $1 }
     | Update { QU $1 }
 
-Delete
-    : DELETE FROM Name WHERE a_expr { Delete $3 (Just $5) }
-    | DELETE FROM Name { Delete $3 Nothing }
+returning_clause :: { [ResTarget] }
+    : RETURNING target_list { $2 }
+    | { [] }
+
+DeleteStmt :: { Delete }
+    : opt_with_clause DELETE FROM relation_expr_opt_alias
+			using_clause where_or_current_clause returning_clause
+      { Delete
+      { withClause = $1
+      , table = $4
+      , using = $5
+      , whereClause = $6
+      , returningList = $7
+      } }
+
+using_clause :: { [TableRef] }
+    : USING from_list { $2 }
+    | { [] }
 
 -- * A complete SELECT statement looks like this.
 -- *
@@ -945,7 +961,7 @@ for_locking_strength :: { LockingStrength }
     | FOR SHARE  { ForShare }
     | FOR KEY SHARE  { ForKeyShare }
 
-locked_rels_list :: { [Name] }
+locked_rels_list :: { [Text] }
     : OF qualified_name_list { $2 }
     | { [] }
 
@@ -1116,33 +1132,26 @@ join_qual :: { JoinQual }
     : USING '(' name_list ')' { Using (reverse $3) }
     | ON a_expr { On $2 }
 
-relation_expr :: { Name } -- TODO FIXME
-    : qualified_name { $1 } -- * inheritance query, implicitly
--- TODO 			| qualified_name '*'
--- TODO 				{
--- TODO 					/* inheritance query, explicitly */
--- TODO 					$$ = $1;
--- TODO 					$$->inh = true;
--- TODO 					$$->alias = NULL;
--- TODO 				}
--- TODO 			| ONLY qualified_name
--- TODO 				{
--- TODO 					/* no inheritance */
--- TODO 					$$ = $2;
--- TODO 					$$->inh = false;
--- TODO 					$$->alias = NULL;
--- TODO 				}
--- TODO 			| ONLY '(' qualified_name ')'
--- TODO 				{
--- TODO 					/* no inheritance, SQL99-style syntax */
--- TODO 					$$ = $3;
--- TODO 					$$->inh = false;
--- TODO 					$$->alias = NULL;
--- TODO 				}
+relation_expr :: { Name }
+    : qualified_name { mkName $1 } -- * inheritance query, implicitly
+    | qualified_name '*' { Name $1 True Nothing } -- * inheritance query, explicitly
+    | ONLY qualified_name { Name $2 False Nothing } -- * no inheritance
+    | ONLY '(' qualified_name ')' { Name $3 False Nothing } -- * no inheritance, SQL99-style syntax
 
 relation_expr_list : list(relation_expr) { $1 }
 
--- TODO relation_expr_opt_alias
+-- * Given "UPDATE foo set set ...", we have to decide without looking any
+-- * further ahead whether the first "set" is an alias or the UPDATE's SET
+-- * keyword.  Since "set" is allowed as a column name both interpretations
+-- * are feasible.  We resolve the shift/reduce conflict by giving the first
+-- * relation_expr_opt_alias production a higher precedence than the SET token
+-- * has, causing the parser to prefer to reduce, in effect assuming that the
+-- * SET is not an alias.
+relation_expr_opt_alias :: { Name }
+    : relation_expr %prec UMINUS { $1 }
+    | relation_expr ColId { $1 { alias = Just $2 } }
+    | relation_expr AS ColId { $1 { alias = Just $3 } }
+
 -- TODO tablesample_clause
 -- TODO opt_repeatable_clause:
 -- TODO func_table
@@ -1155,7 +1164,14 @@ where_clause :: { Maybe Expr }
     : WHERE a_expr { Just $2 }
     | { Nothing }
 
--- TODO where_or_current_clause ::
+where_or_current_clause :: { Maybe WhereOrCurrent }
+: WHERE a_expr { Just (Where $2) }
+| WHERE CURRENT_P OF cursor_name { Just (Current $4) }
+| { Nothing }
+
+cursor_name :: { Text }
+    : name { $1 }
+
 -- TODO OptTableFuncElementList ::
 -- TODO TableFuncElementList ::
 -- TODO TableFuncElement ::
@@ -1894,7 +1910,7 @@ window_specification :: { WindowSpec }
 -- * that the shift/reduce conflict is resolved in favor of reducing the rule.
 -- * These keywords are thus precluded from being an existing_window_name but
 -- * are not reserved for any other purpose.
-opt_existing_window_name :: { Maybe Name }
+opt_existing_window_name :: { Maybe Text }
     : ColId						{ Just $1 }
     | 	%prec Op		{ Nothing }
 
@@ -2023,16 +2039,16 @@ case_arg :: { Maybe Expr }
 
 
 -- * Ideally param_name should be ColId, but that causes too many conflicts.
-param_name :: { Name }
+param_name :: { Text }
            :	type_function_name { $1 }
 
 -- FIXME handwritten
-Insert : INSERT INTO Name '(' name_list ')' VALUES '(' expr_list ')'
+Insert : INSERT INTO relation_expr '(' name_list ')' VALUES '(' expr_list ')'
        { Insert { table = $3, columns = NE.fromList (reverse $5), values = NE.fromList $9 } }
 
 Update :: { Update }
-    : UPDATE Name SET SettingList WHERE a_expr { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
-    | UPDATE Name SET SettingList { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Nothing } }
+    : UPDATE relation_expr SET SettingList WHERE a_expr { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Just $6 } }
+    | UPDATE relation_expr SET SettingList { Update { table = $2, settings = NE.fromList (reverse $4), conditions = Nothing } }
 
 {- These lists are non-empty by construction, but not by type. List head is the right-most element. -}
 
@@ -2057,9 +2073,7 @@ any_operator: all_Op { $1 }
 -- We don't yet support schema-qualified operators (they're more useful if user-defined)
 
 Setting :: { Setting }
-    : Name '=' a_expr { Setting $1 $3 }
-
-Name : IDENT { mkName $1 }
+    : ColId '=' a_expr { Setting $1 $3 }
 
 Null
         : IS NULL_P { IsNull }
@@ -2071,7 +2085,7 @@ columnref :: { Expr }
     : ColId { CRef $1 }
     | ColId indirection { Indirection (CRef $1) $2 }
 
-indirection_el :: { Name } -- TODO bigger type
+indirection_el :: { Text } -- TODO bigger type
     : '.' attr_name { $2 }
 -- TODO 				{
 -- TODO 					$$ = (Node *) makeString($2);
@@ -2103,14 +2117,14 @@ indirection_el :: { Name } -- TODO bigger type
 -- TODO 			| /*EMPTY*/								{ $$ = NULL; }
 -- TODO 		;
 
-indirection :: { NonEmpty Name }
+indirection :: { NonEmpty Text }
   : rev_indirection { NE.reverse $1 }
 
-rev_indirection :: { NonEmpty Name }
+rev_indirection :: { NonEmpty Text }
   : indirection_el { $1 :| [] }
   | rev_indirection indirection_el { NE.cons $2 $1 }
 
-opt_indirection :: { Maybe (NonEmpty Name) }
+opt_indirection :: { Maybe (NonEmpty Text) }
 			: { Nothing }
 			| indirection { Just $1 }
 
@@ -2128,7 +2142,7 @@ target_list : list(target_el) { reverse $1 }
 
 target_el :: { ResTarget }
     : a_expr AS ColLabel { Column $1 (Just $3) }
-    | a_expr Name { Column $1 (Just $2) }
+    | a_expr ColLabel { Column $1 (Just $2) }
     | a_expr { Column $1 Nothing }
     | '*' { Star }
 
@@ -2141,7 +2155,7 @@ qualified_name_list : list(qualified_name) { $1 }
 --  * func_name, something else for a relation). Therefore we allow 'indirection'
 --  * which may contain subscripts, and reject that case in the C code.
 
-qualified_name :: { Name }
+qualified_name :: { Text }
     : ColId { $1 }
 -- -- TODO 			| ColId indirection
 -- TODO 				{
@@ -2193,7 +2207,7 @@ file_name :	Sconst { $1 }
 -- * anything else for a columnref).  Therefore we allow 'indirection' which
 -- * may contain subscripts, and reject that case in the C code.  (If we
 -- * ever implement SQL99-like methods, such syntax may actually become legal!)
-func_name :: { (Name, [Indirection]) }
+func_name :: { (Text, [Text]) }
     :	type_function_name { ($1, []) }
 	  | ColId indirection { ($1, NE.toList $2) }
 
@@ -2297,28 +2311,28 @@ Sconst : STRING { $1 }
 -- * is chosen in part to make keywords acceptable as names wherever possible.
 
 -- Column identifier --- names that can be column, table, etc names.
-ColId :: { Name }
-    :		Name									{ $1 }
+ColId :: { Text }
+    :		IDENT									{ $1 }
     | unreserved_keyword					{ $1 }
 		| col_name_keyword						{ $1 }
 
 -- * Type/function identifier -- *- names that can be type or function names.
-type_function_name :: { Name }
-    :	Name							{ $1 }
+type_function_name :: { Text }
+    :	IDENT							{ $1 }
     | unreserved_keyword					{ $1 }
     | type_func_name_keyword				{ $1 }
 
 -- * Any not-fully-reserved word -- *- these names can be, eg, role names.
-NonReservedWord  :: { Name }
-     :	Name							{ $1 }
+NonReservedWord  :: { Text }
+     :	IDENT							{ $1 }
 			| unreserved_keyword					{ $1 }
 			| col_name_keyword						{ $1 }
 			| type_func_name_keyword				{ $1 }
 
 -- * Column label -- *- allowed labels in "AS" clauses.
 -- * This presently includes *all* Postgres keywords.
-ColLabel :: { Name }
-    :	Name									{  $1 }
+ColLabel :: { Text }
+    :	IDENT									{  $1 }
 			| unreserved_keyword					{  $1 }
 			| col_name_keyword						{  $1 }
 			| type_func_name_keyword				{  $1 }
@@ -2336,299 +2350,299 @@ ColLabel :: { Name }
 -- * kwlist.h's table from a common master list.)
 
 -- * "Unreserved" keywords --- available for use as any kind of name.
-unreserved_keyword :: { Name }
-    : ABORT_P { Name "abort" }
-    | ABSOLUTE_P { Name "absolute" }
-    | ACCESS { Name "access" }
-    | ACTION { Name "action" }
-    | ADD_P { Name "add" }
-    | ADMIN { Name "admin" }
-    | AFTER { Name "after" }
-    | AGGREGATE { Name "aggregate" }
-    | ALSO { Name "also" }
-    | ALTER { Name "alter" }
-    | ALWAYS { Name "always" }
-    | ASSERTION { Name "assertion" }
-    | ASSIGNMENT { Name "assignment" }
-    | AT { Name "at" }
-    | ATTACH { Name "attach" }
-    | ATTRIBUTE { Name "attribute" }
-    | BACKWARD { Name "backward" }
-    | BEFORE { Name "before" }
-    | BEGIN_P { Name "begin" }
-    | BY { Name "by" }
-    | CACHE { Name "cache" }
-    | CALL { Name "call" }
-    | CALLED { Name "called" }
-    | CASCADE { Name "cascade" }
-    | CASCADED { Name "cascaded" }
-    | CATALOG_P { Name "catalog" }
-    | CHAIN { Name "chain" }
-    | CHARACTERISTICS { Name "characteristics" }
-    | CHECKPOINT { Name "checkpoint" }
-    | CLASS { Name "class" }
-    | CLOSE { Name "close" }
-    | CLUSTER { Name "cluster" }
-    | COLUMNS { Name "columns" }
-    | COMMENT { Name "comment" }
-    | COMMENTS { Name "comments" }
-    | COMMIT { Name "commit" }
-    | COMMITTED { Name "committed" }
-    | CONFIGURATION { Name "configuration" }
-    | CONFLICT { Name "conflict" }
-    | CONNECTION { Name "connection" }
-    | CONSTRAINTS { Name "constraints" }
-    | CONTENT_P { Name "content" }
-    | CONTINUE_P { Name "continue" }
-    | CONVERSION_P { Name "conversion" }
-    | COPY { Name "copy" }
-    | COST { Name "cost" }
-    | CSV { Name "csv" }
-    | CUBE { Name "cube" }
-    | CURRENT_P { Name "current" }
-    | CURSOR { Name "cursor" }
-    | CYCLE { Name "cycle" }
-    | DATA_P { Name "data" }
-    | DATABASE { Name "database" }
-    | DAY_P { Name "day" }
-    | DEALLOCATE { Name "deallocate" }
-    | DECLARE { Name "declare" }
-    | DEFAULTS { Name "defaults" }
-    | DEFERRED { Name "deferred" }
-    | DEFINER { Name "definer" }
-    | DELETE_P { Name "delete" }
-    | DELIMITER { Name "delimiter" }
-    | DELIMITERS { Name "delimiters" }
-    | DEPENDS { Name "depends" }
-    | DETACH { Name "detach" }
-    | DICTIONARY { Name "dictionary" }
-    | DISABLE_P { Name "disable" }
-    | DISCARD { Name "discard" }
-    | DOCUMENT_P { Name "document" }
-    | DOMAIN_P { Name "domain" }
-    | DOUBLE_P { Name "double" }
-    | DROP { Name "drop" }
-    | EACH { Name "each" }
-    | ENABLE_P { Name "enable" }
-    | ENCODING { Name "encoding" }
-    | ENCRYPTED { Name "encrypted" }
-    | ENUM_P { Name "enum" }
-    | ESCAPE { Name "escape" }
-    | EVENT { Name "event" }
-    | EXCLUDE { Name "exclude" }
-    | EXCLUDING { Name "excluding" }
-    | EXCLUSIVE { Name "exclusive" }
-    | EXECUTE { Name "execute" }
-    | EXPLAIN { Name "explain" }
-    | EXTENSION { Name "extension" }
-    | EXTERNAL { Name "external" }
-    | FAMILY { Name "family" }
-    | FILTER { Name "filter" }
-    | FIRST_P { Name "first" }
-    | FOLLOWING { Name "following" }
-    | FORCE { Name "force" }
-    | FORWARD { Name "forward" }
-    | FUNCTION { Name "function" }
-    | FUNCTIONS { Name "functions" }
-    | GENERATED { Name "generated" }
-    | GLOBAL { Name "global" }
-    | GRANTED { Name "granted" }
-    | GROUPS { Name "groups" }
-    | HANDLER { Name "handler" }
-    | HEADER_P { Name "header" }
-    | HOLD { Name "hold" }
-    | HOUR_P { Name "hour" }
-    | IDENTITY_P { Name "identity" }
-    | IF_P { Name "if" }
-    | IMMEDIATE { Name "immediate" }
-    | IMMUTABLE { Name "immutable" }
-    | IMPLICIT_P { Name "implicit" }
-    | IMPORT_P { Name "import" }
-    | INCLUDE { Name "include" }
-    | INCLUDING { Name "including" }
-    | INCREMENT { Name "increment" }
-    | INDEX { Name "index" }
-    | INDEXES { Name "indexes" }
-    | INHERIT { Name "inherit" }
-    | INHERITS { Name "inherits" }
-    | INLINE_P { Name "inline" }
-    | INPUT_P { Name "input" }
-    | INSENSITIVE { Name "insensitive" }
-    | INSERT { Name "insert" }
-    | INSTEAD { Name "instead" }
-    | INVOKER { Name "invoker" }
-    | ISOLATION { Name "isolation" }
-    | KEY { Name "key" }
-    | LABEL { Name "label" }
-    | LANGUAGE { Name "language" }
-    | LARGE_P { Name "large" }
-    | LAST { Name "last" }
-    | LEAKPROOF { Name "leakproof" }
-    | LEVEL { Name "level" }
-    | LISTEN { Name "listen" }
-    | LOAD { Name "load" }
-    | LOCAL { Name "local" }
-    | LOCATION { Name "location" }
-    | LOCK_P { Name "lock" }
-    | LOCKED { Name "locked" }
-    | LOGGED { Name "logged" }
-    | MAPPING { Name "mapping" }
-    | MATCH { Name "match" }
-    | MATERIALIZED { Name "materialized" }
-    | MAXVALUE { Name "maxvalue" }
-    | METHOD { Name "method" }
-    | MINUTE_P { Name "minute" }
-    | MINVALUE { Name "minvalue" }
-    | MODE { Name "mode" }
-    | MONTH_P { Name "month" }
-    | MOVE { Name "move" }
-    | NAME_P { Name "name" }
-    | NAMES { Name "names" }
-    | NEW { Name "new" }
-    | NEXT { Name "next" }
-    | NO { Name "no" }
-    | NOTHING { Name "nothing" }
-    | NOTIFY { Name "notify" }
-    | NOWAIT { Name "nowait" }
-    | NULLS_P { Name "nulls" }
-    | OBJECT_P { Name "object" }
-    | OF { Name "of" }
-    | OFF { Name "off" }
-    | OIDS { Name "oids" }
-    | OLD { Name "old" }
-    | OPERATOR { Name "operator" }
-    | OPTION { Name "option" }
-    | OPTIONS { Name "options" }
-    | ORDINALITY { Name "ordinality" }
-    | OTHERS { Name "others" }
-    | OVER { Name "over" }
-    | OVERRIDING { Name "overriding" }
-    | OWNED { Name "owned" }
-    | OWNER { Name "owner" }
-    | PARALLEL { Name "parallel" }
-    | PARSER { Name "parser" }
-    | PARTIAL { Name "partial" }
-    | PARTITION { Name "partition" }
-    | PASSING { Name "passing" }
-    | PASSWORD { Name "password" }
-    | PLANS { Name "plans" }
-    | POLICY { Name "policy" }
-    | PRECEDING { Name "preceding" }
-    | PREPARE { Name "prepare" }
-    | PREPARED { Name "prepared" }
-    | PRESERVE { Name "preserve" }
-    | PRIOR { Name "prior" }
-    | PRIVILEGES { Name "privileges" }
-    | PROCEDURAL { Name "procedural" }
-    | PROCEDURE { Name "procedure" }
-    | PROCEDURES { Name "procedures" }
-    | PROGRAM { Name "program" }
-    | PUBLICATION { Name "publication" }
-    | QUOTE { Name "quote" }
-    | RANGE { Name "range" }
-    | READ { Name "read" }
-    | REASSIGN { Name "reassign" }
-    | RECHECK { Name "recheck" }
-    | RECURSIVE { Name "recursive" }
-    | REF { Name "ref" }
-    | REFERENCING { Name "referencing" }
-    | REFRESH { Name "refresh" }
-    | REINDEX { Name "reindex" }
-    | RELATIVE_P { Name "relative" }
-    | RELEASE { Name "release" }
-    | RENAME { Name "rename" }
-    | REPEATABLE { Name "repeatable" }
-    | REPLACE { Name "replace" }
-    | REPLICA { Name "replica" }
-    | RESET { Name "reset" }
-    | RESTART { Name "restart" }
-    | RESTRICT { Name "restrict" }
-    | RETURNS { Name "returns" }
-    | REVOKE { Name "revoke" }
-    | ROLE { Name "role" }
-    | ROLLBACK { Name "rollback" }
-    | ROLLUP { Name "rollup" }
-    | ROUTINE { Name "routine" }
-    | ROUTINES { Name "routines" }
-    | ROWS { Name "rows" }
-    | RULE { Name "rule" }
-    | SAVEPOINT { Name "savepoint" }
-    | SCHEMA { Name "schema" }
-    | SCHEMAS { Name "schemas" }
-    | SCROLL { Name "scroll" }
-    | SEARCH { Name "search" }
-    | SECOND_P { Name "second" }
-    | SECURITY { Name "security" }
-    | SEQUENCE { Name "sequence" }
-    | SEQUENCES { Name "sequences" }
-    | SERIALIZABLE { Name "serializable" }
-    | SERVER { Name "server" }
-    | SESSION { Name "session" }
-    | SET { Name "set" }
-    | SETS { Name "sets" }
-    | SHARE { Name "share" }
-    | SHOW { Name "show" }
-    | SIMPLE { Name "simple" }
-    | SKIP { Name "skip" }
-    | SNAPSHOT { Name "snapshot" }
-    | SQL_P { Name "sql" }
-    | STABLE { Name "stable" }
-    | STANDALONE_P { Name "standalone" }
-    | START { Name "start" }
-    | STATEMENT { Name "statement" }
-    | STATISTICS { Name "statistics" }
-    | STDIN { Name "stdin" }
-    | STDOUT { Name "stdout" }
-    | STORAGE { Name "storage" }
-    | STORED { Name "stored" }
-    | STRICT_P { Name "strict" }
-    | STRIP_P { Name "strip" }
-    | SUBSCRIPTION { Name "subscription" }
-    | SUPPORT { Name "support" }
-    | SYSID { Name "sysid" }
-    | SYSTEM_P { Name "system" }
-    | TABLES { Name "tables" }
-    | TABLESPACE { Name "tablespace" }
-    | TEMP { Name "temp" }
-    | TEMPLATE { Name "template" }
-    | TEMPORARY { Name "temporary" }
-    | TEXT_P { Name "text" }
-    | TIES { Name "ties" }
-    | TRANSACTION { Name "transaction" }
-    | TRANSFORM { Name "transform" }
-    | TRIGGER { Name "trigger" }
-    | TRUNCATE { Name "truncate" }
-    | TRUSTED { Name "trusted" }
-    | TYPE_P { Name "type" }
-    | TYPES_P { Name "types" }
-    | UNBOUNDED { Name "unbounded" }
-    | UNCOMMITTED { Name "uncommitted" }
-    | UNENCRYPTED { Name "unencrypted" }
-    | UNKNOWN { Name "unknown" }
-    | UNLISTEN { Name "unlisten" }
-    | UNLOGGED { Name "unlogged" }
-    | UNTIL { Name "until" }
-    | UPDATE { Name "update" }
-    | VACUUM { Name "vacuum" }
-    | VALID { Name "valid" }
-    | VALIDATE { Name "validate" }
-    | VALIDATOR { Name "validator" }
-    | VALUE_P { Name "value" }
-    | VARYING { Name "varying" }
-    | VERSION_P { Name "version" }
-    | VIEW { Name "view" }
-    | VIEWS { Name "views" }
-    | VOLATILE { Name "volatile" }
-    | WHITESPACE_P { Name "whitespace" }
-    | WITHIN { Name "within" }
-    | WITHOUT { Name "without" }
-    | WORK { Name "work" }
-    | WRAPPER { Name "wrapper" }
-    | WRITE { Name "write" }
-    | XML_P { Name "xml" }
-    | YEAR_P { Name "year" }
-    | YES_P { Name "yes" }
-    | ZONE { Name "zone" }
+unreserved_keyword :: { Text }
+    : ABORT_P { "abort" }
+    | ABSOLUTE_P { "absolute" }
+    | ACCESS { "access" }
+    | ACTION { "action" }
+    | ADD_P { "add" }
+    | ADMIN { "admin" }
+    | AFTER { "after" }
+    | AGGREGATE { "aggregate" }
+    | ALSO { "also" }
+    | ALTER { "alter" }
+    | ALWAYS { "always" }
+    | ASSERTION { "assertion" }
+    | ASSIGNMENT { "assignment" }
+    | AT { "at" }
+    | ATTACH { "attach" }
+    | ATTRIBUTE { "attribute" }
+    | BACKWARD { "backward" }
+    | BEFORE { "before" }
+    | BEGIN_P { "begin" }
+    | BY { "by" }
+    | CACHE { "cache" }
+    | CALL { "call" }
+    | CALLED { "called" }
+    | CASCADE { "cascade" }
+    | CASCADED { "cascaded" }
+    | CATALOG_P { "catalog" }
+    | CHAIN { "chain" }
+    | CHARACTERISTICS { "characteristics" }
+    | CHECKPOINT { "checkpoint" }
+    | CLASS { "class" }
+    | CLOSE { "close" }
+    | CLUSTER { "cluster" }
+    | COLUMNS { "columns" }
+    | COMMENT { "comment" }
+    | COMMENTS { "comments" }
+    | COMMIT { "commit" }
+    | COMMITTED { "committed" }
+    | CONFIGURATION { "configuration" }
+    | CONFLICT { "conflict" }
+    | CONNECTION { "connection" }
+    | CONSTRAINTS { "constraints" }
+    | CONTENT_P { "content" }
+    | CONTINUE_P { "continue" }
+    | CONVERSION_P { "conversion" }
+    | COPY { "copy" }
+    | COST { "cost" }
+    | CSV { "csv" }
+    | CUBE { "cube" }
+    | CURRENT_P { "current" }
+    | CURSOR { "cursor" }
+    | CYCLE { "cycle" }
+    | DATA_P { "data" }
+    | DATABASE { "database" }
+    | DAY_P { "day" }
+    | DEALLOCATE { "deallocate" }
+    | DECLARE { "declare" }
+    | DEFAULTS { "defaults" }
+    | DEFERRED { "deferred" }
+    | DEFINER { "definer" }
+    | DELETE_P { "delete" }
+    | DELIMITER { "delimiter" }
+    | DELIMITERS { "delimiters" }
+    | DEPENDS { "depends" }
+    | DETACH { "detach" }
+    | DICTIONARY { "dictionary" }
+    | DISABLE_P { "disable" }
+    | DISCARD { "discard" }
+    | DOCUMENT_P { "document" }
+    | DOMAIN_P { "domain" }
+    | DOUBLE_P { "double" }
+    | DROP { "drop" }
+    | EACH { "each" }
+    | ENABLE_P { "enable" }
+    | ENCODING { "encoding" }
+    | ENCRYPTED { "encrypted" }
+    | ENUM_P { "enum" }
+    | ESCAPE { "escape" }
+    | EVENT { "event" }
+    | EXCLUDE { "exclude" }
+    | EXCLUDING { "excluding" }
+    | EXCLUSIVE { "exclusive" }
+    | EXECUTE { "execute" }
+    | EXPLAIN { "explain" }
+    | EXTENSION { "extension" }
+    | EXTERNAL { "external" }
+    | FAMILY { "family" }
+    | FILTER { "filter" }
+    | FIRST_P { "first" }
+    | FOLLOWING { "following" }
+    | FORCE { "force" }
+    | FORWARD { "forward" }
+    | FUNCTION { "function" }
+    | FUNCTIONS { "functions" }
+    | GENERATED { "generated" }
+    | GLOBAL { "global" }
+    | GRANTED { "granted" }
+    | GROUPS { "groups" }
+    | HANDLER { "handler" }
+    | HEADER_P { "header" }
+    | HOLD { "hold" }
+    | HOUR_P { "hour" }
+    | IDENTITY_P { "identity" }
+    | IF_P { "if" }
+    | IMMEDIATE { "immediate" }
+    | IMMUTABLE { "immutable" }
+    | IMPLICIT_P { "implicit" }
+    | IMPORT_P { "import" }
+    | INCLUDE { "include" }
+    | INCLUDING { "including" }
+    | INCREMENT { "increment" }
+    | INDEX { "index" }
+    | INDEXES { "indexes" }
+    | INHERIT { "inherit" }
+    | INHERITS { "inherits" }
+    | INLINE_P { "inline" }
+    | INPUT_P { "input" }
+    | INSENSITIVE { "insensitive" }
+    | INSERT { "insert" }
+    | INSTEAD { "instead" }
+    | INVOKER { "invoker" }
+    | ISOLATION { "isolation" }
+    | KEY { "key" }
+    | LABEL { "label" }
+    | LANGUAGE { "language" }
+    | LARGE_P { "large" }
+    | LAST { "last" }
+    | LEAKPROOF { "leakproof" }
+    | LEVEL { "level" }
+    | LISTEN { "listen" }
+    | LOAD { "load" }
+    | LOCAL { "local" }
+    | LOCATION { "location" }
+    | LOCK_P { "lock" }
+    | LOCKED { "locked" }
+    | LOGGED { "logged" }
+    | MAPPING { "mapping" }
+    | MATCH { "match" }
+    | MATERIALIZED { "materialized" }
+    | MAXVALUE { "maxvalue" }
+    | METHOD { "method" }
+    | MINUTE_P { "minute" }
+    | MINVALUE { "minvalue" }
+    | MODE { "mode" }
+    | MONTH_P { "month" }
+    | MOVE { "move" }
+    | NAME_P { "name" }
+    | NAMES { "names" }
+    | NEW { "new" }
+    | NEXT { "next" }
+    | NO { "no" }
+    | NOTHING { "nothing" }
+    | NOTIFY { "notify" }
+    | NOWAIT { "nowait" }
+    | NULLS_P { "nulls" }
+    | OBJECT_P { "object" }
+    | OF { "of" }
+    | OFF { "off" }
+    | OIDS { "oids" }
+    | OLD { "old" }
+    | OPERATOR { "operator" }
+    | OPTION { "option" }
+    | OPTIONS { "options" }
+    | ORDINALITY { "ordinality" }
+    | OTHERS { "others" }
+    | OVER { "over" }
+    | OVERRIDING { "overriding" }
+    | OWNED { "owned" }
+    | OWNER { "owner" }
+    | PARALLEL { "parallel" }
+    | PARSER { "parser" }
+    | PARTIAL { "partial" }
+    | PARTITION { "partition" }
+    | PASSING { "passing" }
+    | PASSWORD { "password" }
+    | PLANS { "plans" }
+    | POLICY { "policy" }
+    | PRECEDING { "preceding" }
+    | PREPARE { "prepare" }
+    | PREPARED { "prepared" }
+    | PRESERVE { "preserve" }
+    | PRIOR { "prior" }
+    | PRIVILEGES { "privileges" }
+    | PROCEDURAL { "procedural" }
+    | PROCEDURE { "procedure" }
+    | PROCEDURES { "procedures" }
+    | PROGRAM { "program" }
+    | PUBLICATION { "publication" }
+    | QUOTE { "quote" }
+    | RANGE { "range" }
+    | READ { "read" }
+    | REASSIGN { "reassign" }
+    | RECHECK { "recheck" }
+    | RECURSIVE { "recursive" }
+    | REF { "ref" }
+    | REFERENCING { "referencing" }
+    | REFRESH { "refresh" }
+    | REINDEX { "reindex" }
+    | RELATIVE_P { "relative" }
+    | RELEASE { "release" }
+    | RENAME { "rename" }
+    | REPEATABLE { "repeatable" }
+    | REPLACE { "replace" }
+    | REPLICA { "replica" }
+    | RESET { "reset" }
+    | RESTART { "restart" }
+    | RESTRICT { "restrict" }
+    | RETURNS { "returns" }
+    | REVOKE { "revoke" }
+    | ROLE { "role" }
+    | ROLLBACK { "rollback" }
+    | ROLLUP { "rollup" }
+    | ROUTINE { "routine" }
+    | ROUTINES { "routines" }
+    | ROWS { "rows" }
+    | RULE { "rule" }
+    | SAVEPOINT { "savepoint" }
+    | SCHEMA { "schema" }
+    | SCHEMAS { "schemas" }
+    | SCROLL { "scroll" }
+    | SEARCH { "search" }
+    | SECOND_P { "second" }
+    | SECURITY { "security" }
+    | SEQUENCE { "sequence" }
+    | SEQUENCES { "sequences" }
+    | SERIALIZABLE { "serializable" }
+    | SERVER { "server" }
+    | SESSION { "session" }
+    | SET { "set" }
+    | SETS { "sets" }
+    | SHARE { "share" }
+    | SHOW { "show" }
+    | SIMPLE { "simple" }
+    | SKIP { "skip" }
+    | SNAPSHOT { "snapshot" }
+    | SQL_P { "sql" }
+    | STABLE { "stable" }
+    | STANDALONE_P { "standalone" }
+    | START { "start" }
+    | STATEMENT { "statement" }
+    | STATISTICS { "statistics" }
+    | STDIN { "stdin" }
+    | STDOUT { "stdout" }
+    | STORAGE { "storage" }
+    | STORED { "stored" }
+    | STRICT_P { "strict" }
+    | STRIP_P { "strip" }
+    | SUBSCRIPTION { "subscription" }
+    | SUPPORT { "support" }
+    | SYSID { "sysid" }
+    | SYSTEM_P { "system" }
+    | TABLES { "tables" }
+    | TABLESPACE { "tablespace" }
+    | TEMP { "temp" }
+    | TEMPLATE { "template" }
+    | TEMPORARY { "temporary" }
+    | TEXT_P { "text" }
+    | TIES { "ties" }
+    | TRANSACTION { "transaction" }
+    | TRANSFORM { "transform" }
+    | TRIGGER { "trigger" }
+    | TRUNCATE { "truncate" }
+    | TRUSTED { "trusted" }
+    | TYPE_P { "type" }
+    | TYPES_P { "types" }
+    | UNBOUNDED { "unbounded" }
+    | UNCOMMITTED { "uncommitted" }
+    | UNENCRYPTED { "unencrypted" }
+    | UNKNOWN { "unknown" }
+    | UNLISTEN { "unlisten" }
+    | UNLOGGED { "unlogged" }
+    | UNTIL { "until" }
+    | UPDATE { "update" }
+    | VACUUM { "vacuum" }
+    | VALID { "valid" }
+    | VALIDATE { "validate" }
+    | VALIDATOR { "validator" }
+    | VALUE_P { "value" }
+    | VARYING { "varying" }
+    | VERSION_P { "version" }
+    | VIEW { "view" }
+    | VIEWS { "views" }
+    | VOLATILE { "volatile" }
+    | WHITESPACE_P { "whitespace" }
+    | WITHIN { "within" }
+    | WITHOUT { "without" }
+    | WORK { "work" }
+    | WRAPPER { "wrapper" }
+    | WRITE { "write" }
+    | XML_P { "xml" }
+    | YEAR_P { "year" }
+    | YES_P { "yes" }
+    | ZONE { "zone" }
 
 -- * Column identifier -- *- keywords that can be column, table, etc names.
 -- *
@@ -2639,57 +2653,57 @@ unreserved_keyword :: { Name }
 -- * The type names appearing here are not usable as function names
 -- * because they can be followed by '(' in typename productions, which
 -- * looks too much like a function call for an LR(1) parser.
-col_name_keyword :: { Name }
-    : BETWEEN { Name "between" }
-    | BIGINT { Name "bigint" }
-    | BIT { Name "bit" }
-    | BOOLEAN_P { Name "boolean" }
-    | CHAR_P { Name "char" }
-    | CHARACTER { Name "character" }
-    | COALESCE { Name "coalesce" }
-    | DEC { Name "dec" }
-    | DECIMAL_P { Name "decimal" }
-    | EXISTS { Name "exists" }
-    | EXTRACT { Name "extract" }
-    | FLOAT_P { Name "float" }
-    | GREATEST { Name "greatest" }
-    | GROUPING { Name "grouping" }
-    | INOUT { Name "inout" }
-    | INT_P { Name "int" }
-    | INTEGER { Name "integer" }
-    | INTERVAL { Name "interval" }
-    | LEAST { Name "least" }
-    | NATIONAL { Name "national" }
-    | NCHAR { Name "nchar" }
-    | NONE { Name "none" }
-    | NULLIF { Name "nullif" }
-    | NUMERIC { Name "numeric" }
-    | OUT_P { Name "out" }
-    | OVERLAY { Name "overlay" }
-    | POSITION { Name "position" }
-    | PRECISION { Name "precision" }
-    | REAL { Name "real" }
-    | ROW { Name "row" }
-    | SETOF { Name "setof" }
-    | SMALLINT { Name "smallint" }
-    | SUBSTRING { Name "substring" }
-    | TIME { Name "time" }
-    | TIMESTAMP { Name "timestamp" }
-    | TREAT { Name "treat" }
-    | TRIM { Name "trim" }
-    | VALUES { Name "values" }
-    | VARCHAR { Name "varchar" }
-    | XMLATTRIBUTES { Name "xmlattributes" }
-    | XMLCONCAT { Name "xmlconcat" }
-    | XMLELEMENT { Name "xmlelement" }
-    | XMLEXISTS { Name "xmlexists" }
-    | XMLFOREST { Name "xmlforest" }
-    | XMLNAMESPACES { Name "xmlnamespaces" }
-    | XMLPARSE { Name "xmlparse" }
-    | XMLPI { Name "xmlpi" }
-    | XMLROOT { Name "xmlroot" }
-    | XMLSERIALIZE { Name "xmlserialize" }
-    | XMLTABLE { Name "xmltable" }
+col_name_keyword :: { Text }
+    : BETWEEN { "between" }
+    | BIGINT { "bigint" }
+    | BIT { "bit" }
+    | BOOLEAN_P { "boolean" }
+    | CHAR_P { "char" }
+    | CHARACTER { "character" }
+    | COALESCE { "coalesce" }
+    | DEC { "dec" }
+    | DECIMAL_P { "decimal" }
+    | EXISTS { "exists" }
+    | EXTRACT { "extract" }
+    | FLOAT_P { "float" }
+    | GREATEST { "greatest" }
+    | GROUPING { "grouping" }
+    | INOUT { "inout" }
+    | INT_P { "int" }
+    | INTEGER { "integer" }
+    | INTERVAL { "interval" }
+    | LEAST { "least" }
+    | NATIONAL { "national" }
+    | NCHAR { "nchar" }
+    | NONE { "none" }
+    | NULLIF { "nullif" }
+    | NUMERIC { "numeric" }
+    | OUT_P { "out" }
+    | OVERLAY { "overlay" }
+    | POSITION { "position" }
+    | PRECISION { "precision" }
+    | REAL { "real" }
+    | ROW { "row" }
+    | SETOF { "setof" }
+    | SMALLINT { "smallint" }
+    | SUBSTRING { "substring" }
+    | TIME { "time" }
+    | TIMESTAMP { "timestamp" }
+    | TREAT { "treat" }
+    | TRIM { "trim" }
+    | VALUES { "values" }
+    | VARCHAR { "varchar" }
+    | XMLATTRIBUTES { "xmlattributes" }
+    | XMLCONCAT { "xmlconcat" }
+    | XMLELEMENT { "xmlelement" }
+    | XMLEXISTS { "xmlexists" }
+    | XMLFOREST { "xmlforest" }
+    | XMLNAMESPACES { "xmlnamespaces" }
+    | XMLPARSE { "xmlparse" }
+    | XMLPI { "xmlpi" }
+    | XMLROOT { "xmlroot" }
+    | XMLSERIALIZE { "xmlserialize" }
+    | XMLTABLE { "xmltable" }
 
 -- * Type/function identifier -- *- keywords that can be type or function names.
 -- *
@@ -2700,114 +2714,114 @@ col_name_keyword :: { Name }
 -- * Do not include POSITION, SUBSTRING, etc here since they have explicit
 -- * productions in a_expr to support the goofy SQL9x argument syntax.
 -- * - thomas 2000-11-28
-type_func_name_keyword :: { Name }
-			: AUTHORIZATION { Name "authorization" }
-			| BINARY { Name "binary" }
-			| COLLATION { Name "collation" }
-			| CONCURRENTLY { Name "concurrently" }
-			| CROSS { Name "cross" }
-			| CURRENT_SCHEMA { Name "current_schema" }
-			| FREEZE { Name "freeze" }
-			| FULL { Name "full" }
-			| ILIKE { Name "ilike" }
-			| INNER_P { Name "inner" }
-			| IS { Name "is" }
-			| ISNULL { Name "isnull" }
-			| JOIN { Name "join" }
-			| LEFT { Name "left" }
-			| LIKE { Name "like" }
-			| NATURAL { Name "natural" }
-			| NOTNULL { Name "notnull" }
-			| OUTER_P { Name "outer" }
-			| OVERLAPS { Name "overlaps" }
-			| RIGHT { Name "right" }
-			| SIMILAR { Name "similar" }
-			| TABLESAMPLE { Name "tablesample" }
-			| VERBOSE { Name "verbose" }
+type_func_name_keyword :: { Text }
+			: AUTHORIZATION { "authorization" }
+			| BINARY { "binary" }
+			| COLLATION { "collation" }
+			| CONCURRENTLY { "concurrently" }
+			| CROSS { "cross" }
+			| CURRENT_SCHEMA { "current_schema" }
+			| FREEZE { "freeze" }
+			| FULL { "full" }
+			| ILIKE { "ilike" }
+			| INNER_P { "inner" }
+			| IS { "is" }
+			| ISNULL { "isnull" }
+			| JOIN { "join" }
+			| LEFT { "left" }
+			| LIKE { "like" }
+			| NATURAL { "natural" }
+			| NOTNULL { "notnull" }
+			| OUTER_P { "outer" }
+			| OVERLAPS { "overlaps" }
+			| RIGHT { "right" }
+			| SIMILAR { "similar" }
+			| TABLESAMPLE { "tablesample" }
+			| VERBOSE { "verbose" }
 
 -- * Reserved keyword -- *- these keywords are usable only as a ColLabel.
 -- *
 -- * Keywords appear here if they could not be distinguished from variable,
 -- * type, or function names in some contexts.  Don't put things here unless
 -- * forced to.
-reserved_keyword :: { Name }
-			: ALL { Name "all" }
-			| ANALYSE { Name "analyse" }
-			| ANALYZE { Name "analyze" }
-			| AND { Name "and" }
-			| ANY { Name "any" }
-			| ARRAY { Name "array" }
-			| AS { Name "as" }
-			| ASC { Name "asc" }
-			| ASYMMETRIC { Name "asymmetric" }
-			| BOTH { Name "both" }
-			| CASE { Name "case" }
-			| CAST { Name "cast" }
-			| CHECK { Name "check" }
-			| COLLATE { Name "collate" }
-			| COLUMN { Name "column" }
-			| CONSTRAINT { Name "constraint" }
-			| CREATE { Name "create" }
-			| CURRENT_CATALOG { Name "current_catalog" }
-			| CURRENT_DATE { Name "current_date" }
-			| CURRENT_ROLE { Name "current_role" }
-			| CURRENT_TIME { Name "current_time" }
-			| CURRENT_TIMESTAMP { Name "current_timestamp" }
-			| CURRENT_USER { Name "current_user" }
-			| DEFAULT { Name "default" }
-			| DEFERRABLE { Name "deferrable" }
-			| DESC { Name "desc" }
-			| DISTINCT { Name "distinct" }
-			| DO { Name "do" }
-			| ELSE { Name "else" }
-			| END_P { Name "end" }
-			| EXCEPT { Name "except" }
-			| FALSE_P { Name "false" }
-			| FETCH { Name "fetch" }
-			| FOR { Name "for" }
-			| FOREIGN { Name "foreign" }
-			| FROM { Name "from" }
-			| GRANT { Name "grant" }
-			| GROUP_P { Name "group" }
-			| HAVING { Name "having" }
-			| IN_P { Name "in" }
-			| INITIALLY { Name "initially" }
-			| INTERSECT { Name "intersect" }
-			| INTO { Name "into" }
-			| LATERAL_P { Name "lateral" }
-			| LEADING { Name "leading" }
-			| LIMIT { Name "limit" }
-			| LOCALTIME { Name "localtime" }
-			| LOCALTIMESTAMP { Name "localtimestamp" }
-			| NOT { Name "not" }
-			| NULL_P { Name "null" }
-			| OFFSET { Name "offset" }
-			| ON { Name "on" }
-			| ONLY { Name "only" }
-			| OR { Name "or" }
-			| ORDER { Name "order" }
-			| PLACING { Name "placing" }
-			| PRIMARY { Name "primary" }
-			| REFERENCES { Name "references" }
-			| RETURNING { Name "returning" }
-			| SELECT { Name "select" }
-			| SESSION_USER { Name "current_user" }
-			| SOME { Name "some" }
-			| SYMMETRIC { Name "symmetric" }
-			| TABLE { Name "table" }
-			| THEN { Name "then" }
-			| TO { Name "to" }
-			| TRAILING { Name "trailing" }
-			| TRUE_P { Name "true" }
-			| UNION { Name "union" }
-			| UNIQUE { Name "unique" }
-			| USER { Name "user" }
-			| USING { Name "using" }
-			| VARIADIC { Name "variadic" }
-			| WHEN { Name "when" }
-			| WHERE { Name "where" }
-			| WINDOW { Name "window" }
-			| WITH { Name "with" }
+reserved_keyword :: { Text }
+			: ALL { "all" }
+			| ANALYSE { "analyse" }
+			| ANALYZE { "analyze" }
+			| AND { "and" }
+			| ANY { "any" }
+			| ARRAY { "array" }
+			| AS { "as" }
+			| ASC { "asc" }
+			| ASYMMETRIC { "asymmetric" }
+			| BOTH { "both" }
+			| CASE { "case" }
+			| CAST { "cast" }
+			| CHECK { "check" }
+			| COLLATE { "collate" }
+			| COLUMN { "column" }
+			| CONSTRAINT { "constraint" }
+			| CREATE { "create" }
+			| CURRENT_CATALOG { "current_catalog" }
+			| CURRENT_DATE { "current_date" }
+			| CURRENT_ROLE { "current_role" }
+			| CURRENT_TIME { "current_time" }
+			| CURRENT_TIMESTAMP { "current_timestamp" }
+			| CURRENT_USER { "current_user" }
+			| DEFAULT { "default" }
+			| DEFERRABLE { "deferrable" }
+			| DESC { "desc" }
+			| DISTINCT { "distinct" }
+			| DO { "do" }
+			| ELSE { "else" }
+			| END_P { "end" }
+			| EXCEPT { "except" }
+			| FALSE_P { "false" }
+			| FETCH { "fetch" }
+			| FOR { "for" }
+			| FOREIGN { "foreign" }
+			| FROM { "from" }
+			| GRANT { "grant" }
+			| GROUP_P { "group" }
+			| HAVING { "having" }
+			| IN_P { "in" }
+			| INITIALLY { "initially" }
+			| INTERSECT { "intersect" }
+			| INTO { "into" }
+			| LATERAL_P { "lateral" }
+			| LEADING { "leading" }
+			| LIMIT { "limit" }
+			| LOCALTIME { "localtime" }
+			| LOCALTIMESTAMP { "localtimestamp" }
+			| NOT { "not" }
+			| NULL_P { "null" }
+			| OFFSET { "offset" }
+			| ON { "on" }
+			| ONLY { "only" }
+			| OR { "or" }
+			| ORDER { "order" }
+			| PLACING { "placing" }
+			| PRIMARY { "primary" }
+			| REFERENCES { "references" }
+			| RETURNING { "returning" }
+			| SELECT { "select" }
+			| SESSION_USER { "current_user" }
+			| SOME { "some" }
+			| SYMMETRIC { "symmetric" }
+			| TABLE { "table" }
+			| THEN { "then" }
+			| TO { "to" }
+			| TRAILING { "trailing" }
+			| TRUE_P { "true" }
+			| UNION { "union" }
+			| UNIQUE { "unique" }
+			| USER { "user" }
+			| USING { "using" }
+			| VARIADIC { "variadic" }
+			| WHEN { "when" }
+			| WHERE { "where" }
+			| WINDOW { "window" }
+			| WITH { "with" }
 
 {
 

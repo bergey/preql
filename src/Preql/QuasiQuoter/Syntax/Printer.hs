@@ -62,7 +62,10 @@ formatAsText = TL.toStrict . TLB.toLazyText . fmt
 
 instance FormatSql Name where
     -- TODO enclose keywoards &c in double quotes
-    fmt = B.fromText . getName
+    fmt Name{..}= case (inherit, alias) of
+      (False, Nothing) -> B.fromText qualifiedName
+      (_, Just as) -> only <> "AS " <> B.fromText as
+        where only = if inherit then "" else "ONLY "
 
 instance FormatSql Literal where
     fmt (I i)     = B.decimal i
@@ -109,17 +112,16 @@ instance FormatSql B.Builder where
 
 instance FormatSql Insert where
     fmt Insert{table, columns, values} =
-        "INSERT INTO " <> fmt table <> " (" <> commas columns <>
+        "INSERT INTO " <> fmt table <> " (" <> commas (B.fromText <$> columns) <>
         ") VALUES (" <> commas values <> ")"
 
 instance FormatSql Delete where
-    fmt Delete{table, conditions} = "DELETE FROM " <> fmt table <> wh where
-      wh = case conditions of
-          Nothing         -> ""
-          Just conditions' -> " WHERE " <> fmt conditions'
+    fmt Delete{table, whereClause, using, returningList, withClause} =
+      opt "WITH " withClause <> "DELETE FROM " <> fmt table
+      <> optList " USING " using <> opt " WHERE " whereClause <> optList " RETURNING " returningList
 
 instance FormatSql Setting where
-    fmt (Setting column rhs) = fmt column <> "=" <> fmt rhs
+    fmt (Setting column rhs) = B.fromText column <> "=" <> fmt rhs
 
 instance FormatSql Update where
     fmt Update{table, settings, conditions} =
@@ -130,7 +132,7 @@ instance FormatSql Update where
 
 instance FormatSql Expr where
     fmtPrec _ (Lit lit)  = fmt lit
-    fmtPrec _ (CRef name) = fmt name
+    fmtPrec _ (CRef name) = B.fromText name
     fmtPrec _ (NumberedParam i) = B.fromString ('$' : show i)
     fmtPrec _ (HaskellParam txt) = "${" <> B.fromText txt <> "}"
     fmtPrec p (BinOp op l r) = let (assoc, p1) = binOpPrec op
@@ -155,8 +157,8 @@ instance FormatSql Expr where
     fmtPrec _ (Fun f) = fmt f
     fmtPrec _ (Cas c) = fmt c
 
-fmtIndirections :: Foldable f => f Indirection -> TLB.Builder
-fmtIndirections = foldMap (("." <>) . fmt)
+fmtIndirections :: Foldable f => f Text -> TLB.Builder
+fmtIndirections = foldMap (("." <>) . B.fromText)
 
 instance FormatSql BinOp where
     fmt op = case op of
@@ -220,8 +222,8 @@ instance FormatSql LikeE where
 instance FormatSql SelectStmt where
     fmtPrec _ (SelectValues values) = "VALUES " <> commas (fmap (parens . commas) values)
     fmtPrec _ (Simple un) = fmt un
-    fmtPrec p (S ss so) = let topLevel = parensIf (p > 0) (fmtPrec 1 ss <> fmt so) in
-      case withClause so of
+    fmtPrec p (S ss so@SelectOptions{withClause}) = let topLevel = parensIf (p > 0) (fmtPrec 1 ss <> fmt so) in
+      case withClause of
         Nothing -> topLevel
         Just ctes -> fmt ctes <> " " <> topLevel
     fmtPrec p (Set op distinct l r) = parensIf (p > q) $
@@ -264,7 +266,7 @@ instance FormatSql Materialized where
 
 instance FormatSql CTE where
   fmt CommonTableExpr {name, aliases, materialized, query} =
-    fmt name <> unlessEmpty parens (commas aliases)
+    B.fromText name <> unlessEmpty parens (commas (B.fromText <$> aliases))
     <> unlessEmpty spacesAround (fmt materialized) <> parens (fmt query)
     where
       spacesAround s = " " <> s <> " "
@@ -275,15 +277,15 @@ instance FormatSql TableRef where
     fmtPrec _ (SubSelect stmt alias) = parens (fmt stmt) <> " AS " <> fmt alias
 
 instance FormatSql Alias where
-    fmt (Alias name []) = fmt name
-    fmt (Alias name columns) = fmt name <> parens (commas columns)
+    fmt (Alias name []) = B.fromText name
+    fmt (Alias name columns) = B.fromText name <> parens (commas (map B.fromText columns))
 
 instance FormatSql JoinedTable where
     fmtPrec _ (Table name) = fmt name
     fmtPrec p (CrossJoin l r) = parensIf (p > 0) $ fmtPrec 0 l <> " CROSS JOIN " <> fmtPrec 1 r
     fmtPrec p (Join Inner Natural l r) = parensIf (p > 0) $ fmtPrec 0 l <> " NATURAL JOIN " <> fmtPrec 1 r
     fmtPrec p (Join ty Natural l r) = parensIf (p > 0) $ fmtPrec 0 l <> " NATURAL" <> fmt ty <> "JOIN " <> fmtPrec 1 r
-    fmtPrec p (Join ty (Using cols) l r) = parensIf (p > 0) $ fmtPrec 0 l <> fmt ty <> " JOIN " <> fmtPrec 1 r <> " USING " <> parens (commas cols)
+    fmtPrec p (Join ty (Using cols) l r) = parensIf (p > 0) $ fmtPrec 0 l <> fmt ty <> " JOIN " <> fmtPrec 1 r <> " USING " <> parens (commas (B.fromText <$> cols))
     fmtPrec p (Join ty (On expr) l r) = parensIf (p > 0) $ fmtPrec 0 l <> fmt ty <> " JOIN " <> fmtPrec 0 r <> " ON " <> fmtPrec 0 expr
 
 instance FormatSql JoinType where
@@ -317,7 +319,7 @@ instance FormatSql NullsOrder where
 
 instance FormatSql Locking where
     fmt Locking{strength, tables, wait} =
-        " " <> fmt strength <> optList " OF " tables <> " " <> fmt wait
+        " " <> fmt strength <> optList " OF " (B.fromText <$> tables) <> " " <> fmt wait
 
 instance FormatSql LockingStrength where
     fmt ForUpdate = "FOR UPDATE"
@@ -338,7 +340,7 @@ instance FormatSql SetOp where
 instance FormatSql ResTarget where
     fmt Star = "*"
     fmt (Column expr Nothing) = fmt expr
-    fmt (Column expr (Just name)) = fmt expr <> " AS " <> fmt name
+    fmt (Column expr (Just name)) = fmt expr <> " AS " <> B.fromText name
 
 -- instance FormatSql ColumnRef where
 --     fmt ColumnRef {value, name} = fmt value <> case name of
@@ -346,12 +348,12 @@ instance FormatSql ResTarget where
 --         Just n -> "." <> fmt n
 
 instance FormatSql WindowDef where
-  fmt (WindowDef name spec) = fmt name <> " AS " <> fmt spec
+  fmt (WindowDef name spec) = B.fromText name <> " AS " <> fmt spec
 
 instance FormatSql WindowSpec where
     fmt WindowSpec { refName, partitionClause, orderClause }
         = "(" <> mconcat [m_refName, m_partition, m_order ] <> ")" where
-      m_refName = maybe "" fmt refName
+      m_refName = maybe "" B.fromText refName
       m_partition = case partitionClause of
           [] -> ""
           _ -> " PARTITION BY " <> commas (fmt <$> partitionClause)
@@ -360,7 +362,7 @@ instance FormatSql WindowSpec where
           _ -> " ORDER BY " <> commas (fmt <$> orderClause)
 
 instance FormatSql FunctionApplication where
-  fmt FApp {..} = fmt name <> fmtIndirections indirection
+  fmt FApp {..} = B.fromText name <> fmtIndirections indirection
     <> fmt arguments  <> withinGroup'
     <> maybe "" (\fc -> " FILTER " <> parens ("WHERE " <> fmt fc)) filterClause
     <> over'
@@ -370,10 +372,10 @@ instance FormatSql FunctionApplication where
         _ -> "WITHIN GROUP " <> parens ("ORDER BY " <> commas withinGroup)
       over' = case over of
         (Window (WindowSpec Nothing [] [])) -> ""
-        (WindowName alias) -> "OVER " <> fmt alias
+        (WindowName alias) -> "OVER " <> B.fromText alias
         Window WindowSpec {refName, partitionClause, orderClause} ->
           "OVER " <> parens
-              (opt "" refName
+              (opt "" (B.fromText <$> refName)
                <> optList " PARTITION BY " partitionClause
                <> optList " ORDER BY " orderClause)
 
@@ -386,10 +388,14 @@ instance FormatSql FunctionArguments where
 
 instance FormatSql Argument where
   fmt (E e) = fmt e
-  fmt (Named name e) = fmt name <> " => " <> fmt e
+  fmt (Named name e) = B.fromText name <> " => " <> fmt e
 
 instance FormatSql Case where
   fmt Case { whenClause, implicitArg, elseClause } =
    "CASE" <> opt " " implicitArg <> whenClauses' <> opt " ELSE " elseClause <> " END"
     where whenClauses' = spaces [ " WHEN " <> fmt condition <> " THEN " <> fmt result
                                 | (condition, result) <- whenClause ]
+
+instance FormatSql WhereOrCurrent where
+  fmt (Where expr) = fmt expr
+  fmt (Current cursor) = "CURRENT OF " <> B.fromText cursor

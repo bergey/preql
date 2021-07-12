@@ -14,15 +14,19 @@ import           Language.Haskell.TH.Syntax (Lift (..))
 
 import qualified Data.Text                  as T
 
-newtype Name = Name Text
+data Name = Name
+  { qualifiedName :: Text
+  , inherit :: Bool
+  , alias :: Maybe Text
+  }
     deriving (Show, Eq, Ord, Generic, Typeable, Data, Lift)
 
 instance IsString Name where
-    fromString = Name . T.pack
+    fromString = mkName . T.pack
 
 -- TODO mkName should enforce valid characters in Name
 mkName :: Text -> Name
-mkName = Name
+mkName base = Name base True Nothing
 
 getName :: Name -> Text
-getName (Name name) = name
+getName (Name name _ _) = name

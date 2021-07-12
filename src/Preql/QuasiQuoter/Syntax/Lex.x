@@ -55,6 +55,7 @@ tokens :-
     $c $a $s $e { lex CASE }
     $c $o $a $l $e $s $c $e { lex COALESCE }
     $c $r $o $s $s  { lex CROSS }
+    $c $u $r $r $e $n $t  { lex CURRENT_P }
     $d $e $l $e $t $e { lex DELETE_P }
     $d $e $s $c { lex DESC }
     $d $i $s $t $i $n $c $t { lex DISTINCT }
@@ -103,6 +104,7 @@ tokens :-
     $o $v $e $r { lex OVER }
     $p $a $r $t $i $t $i $o $n { lex PARTITION }
     $r $e $c $u $r $s $i $v $e { lex RECURSIVE }
+    $r $e $t $u $r $n $i $n $g { lex RETURNING }
     $r $i $g $h $t { lex RIGHT }
     $s $e $l $e $c $t { lex SELECT }
     $s $e $t { lex SET }

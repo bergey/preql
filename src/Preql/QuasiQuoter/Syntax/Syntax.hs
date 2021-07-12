@@ -12,13 +12,10 @@ import Preql.QuasiQuoter.Syntax.Name
 
 import Data.Data
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
-import Data.String (IsString(..))
 import Data.Text (Text)
-import Data.Word (Word)
 import GHC.Generics
 import Instances.TH.Lift ()
 import Language.Haskell.TH.Syntax (Lift(..))
-import qualified Data.Text as T
 
 -- FIXME rename to Constant?
 data Literal = I !Word | F !Double | T !Text | B !Bool | Null
@@ -33,17 +30,19 @@ data Statement = QI !Insert | QD !Delete | QU !Update | QS !SelectStmt
 -- * no @ON CONFLICT@
 data Insert = Insert
     { table   :: !Name
-    , columns :: NonEmpty Name
+    , columns :: NonEmpty Text
     , values  :: NonEmpty Expr -- TODO enforce matched lengths?
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
--- | Queries of the form @DELETE FROM table WHERE conditions@.
 data Delete = Delete
     { table      :: !Name
-    , conditions :: Maybe Expr
+    , whereClause :: Maybe WhereOrCurrent
+    , using :: [TableRef]
+    , returningList :: [ResTarget]
+    , withClause :: Maybe WithClause
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Setting = Setting !Name !Expr
+data Setting = Setting !Text !Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 -- | Queries of the form @UPDATE table SET settings WHERE conditions@.  Where each
@@ -116,14 +115,14 @@ data JoinedTable
   deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Alias = Alias
-    { aliasName :: Name
-    , columnNames :: [ Name ]
+    { aliasName :: Text
+    , columnNames :: [ Text ]
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data JoinType = Inner | LeftJoin | RightJoin | Full
     deriving (Show, Eq, Generic, Typeable, Data, Lift, Enum, Bounded)
 
-data JoinQual = Using [Name] | On Expr | Natural
+data JoinQual = Using [Text] | On Expr | Natural
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data DistinctClause = DistinctAll | DistinctOn (NonEmpty Expr)
@@ -135,17 +134,17 @@ data SetOp = Union | Intersect | Except
 data AllOrDistinct = All | Distinct
     deriving (Show, Eq, Generic, Typeable, Data, Lift, Enum, Bounded)
 
-data ResTarget = Star | Column Expr (Maybe Name)
+data ResTarget = Star | Column Expr (Maybe Text)
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data WindowDef = WindowDef Name WindowSpec
+data WindowDef = WindowDef Text WindowSpec
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Over = WindowName Name | Window WindowSpec
+data Over = WindowName Text | Window WindowSpec
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data WindowSpec = WindowSpec
-    { refName :: Maybe Name
+    { refName :: Maybe Text
     , partitionClause :: [Expr]
     , orderClause :: [SortBy ]
     -- , frameOptions :: _ -- FIXME implement
@@ -171,7 +170,7 @@ data NullsOrder = NullsFirst | NullsLast | NullsOrderDefault
 
 data Locking = Locking
     { strength :: LockingStrength
-    , tables :: [Name]
+    , tables :: [Text]
     , wait :: LockWait
     } deriving (Show, Eq, Generic, Data, Lift)
 
@@ -195,26 +194,24 @@ data Materialized = Materialized | NotMaterialized | MaterializeDefault
     deriving (Show, Eq, Enum, Bounded, Data, Lift, Generic)
 
 data CTE = CommonTableExpr
-  { name :: Name
-  , aliases :: [Name]
+  { name :: Text
+  , aliases :: [Text]
   , materialized :: Materialized
   , query :: Statement
   }
   deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-data Expr = Lit !Literal | CRef Name
+data Expr = Lit !Literal | CRef Text
     | NumberedParam !Word
     | HaskellParam !Text
     | BinOp !BinOp !Expr !Expr
     | Unary !UnaryOp !Expr
-    | Indirection Expr (NonEmpty Indirection)
+    | Indirection Expr (NonEmpty Text)
     | SelectExpr SelectStmt
     | L LikeE
     | Fun FunctionApplication
     | Cas Case
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
-
-type Indirection = Name -- FIXME
 
 data BinOp = Mul | Div | Add | Sub | Exponent | Mod
            | Eq | LT | LTE | GT | GTE | NEq
@@ -241,15 +238,15 @@ like op string likePattern =
     LikeE { op, string, likePattern, escape = Nothing, invert = False }
 
 data FunctionApplication = FApp
-    { name :: Name
-    , indirection :: [Indirection]
+    { name :: Text
+    , indirection :: [Text]
     , arguments :: FunctionArguments
     , withinGroup :: [SortBy] -- not allowed if sortBy in arguments isn't empty
     , filterClause :: Maybe Expr
     , over :: Over
     } deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
-fapp :: (Name, [Indirection]) -> FunctionArguments -> FunctionApplication
+fapp :: (Text, [Text]) -> FunctionArguments -> FunctionApplication
 fapp (name, indirection) args = FApp
     { name, indirection
     , arguments = args
@@ -258,7 +255,7 @@ fapp (name, indirection) args = FApp
     , over = noWindow
     }
 
-fapp1 :: Name -> [Expr] -> FunctionApplication
+fapp1 :: Text -> [Expr] -> FunctionApplication
 fapp1 fName args = fapp (fName, []) args' where
   args' = case nonEmpty args of
     Nothing -> NoArgs
@@ -282,7 +279,7 @@ data ArgsList = ArgsList
 argsList :: NonEmpty Argument -> ArgsList
 argsList args = ArgsList args [] False
 
-data Argument = E Expr | Named Name Expr
+data Argument = E Expr | Named Text Expr
     deriving (Show, Eq, Generic, Typeable, Data, Lift)
 
 data Case = Case
@@ -290,3 +287,8 @@ data Case = Case
   , implicitArg :: Maybe Expr
   , elseClause :: Maybe Expr
   } deriving (Show, Eq, Generic, Data, Lift)
+
+data WhereOrCurrent
+  = Where Expr
+  | Current Text
+  deriving (Show, Eq, Generic, Typeable, Data, Lift)

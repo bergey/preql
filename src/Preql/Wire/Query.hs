@@ -1,3 +1,5 @@
+-- | Description: Send queries, decode results, look up OID for a known type name
+
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}

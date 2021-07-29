@@ -16,7 +16,7 @@ jobs:
         resolver:
           - ""
           - "--resolver nightly"
-          - "--resolver lts-16.4"
+          - "--resolver lts-16.31"
       fail-fast: false
 
     services:

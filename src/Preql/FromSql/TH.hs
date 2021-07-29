@@ -44,7 +44,11 @@ deriveFromSql tyName = do
             in return [fromSqlDecl targetTy conN fieldTypes]
         _ -> error ("deriveFromSql only handles type names, got: " ++ show tyName)
 
+#if MIN_VERSION_template_haskell(2,17,0)
+tyVarName :: TyVarBndr () -> Name
+#else
 tyVarName :: TyVarBndr -> Name
+#endif
 tyVarName = \case
     PlainTV name -> name
     KindedTV name _k -> name

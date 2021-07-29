@@ -34,7 +34,7 @@ type TypeCache = IORef (HM.HashMap Text PQ.Oid)
 -- per-Connection (or striped) caches.  It's also reasonable to share a single
 -- cache for an entire multi-threaded program; the @IORef@ supports this usage.
 data Connection = Connection
-  { connection :: !PQ.Connection
+  { rawConnection :: !PQ.Connection
   , typeCache :: !TypeCache
   }
 

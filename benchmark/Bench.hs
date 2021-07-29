@@ -7,6 +7,7 @@
 module Main where
 
 import Preql
+import Preql.Wire.Query (Connection(..), connectdbSharedCache)
 import qualified Preql.Wire.TypeInfo.Static as OID
 
 import Control.DeepSeq (NFData(..))
@@ -39,10 +40,10 @@ main = do
                                   , PQ.Oid, PQ.Oid, PQ.Oid))
     ]
 
-connectDB :: IO PQ.Connection
+connectDB :: IO Connection
 connectDB = do
-    conn <- PQ.connectdb =<< connectionString
-    status <- PQ.status conn
+    conn@(Connection rawConn _) <- connectdbSharedCache =<< connectionString
+    status <- PQ.status rawConn
     unless (status == PQ.ConnectionOk) (error "bad connection")
     return conn
 

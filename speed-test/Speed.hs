@@ -16,6 +16,7 @@
 module Main where
 
 import           Preql
+import Preql.Wire.Query (Connection(..), connectdbSharedCache)
 import qualified Preql.Wire.TypeInfo.Static  as OID
 import Preql.FromSql
 import Preql.FromSql.TH
@@ -51,7 +52,7 @@ import           System.IO
 main :: IO ()
 main = do
     Options {..} <- execParser (info (options <**> helper) fullDesc)
-    m_pool :: Maybe (Pool PQ.Connection) <- traverse (createPool connectDB PQ.finish 1 1) connections
+    m_pool :: Maybe (Pool Connection) <- traverse (createPool connectDB (PQ.finish . rawConnection) 1 1) connections
     startTime <- getCurrentTime
     lastPrintTime <- newTVarIO startTime
     lastPrintCount <- newTVarIO 0
@@ -61,7 +62,7 @@ main = do
         let
             typmod = -1 :: Int16
             isdefined = True
-            selectRows :: PQ.Connection -> IO ()
+            selectRows :: Connection -> IO ()
             selectRows conn = do
                 traceEventIO "before query"
                 res :: Vector TypeInfo <-
@@ -90,10 +91,10 @@ main = do
             return $ Just (rows, (rows - last) `div` dt)
         for_ m_print $ \(rows, rps) -> putStrLn (iso8601Show now ++ ": " ++ show rows ++ " total " ++ show rps ++ " per second")
 
-connectDB :: IO PQ.Connection
+connectDB :: IO Connection
 connectDB = do
-    conn <- PQ.connectdb =<< connectionString
-    status <- PQ.status conn
+    conn <- connectdbSharedCache =<< connectionString
+    status <- PQ.status (rawConnection conn)
     unless (status == PQ.ConnectionOk) (error "bad connection")
     return conn
 

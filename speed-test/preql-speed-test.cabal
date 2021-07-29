@@ -1,8 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.3.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
+--
+-- hash: 1409eecac61471d11c2fa8d2932dbfb6250ff9f0abde991dd5da0c1fc61a94a7
 
 name:           preql-speed-test
 version:        0.5
@@ -28,7 +30,7 @@ executable preql-speed
   build-depends:
       aeson >=1.4.7.1
     , array >=0.5.4.0
-    , base >=4.13.0.0 && <4.15
+    , base >=4.13.0.0
     , binary-parser >=0.5.6
     , bytestring >=0.10.10.0
     , bytestring-strict-builder >=0.4.5.3

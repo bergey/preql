@@ -49,6 +49,34 @@ import           System.Environment          (lookupEnv)
 import           System.Exit                 (exitSuccess)
 import           System.IO
 
+instance NFData PQ.Oid where
+    rnf (PQ.Oid oid) = rnf oid
+instance (NFData a1, NFData a2, NFData a3, NFData a4, NFData a5, NFData a6, NFData a7, NFData a8, NFData a9, NFData a10, NFData a11, NFData a12) =>
+         NFData (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12) where
+  rnf (x1,x2,x3,x4,x5,x6, x7, x8, x9, x10, x11, x12) =
+      rnf x1 `seq` rnf x2 `seq` rnf x3 `seq` rnf x4 `seq` rnf x5
+      `seq` rnf x6 `seq` rnf x7 `seq` rnf x8 `seq` rnf x9 `seq` rnf x10
+      `seq` rnf x11 `seq` rnf x12
+
+deriving newtype instance NFData PgName
+
+data TypeInfo = TypeInfo
+    { typname        :: !PgName
+    , typnamespace   :: !PQ.Oid
+    , typowner       :: !PQ.Oid
+    , typlen         :: !Int16
+    , typbyval       :: !Bool
+    , typcategory    :: !Char
+    , typispreferred :: !Bool
+    , typisdefined   :: !Bool
+    , typdelim       :: !Char
+    , typrelid       :: !PQ.Oid
+    , typelem        :: !PQ.Oid
+    , typarray       :: !PQ.Oid
+    }
+    deriving (Generic, NFData)
+$(deriveFromSql ''TypeInfo)
+
 main :: IO ()
 main = do
     Options {..} <- execParser (info (options <**> helper) fullDesc)
@@ -125,31 +153,3 @@ options = do
         ( long "duration" <> short 'd' <> metavar "SECONDS"
           <> help "duration in seconds to run (default until killed)" )
     return Options {..}
-
-instance NFData PQ.Oid where
-    rnf (PQ.Oid oid) = rnf oid
-instance (NFData a1, NFData a2, NFData a3, NFData a4, NFData a5, NFData a6, NFData a7, NFData a8, NFData a9, NFData a10, NFData a11, NFData a12) =>
-         NFData (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12) where
-  rnf (x1,x2,x3,x4,x5,x6, x7, x8, x9, x10, x11, x12) =
-      rnf x1 `seq` rnf x2 `seq` rnf x3 `seq` rnf x4 `seq` rnf x5
-      `seq` rnf x6 `seq` rnf x7 `seq` rnf x8 `seq` rnf x9 `seq` rnf x10
-      `seq` rnf x11 `seq` rnf x12
-
-deriving newtype instance NFData PgName
-
-data TypeInfo = TypeInfo
-    { typname        :: !PgName
-    , typnamespace   :: !PQ.Oid
-    , typowner       :: !PQ.Oid
-    , typlen         :: !Int16
-    , typbyval       :: !Bool
-    , typcategory    :: !Char
-    , typispreferred :: !Bool
-    , typisdefined   :: !Bool
-    , typdelim       :: !Char
-    , typrelid       :: !PQ.Oid
-    , typelem        :: !PQ.Oid
-    , typarray       :: !PQ.Oid
-    }
-    deriving (Generic, NFData)
-$(deriveFromSql ''TypeInfo)

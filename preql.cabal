@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d708829e81caa9395aededdd5e107e416ae26563193bc48e8c76e2e09866f185
+-- hash: f4dbe72a66bc70347b232733521f1dc19162d6cae9eb9467c4f262693e91d5b2
 
 name:           preql
 version:        0.6
@@ -81,7 +81,7 @@ library
   build-depends:
       aeson >=1.4.7.1
     , array >=0.5.4.0
-    , base >=4.13.0.0
+    , base >=4.13.0.0 && <5.0
     , binary-parser >=0.5.6
     , bytestring >=0.10.10.0
     , bytestring-strict-builder >=0.4.5.3
@@ -122,7 +122,7 @@ test-suite tests
   build-depends:
       aeson >=1.4.7.1
     , array >=0.5.4.0
-    , base >=4.13.0.0
+    , base >=4.13.0.0 && <5.0
     , binary-parser >=0.5.6
     , bytestring >=0.10.10.0
     , bytestring-strict-builder >=0.4.5.3
@@ -164,7 +164,7 @@ benchmark pgbench
   build-depends:
       aeson >=1.4.7.1
     , array >=0.5.4.0
-    , base >=4.13.0.0
+    , base >=4.13.0.0 && <5.0
     , binary-parser >=0.5.6
     , bytestring >=0.10.10.0
     , bytestring-strict-builder >=0.4.5.3

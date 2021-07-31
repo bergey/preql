@@ -1,3 +1,9 @@
+# 0.6 (2021-07-31)
+
+- decode array types
+- decode composite types with `Tuple` newtype
+- cache OID lookups
+
 # 0.5 (2021-01-10)
 
 - fix `deriveFromSql` which was completely unusable

@@ -94,7 +94,7 @@ main = do
             selectRows conn = do
                 traceEventIO "before query"
                 res :: Vector TypeInfo <-
-                    flip runReaderT conn $ query [sql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
+                    flip runReaderT conn $ query [rawSql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
                 traceEventIO "after query"
                 evaluate $ force res
                 traceEventIO "forced rows"

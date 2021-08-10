@@ -46,8 +46,8 @@ select = expressionOnly "select" (aritySql parseSelect QS)
 -- | This quasiquoter will accept all queries accepted by 'select',
 -- and limited INSERT, UPDATE, and DELETE queries.  For details of
 -- what can be parsed, consult Parser.y
-validSql :: QuasiQuoter
-validSql = expressionOnly "validSql" (aritySql parseStatement id)
+sql :: QuasiQuoter
+sql = expressionOnly "sql" (aritySql parseStatement id)
 
 aritySql  :: (String -> String -> Either String a) -> (a -> Statement) -> String -> Q Exp
 aritySql parse mkStatement raw = do

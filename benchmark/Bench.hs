@@ -34,7 +34,7 @@ main = do
             let
                 typmod = -1 :: Int16
                 isdefined = True
-            res <- query [sql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
+            res <- query [rawSql| select typname, typnamespace, typowner, typlen, typbyval , typcategory, typispreferred, typisdefined, typdelim , typrelid, typelem, typarray from pg_type where typtypmod = ${typmod} and typisdefined = ${isdefined} |]
             return (res :: Vector (PgName, PQ.Oid, PQ.Oid, Int16, Bool
                                   , Char, Bool, Bool, Char
                                   , PQ.Oid, PQ.Oid, PQ.Oid))

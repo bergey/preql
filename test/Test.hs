@@ -50,7 +50,7 @@ integration = withResource initDB W.finish $ \db ->
     query' qp = runReaderT (query qp) =<< db
   in testGroup "integration"
     [ testCase "SELECT foo, bar FROM baz" $ do
-        result <- query' [sql|SELECT foo, bar FROM baz |]
+        result <- query' [rawSql|SELECT foo, bar FROM baz |]
         assertEqual "" [(1, "one"), (2, "two")] (result :: Vector (Int32, T.Text))
     , testCase "with params" $ do
         result <- query' $ [select| SELECT foo, bar FROM baz WHERE foo = $1|] (1 :: Int32)

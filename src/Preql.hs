@@ -3,7 +3,7 @@
 -- | Description: Import this
 
 module Preql (
-    SQL(..), SqlQuery(..), sql, select, validSql
+    SQL(..), SqlQuery(..), sql, select, rawSql
     , Transaction, Query
     -- * functions for writing SQL instances
     , runTransactionIO
@@ -18,6 +18,6 @@ module Preql (
     ) where
 
 import           Preql.Effect
-import           Preql.QuasiQuoter.Raw.TH    (sql)
-import           Preql.QuasiQuoter.Syntax.TH (select, validSql)
+import           Preql.QuasiQuoter.Raw.TH    (rawSql)
+import           Preql.QuasiQuoter.Syntax.TH (select, sql)
 import           Preql.Wire

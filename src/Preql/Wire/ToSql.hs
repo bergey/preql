@@ -1,3 +1,4 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -48,46 +49,48 @@ class ToSqlField a where
 -- | @ToSql a@ is sufficient to pass @a@ as parameters to a paramaterized query.
 class ToSql a where
     toSql :: RowEncoder a
+    default toSql :: ToSqlField a => RowEncoder a
+    toSql = oneField toSqlField
 
 instance ToSqlField Bool where
     toSqlField = FieldEncoder OID.boolOid PGB.bool
-instance ToSql Bool where toSql = oneField toSqlField
+instance ToSql Bool
 
 instance ToSqlField Int16 where
     toSqlField = FieldEncoder OID.int2Oid PGB.int2_int16
-instance ToSql Int16 where toSql = oneField toSqlField
+instance ToSql Int16
 
 instance ToSqlField Int32 where
     toSqlField = FieldEncoder OID.int4Oid PGB.int4_int32
-instance ToSql Int32 where toSql = oneField toSqlField
+instance ToSql Int32
 
 instance ToSqlField Int64 where
     toSqlField = FieldEncoder OID.int8Oid PGB.int8_int64
-instance ToSql Int64 where toSql = oneField toSqlField
+instance ToSql Int64
 
 instance ToSqlField Float where
     toSqlField = FieldEncoder OID.float4Oid PGB.float4
-instance ToSql Float where toSql = oneField toSqlField
+instance ToSql Float
 
 instance ToSqlField Double where
     toSqlField = FieldEncoder OID.float8Oid PGB.float8
-instance ToSql Double where toSql = oneField toSqlField
+instance ToSql Double
 
 instance ToSqlField Char where
     toSqlField = FieldEncoder OID.charOid PGB.char_utf8
-instance ToSql Char where toSql = oneField toSqlField
+instance ToSql Char
 
 instance ToSqlField String where
     toSqlField = FieldEncoder OID.textOid (PGB.text_strict . T.pack)
-instance ToSql String where toSql = oneField toSqlField
+instance ToSql String
 
 instance ToSqlField Text where
     toSqlField = FieldEncoder OID.textOid PGB.text_strict
-instance ToSql Text where toSql = oneField toSqlField
+instance ToSql Text
 
 instance ToSqlField TL.Text where
     toSqlField = FieldEncoder OID.textOid PGB.text_lazy
-instance ToSql TL.Text where toSql = oneField toSqlField
+instance ToSql TL.Text
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'Data.Aeson.encode' and
@@ -95,39 +98,39 @@ instance ToSql TL.Text where toSql = oneField toSqlField
 -- instance.
 instance ToSqlField ByteString where
     toSqlField = FieldEncoder OID.byteaOid PGB.bytea_strict
-instance ToSql ByteString where toSql = oneField toSqlField
+instance ToSql ByteString
 
 instance ToSqlField BSL.ByteString where
     toSqlField = FieldEncoder OID.byteaOid PGB.bytea_lazy
-instance ToSql BSL.ByteString where toSql = oneField toSqlField
+instance ToSql BSL.ByteString
 
 -- TODO check for integer_datetimes setting
 instance ToSqlField UTCTime where
     toSqlField = FieldEncoder OID.timestamptzOid PGB.timestamptz_int
-instance ToSql UTCTime where toSql = oneField toSqlField
+instance ToSql UTCTime
 
 instance ToSqlField Day where
     toSqlField = FieldEncoder OID.dateOid PGB.date
-instance ToSql Day where toSql = oneField toSqlField
+instance ToSql Day
 
 instance ToSqlField TimeOfDay where
     toSqlField = FieldEncoder OID.timeOid PGB.time_int
-instance ToSql TimeOfDay where toSql = oneField toSqlField
+instance ToSql TimeOfDay
 
 instance ToSqlField TimeTZ where
     toSqlField = FieldEncoder OID.timetzOid (\(TimeTZ tod tz) -> PGB.timetz_int (tod, tz))
-instance ToSql TimeTZ where toSql = oneField toSqlField
+instance ToSql TimeTZ
 
 instance ToSqlField UUID where
     toSqlField = FieldEncoder OID.uuidOid PGB.uuid
-instance ToSql UUID where toSql = oneField toSqlField
+instance ToSql UUID
 
 -- | If you want to encode some more specific Haskell type via JSON,
 -- it is more efficient to use 'toSqlJsonField' rather than this
 -- instance.
 instance ToSqlField JSON.Value where
     toSqlField = FieldEncoder OID.jsonbOid PGB.jsonb_ast
-instance ToSql JSON.Value where toSql = oneField toSqlField
+instance ToSql JSON.Value
 
 toSqlJsonField :: JSON.ToJSON a => FieldEncoder a
 toSqlJsonField = FieldEncoder OID.jsonbOid (PGB.jsonb_bytes . BSL.toStrict . JSON.encode)

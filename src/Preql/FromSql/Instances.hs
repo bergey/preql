@@ -1,8 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Preql.FromSql.Instances (fromSqlJsonField) where
@@ -19,6 +19,7 @@ import Data.Time (Day, TimeOfDay, UTCTime)
 import Data.UUID (UUID)
 import Data.Vector (Vector)
 import Database.PostgreSQL.LibPQ (Oid)
+import GHC.Exts (maxTupleSize)
 import GHC.TypeNats
 import Preql.Imports
 import qualified BinaryParser as BP
@@ -229,26 +230,4 @@ instance (FromSqlField a, FromSqlField b) => FromSqlField (Tuple (a, b)) where
         (Tuple <$> composite 2 (pure (,) <*> vc fromSqlField <*> vc fromSqlField))
 instance (FromSqlField a, FromSqlField b) => FromSql (Tuple (a, b))
 
-$(deriveFromSqlFieldTuple 3)
-$(deriveFromSqlFieldTuple 4)
-$(deriveFromSqlFieldTuple 5)
-$(deriveFromSqlFieldTuple 6)
-$(deriveFromSqlFieldTuple 7)
-$(deriveFromSqlFieldTuple 8)
-$(deriveFromSqlFieldTuple 9)
-$(deriveFromSqlFieldTuple 10)
-$(deriveFromSqlFieldTuple 11)
-$(deriveFromSqlFieldTuple 12)
-$(deriveFromSqlFieldTuple 13)
-$(deriveFromSqlFieldTuple 14)
-$(deriveFromSqlFieldTuple 15)
-$(deriveFromSqlFieldTuple 16)
-$(deriveFromSqlFieldTuple 17)
-$(deriveFromSqlFieldTuple 18)
-$(deriveFromSqlFieldTuple 19)
-$(deriveFromSqlFieldTuple 20)
-$(deriveFromSqlFieldTuple 21)
-$(deriveFromSqlFieldTuple 22)
-$(deriveFromSqlFieldTuple 23)
-$(deriveFromSqlFieldTuple 24)
-$(deriveFromSqlFieldTuple 25)
+$(concat <$> traverse deriveFromSqlFieldTuple [3..maxTupleSize])

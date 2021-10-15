@@ -13,6 +13,7 @@ import Data.Functor.Contravariant
 import Data.Int
 import Data.Time (Day, TimeOfDay, UTCTime)
 import Data.UUID (UUID)
+import GHC.Exts (maxTupleSize)
 
 import qualified ByteString.StrictBuilder as B
 import qualified Data.Aeson as JSON
@@ -149,25 +150,4 @@ instance (ToSqlField a, ToSqlField b, ToSqlField c) => ToSql (a, b, c) where
 -- instances above.  The ones above are written out without the macro
 -- to illustrate the pattern.
 
-$(deriveToSqlTuple 4)
-$(deriveToSqlTuple 5)
-$(deriveToSqlTuple 6)
-$(deriveToSqlTuple 7)
-$(deriveToSqlTuple 8)
-$(deriveToSqlTuple 9)
-$(deriveToSqlTuple 10)
-$(deriveToSqlTuple 11)
-$(deriveToSqlTuple 12)
-$(deriveToSqlTuple 13)
-$(deriveToSqlTuple 14)
-$(deriveToSqlTuple 15)
-$(deriveToSqlTuple 16)
-$(deriveToSqlTuple 17)
-$(deriveToSqlTuple 18)
-$(deriveToSqlTuple 19)
-$(deriveToSqlTuple 20)
-$(deriveToSqlTuple 21)
-$(deriveToSqlTuple 22)
-$(deriveToSqlTuple 23)
-$(deriveToSqlTuple 24)
-$(deriveToSqlTuple 25)
+$(concat <$> traverse deriveToSqlTuple [4..maxTupleSize])
